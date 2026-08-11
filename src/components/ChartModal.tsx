@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
+import { createPortal } from 'react-dom'
 import {
   GripVertical,
   Heart,
@@ -79,7 +80,7 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
 
   const isBearish = alert.sentiment === 'Bearish'
 
-  return (
+  return createPortal(
     <div className="chart-desktop" role="dialog" aria-modal="true" aria-labelledby="chart-desktop-title">
       <header className="chart-desktop-bar">
         <h2 id="chart-desktop-title" className="font-display">
@@ -117,7 +118,8 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
           onClose={() => setFloatOpen(false)}
         />
       )}
-    </div>
+    </div>,
+    document.body,
   )
 }
 
