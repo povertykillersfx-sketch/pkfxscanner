@@ -40,14 +40,15 @@ export function SignIn() {
         <div className="signin-fields">
           <input
             className="field"
-            type="email"
+            type="text"
+            inputMode="email"
             placeholder="Email"
             value={email}
             onChange={(e) => {
               setEmail(e.target.value)
               setError('')
             }}
-            autoComplete="email"
+            autoComplete="username"
             required
           />
           <input
@@ -69,6 +70,12 @@ export function SignIn() {
         <button type="submit" className="btn btn-primary signin-btn">
           Login
         </button>
+
+        <p className="signin-hint">
+          Client: povertykillersfx@gmail.com / pkfxtest
+          <br />
+          Admin: povertykillersfx2@gmail.com / pkfx-admin
+        </p>
 
         <p className="signin-signup">
           Don&apos;t have an account? <Link to="/signup">Sign Up now</Link>

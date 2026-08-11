@@ -48,14 +48,15 @@ export function SignUp() {
           />
           <input
             className="field"
-            type="email"
+            type="text"
+            inputMode="email"
             placeholder="Email"
             value={email}
             onChange={(e) => {
               setEmail(e.target.value)
               setError('')
             }}
-            autoComplete="email"
+            autoComplete="username"
             required
           />
           <input
