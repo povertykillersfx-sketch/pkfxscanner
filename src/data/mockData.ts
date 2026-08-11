@@ -21,6 +21,10 @@ export interface Alert {
   entry?: string
   /** True when levels/direction came from a live market feed */
   live?: boolean
+  /** Latest verified market spot when the signal was built */
+  spot?: string
+  /** Data source label: yahoo / twelve / tradingview-spot / synthetic */
+  dataSource?: string
 }
 
 export interface CourseVideo {

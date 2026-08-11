@@ -13,7 +13,20 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   AUDUSD: 'AUDUSD=X',
 }
 
-/** Twelve Data symbols (optional; set VITE_TWELVEDATA_API_KEY for full coverage) */
+/** TradingView quote symbols (CORS-friendly scanner) */
+const TV_SYMBOLS: Record<string, string> = {
+  EURUSD: 'FX:EURUSD',
+  GBPUSD: 'FX:GBPUSD',
+  USDJPY: 'FX:USDJPY',
+  NZDUSD: 'FX:NZDUSD',
+  USDZAR: 'FX:USDZAR',
+  GOLD: 'OANDA:XAUUSD',
+  US30: 'TVC:DJI',
+  NASDAQ: 'NASDAQ:IXIC',
+  AUDUSD: 'FX:AUDUSD',
+}
+
+/** Twelve Data symbols (optional; set VITE_TWELVEDATA_API_KEY) */
 const TWELVE_SYMBOLS: Record<string, string> = {
   EURUSD: 'EUR/USD',
   GBPUSD: 'GBP/USD',
@@ -27,6 +40,7 @@ const TWELVE_SYMBOLS: Record<string, string> = {
 }
 
 export type ChartInterval = '15m' | '60m' | '240m' | '1d'
+export type MarketSource = 'yahoo' | 'twelve' | 'frankfurter' | 'tradingview-spot' | 'synthetic'
 
 export interface Candle {
   timestamp: number
@@ -40,8 +54,20 @@ export interface Candle {
 
 export interface CandleFetchResult {
   candles: Candle[]
-  /** True when bars came from a live market feed (not synthetic fallback) */
+  /** True only when bars are real market OHLC (not synthetic) */
   live: boolean
+  source: MarketSource
+  /** Last traded / regular market price when known */
+  spot?: number
+}
+
+export interface LiveQuote {
+  asset: string
+  price: number
+  changePct?: number
+  high?: number
+  low?: number
+  source: MarketSource
 }
 
 const INTERVAL_META: Record<
@@ -54,33 +80,13 @@ const INTERVAL_META: Record<
   '1d': { yahooInterval: '1d', yahooRange: '6mo', stepMs: 24 * 60 * 60 * 1000, twelve: '1day' },
 }
 
-const FX_QUOTE: Record<string, { base: string; quote: string; invert?: boolean }> = {
-  EURUSD: { base: 'EUR', quote: 'USD' },
-  GBPUSD: { base: 'GBP', quote: 'USD' },
-  USDJPY: { base: 'USD', quote: 'JPY' },
-  NZDUSD: { base: 'NZD', quote: 'USD' },
-  USDZAR: { base: 'USD', quote: 'ZAR' },
-  AUDUSD: { base: 'AUD', quote: 'USD' },
-}
-
 function yahooSymbol(asset: string): string {
   return YAHOO_SYMBOLS[asset] ?? `${asset}=X`
 }
 
-function yahooPath(symbol: string, interval: ChartInterval): string {
+function yahooChartPath(symbol: string, interval: ChartInterval): string {
   const meta = INTERVAL_META[interval]
   return `/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${meta.yahooInterval}&range=${meta.yahooRange}`
-}
-
-/** Prefer CORS mirrors / Vite proxy before direct Yahoo (browser CORS). */
-function candidateUrls(symbol: string, interval: ChartInterval): string[] {
-  const path = yahooPath(symbol, interval)
-  const yahoo = `https://query1.finance.yahoo.com${path}`
-  return [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahoo)}`,
-    `/api/yahoo${path}`,
-    yahoo,
-  ]
 }
 
 /** Aggregate 1h bars into 4h bars when feed has no native 4h. */
@@ -104,10 +110,11 @@ function aggregateBars(candles: Candle[], groupSize: number): Candle[] {
   return out
 }
 
-function parseYahooChart(json: unknown, interval: ChartInterval): Candle[] {
+function parseYahooChart(json: unknown, interval: ChartInterval): { candles: Candle[]; spot?: number } {
   const data = json as {
     chart?: {
       result?: Array<{
+        meta?: { regularMarketPrice?: number }
         timestamp?: number[]
         indicators?: {
           quote?: Array<{
@@ -124,7 +131,7 @@ function parseYahooChart(json: unknown, interval: ChartInterval): Candle[] {
   const result = data.chart?.result?.[0]
   const times = result?.timestamp ?? []
   const quote = result?.indicators?.quote?.[0]
-  if (!times.length || !quote) throw new Error('empty')
+  if (!times.length || !quote) throw new Error('empty yahoo')
 
   let candles: Candle[] = []
   for (let i = 0; i < times.length; i++) {
@@ -143,36 +150,94 @@ function parseYahooChart(json: unknown, interval: ChartInterval): Candle[] {
     })
   }
   if (interval === '240m') candles = aggregateBars(candles, 4)
-  if (candles.length < 20) throw new Error('too few')
-  return candles
+  if (candles.length < 20) throw new Error('too few yahoo bars')
+  const spot = result?.meta?.regularMarketPrice ?? candles[candles.length - 1]?.close
+  return { candles, spot }
 }
 
-async function fetchYahooCandles(asset: string, interval: ChartInterval): Promise<Candle[]> {
-  const symbol = yahooSymbol(asset)
-  let lastError: unknown
-  for (const url of candidateUrls(symbol, interval)) {
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(14_000) })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json: unknown = await res.json()
-      return parseYahooChart(json, interval)
-    } catch (err) {
-      lastError = err
-    }
+async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
+  const res = await fetch(url, {
+    ...init,
+    signal: init?.signal ?? AbortSignal.timeout(16_000),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+/** Jina reader returns { data: { content: "<yahoo json string>" } } with CORS. */
+async function fetchYahooViaJina(symbol: string, interval: ChartInterval): Promise<{ candles: Candle[]; spot?: number }> {
+  const path = yahooChartPath(symbol, interval)
+  const upstream = `http://query2.finance.yahoo.com${path}`
+  const url = `https://r.jina.ai/${upstream}`
+  const json = (await fetchJson(url, {
+    headers: { Accept: 'application/json' },
+  })) as { data?: { content?: string }; content?: string }
+  const content = json.data?.content ?? json.content
+  if (!content) throw new Error('jina empty')
+  const chartJson = typeof content === 'string' ? JSON.parse(content) : content
+  return parseYahooChart(chartJson, interval)
+}
+
+/** Same-origin Vite/preview proxy → query2 Yahoo. */
+async function fetchYahooViaProxy(symbol: string, interval: ChartInterval): Promise<{ candles: Candle[]; spot?: number }> {
+  const path = yahooChartPath(symbol, interval)
+  const json = await fetchJson(`/api/yahoo${path}`)
+  return parseYahooChart(json, interval)
+}
+
+async function fetchYahooDirect(symbol: string, interval: ChartInterval): Promise<{ candles: Candle[]; spot?: number }> {
+  const path = yahooChartPath(symbol, interval)
+  const json = await fetchJson(`https://query2.finance.yahoo.com${path}`)
+  return parseYahooChart(json, interval)
+}
+
+/** Frankfurter daily history — real FX closes when intraday Yahoo is blocked. */
+async function fetchFrankfurterDaily(asset: string): Promise<{ candles: Candle[]; spot?: number }> {
+  const map: Record<string, { from: string; to: string; invert?: boolean }> = {
+    EURUSD: { from: 'EUR', to: 'USD' },
+    GBPUSD: { from: 'GBP', to: 'USD' },
+    USDJPY: { from: 'USD', to: 'JPY' },
+    AUDUSD: { from: 'AUD', to: 'USD' },
+    NZDUSD: { from: 'NZD', to: 'USD' },
+    USDZAR: { from: 'USD', to: 'ZAR' },
   }
-  throw lastError instanceof Error ? lastError : new Error('yahoo fetch failed')
+  const cfg = map[asset]
+  if (!cfg) throw new Error('not fx frankfurter')
+
+  const end = new Date()
+  const start = new Date(end.getTime() - 120 * 24 * 60 * 60 * 1000)
+  const startStr = start.toISOString().slice(0, 10)
+  const url = `https://api.frankfurter.app/${startStr}..?from=${cfg.from}&to=${cfg.to}`
+  const json = (await fetchJson(url)) as { rates?: Record<string, Record<string, number>> }
+  if (!json.rates) throw new Error('no frankfurter rates')
+
+  const candles: Candle[] = Object.entries(json.rates)
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([date, rates]) => {
+      let close = rates[cfg.to]
+      if (close == null) throw new Error('missing rate')
+      // frankfurter from EUR to USD gives EURUSD directly when from=EUR to=USD
+      return {
+        timestamp: Date.parse(`${date}T00:00:00Z`),
+        open: close,
+        high: close,
+        low: close,
+        close,
+        volume: 0,
+      }
+    })
+  if (candles.length < 20) throw new Error('too few frankfurter')
+  return { candles, spot: candles[candles.length - 1]?.close }
 }
 
-async function fetchTwelveCandles(asset: string, interval: ChartInterval): Promise<Candle[]> {
+async function fetchTwelveCandles(asset: string, interval: ChartInterval): Promise<{ candles: Candle[]; spot?: number }> {
   const key = import.meta.env.VITE_TWELVEDATA_API_KEY as string | undefined
   if (!key) throw new Error('no twelve key')
   const symbol = TWELVE_SYMBOLS[asset]
   if (!symbol) throw new Error('unsupported')
   const meta = INTERVAL_META[interval]
   const url = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=${meta.twelve}&outputsize=180&apikey=${encodeURIComponent(key)}`
-  const res = await fetch(url, { signal: AbortSignal.timeout(12_000) })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const json = (await res.json()) as {
+  const json = (await fetchJson(url)) as {
     values?: Array<{ datetime: string; open: string; high: string; low: string; close: string; volume?: string }>
     code?: number
     message?: string
@@ -192,62 +257,35 @@ async function fetchTwelveCandles(asset: string, interval: ChartInterval): Promi
     }))
     .filter((c) => Number.isFinite(c.open) && Number.isFinite(c.close))
   if (candles.length < 20) throw new Error('too few')
-  return candles
+  return { candles, spot: candles[candles.length - 1]?.close }
 }
 
-/** Real FX spot from open.er-api (CORS-friendly), expanded into session bars. */
-async function fetchFxSpotCandles(asset: string, interval: ChartInterval): Promise<Candle[]> {
-  const pair = FX_QUOTE[asset]
-  if (!pair) throw new Error('not fx')
-  const res = await fetch('https://open.er-api.com/v6/latest/USD', {
-    signal: AbortSignal.timeout(10_000),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const json = (await res.json()) as { result?: string; rates?: Record<string, number> }
-  if (json.result !== 'success' || !json.rates) throw new Error('bad fx')
-
-  const rates = json.rates
-  let spot: number
-  if (pair.base === 'USD') {
-    const q = rates[pair.quote]
-    if (!q) throw new Error('missing quote')
-    spot = q
-  } else {
-    const b = rates[pair.base]
-    if (!b) throw new Error('missing base')
-    // rates are USD→currency; EURUSD = 1 / (USD→EUR) when base is EUR
-    spot = 1 / b
+/** Live TradingView quote (CORS). Used to pin entry to real market price. */
+export async function fetchTradingViewQuote(asset: string): Promise<LiveQuote> {
+  const symbol = TV_SYMBOLS[asset]
+  if (!symbol) throw new Error('no tv symbol')
+  const url = `https://scanner.tradingview.com/symbol?symbol=${encodeURIComponent(symbol)}&fields=close,change,high,low,description`
+  const json = (await fetchJson(url)) as {
+    close?: number
+    change?: number
+    high?: number
+    low?: number
   }
-
-  return buildLiveSpotSeries(spot, interval)
+  if (json.close == null || !Number.isFinite(json.close)) throw new Error('no tv close')
+  return {
+    asset,
+    price: json.close,
+    changePct: json.change,
+    high: json.high,
+    low: json.low,
+    source: 'tradingview-spot',
+  }
 }
 
-function buildLiveSpotSeries(spot: number, interval: ChartInterval): Candle[] {
-  const step = INTERVAL_META[interval].stepMs
-  const count = interval === '1d' ? 90 : 120
-  const now = Date.now()
-  const out: Candle[] = []
-  let price = spot * (1 - 0.004)
-  for (let i = count; i >= 0; i--) {
-    // Walk toward current live spot so the last bar is the real rate
-    const t = i / count
-    const target = spot * (1 - 0.004 * t)
-    const noise = (Math.sin(i / 7) + Math.sin(i / 3) * 0.4) * spot * 0.00035
-    const open = price
-    const close = target + noise
-    const high = Math.max(open, close) + Math.abs(noise) * 0.5
-    const low = Math.min(open, close) - Math.abs(noise) * 0.5
-    out.push({
-      timestamp: now - i * step,
-      open,
-      high,
-      low,
-      close,
-      volume: 1000 + ((i * 97) % 3000),
-    })
-    price = close
-  }
-  // Force last close to exact live spot
+/** Anchor last candle close to a verified live spot (keeps structure, fixes entry). */
+function pinSpot(candles: Candle[], spot: number): Candle[] {
+  if (!candles.length) return candles
+  const out = candles.map((c) => ({ ...c }))
   const last = out[out.length - 1]!
   last.close = spot
   last.high = Math.max(last.high, spot)
@@ -256,103 +294,203 @@ function buildLiveSpotSeries(spot: number, interval: ChartInterval): Candle[] {
 }
 
 const BASE: Record<string, number> = {
-  EURUSD: 1.085,
-  GBPUSD: 1.268,
-  USDJPY: 148.6,
+  EURUSD: 1.154,
+  GBPUSD: 1.35,
+  USDJPY: 159.3,
   NZDUSD: 0.602,
   USDZAR: 18.35,
-  GOLD: 3345,
-  US30: 40050,
-  NASDAQ: 17980,
+  GOLD: 4380,
+  US30: 53860,
+  NASDAQ: 26460,
   AUDUSD: 0.656,
 }
 
-function syntheticCandles(asset: string, interval: ChartInterval): Candle[] {
-  const base = BASE[asset] ?? 1
+function syntheticCandles(asset: string, interval: ChartInterval, spot?: number): Candle[] {
+  const base = spot ?? BASE[asset] ?? 1
   const now = Date.now()
   const step = INTERVAL_META[interval].stepMs
   const count = interval === '1d' ? 120 : interval === '15m' ? 240 : 180
   const out: Candle[] = []
-  let price = base
+  let price = base * 0.995
   for (let i = count; i >= 0; i--) {
-    const drift = (Math.sin(i / 9) + (Math.random() - 0.5) * 1.4) * base * 0.0012
+    const drift = (Math.sin(i / 9) + Math.sin(i / 5) * 0.5) * base * 0.0008
     const open = price
     const close = price + drift
-    const high = Math.max(open, close) + Math.random() * base * 0.0008
-    const low = Math.min(open, close) - Math.random() * base * 0.0008
+    const high = Math.max(open, close) + Math.abs(drift) * 0.4
+    const low = Math.min(open, close) - Math.abs(drift) * 0.4
     out.push({
       timestamp: now - i * step,
       open,
       high,
       low,
       close,
-      volume: Math.floor(800 + Math.random() * 4000),
+      volume: Math.floor(800 + (i % 40) * 90),
     })
     price = close
   }
-  return out
+  return pinSpot(out, base)
 }
 
-/** Fetch candles with live/synthetic status. */
+const candleCache = new Map<string, { at: number; value: CandleFetchResult }>()
+const CACHE_MS = 60_000
+
+/** Fetch real OHLC when possible. Synthetic only as last resort (live=false). */
 export async function fetchCandlesResult(
   asset: string,
-  interval: ChartInterval = '60m',
+  interval: ChartInterval = '15m',
 ): Promise<CandleFetchResult> {
-  // 1) Optional Twelve Data key (best coverage)
+  const cacheKey = `${asset}|${interval}`
+  const hit = candleCache.get(cacheKey)
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.value
+
+  let result: CandleFetchResult
+
+  // 1) Optional Twelve Data
   try {
-    const candles = await fetchTwelveCandles(asset, interval)
-    return { candles, live: true }
+    const { candles, spot } = await fetchTwelveCandles(asset, interval)
+    result = { candles, live: true, source: 'twelve', spot }
+    candleCache.set(cacheKey, { at: Date.now(), value: result })
+    return result
   } catch {
     /* continue */
   }
 
-  // 2) Yahoo via CORS mirror / proxy
+  // 2) Real Yahoo OHLC — jina first (CORS + bypasses many Yahoo IP blocks), then proxy, then direct
   try {
-    const candles = await fetchYahooCandles(asset, interval)
-    return { candles, live: true }
+    const symbol = yahooSymbol(asset)
+    let parsed: { candles: Candle[]; spot?: number } | null = null
+    const errors: string[] = []
+    for (const fn of [fetchYahooViaJina, fetchYahooViaProxy, fetchYahooDirect]) {
+      try {
+        parsed = await fn(symbol, interval)
+        break
+      } catch (err) {
+        errors.push(err instanceof Error ? err.message : String(err))
+      }
+    }
+    if (!parsed) throw new Error(`yahoo failed: ${errors.join(' | ')}`)
+
+    let pinned = parsed.candles
+    let finalSpot = parsed.spot
+    try {
+      const tv = await fetchTradingViewQuote(asset)
+      finalSpot = tv.price
+      pinned = pinSpot(parsed.candles, tv.price)
+    } catch {
+      /* keep yahoo spot */
+    }
+    result = { candles: pinned, live: true, source: 'yahoo', spot: finalSpot }
+    candleCache.set(cacheKey, { at: Date.now(), value: result })
+    return result
   } catch {
     /* continue */
   }
 
-  // 3) Live FX spot (daily) for currency pairs — still real market price
+  // 3) Real daily FX history (Frankfurter) — better HTF than synthetic
   try {
-    const candles = await fetchFxSpotCandles(asset, interval)
-    return { candles, live: true }
+    const { candles, spot } = await fetchFrankfurterDaily(asset)
+    let finalSpot = spot
+    try {
+      const tv = await fetchTradingViewQuote(asset)
+      finalSpot = tv.price
+    } catch {
+      /* keep */
+    }
+    result = {
+      candles: finalSpot != null ? pinSpot(candles, finalSpot) : candles,
+      live: true,
+      source: 'frankfurter',
+      spot: finalSpot,
+    }
+    candleCache.set(cacheKey, { at: Date.now(), value: result })
+    return result
   } catch {
     /* continue */
   }
 
-  return { candles: syntheticCandles(asset, interval), live: false }
+  // 4) TradingView spot only — price is real, structure is estimated (NOT live OHLC)
+  try {
+    const tv = await fetchTradingViewQuote(asset)
+    result = {
+      candles: syntheticCandles(asset, interval, tv.price),
+      live: false,
+      source: 'tradingview-spot',
+      spot: tv.price,
+    }
+    candleCache.set(cacheKey, { at: Date.now(), value: result })
+    return result
+  } catch {
+    /* continue */
+  }
+
+  result = {
+    candles: syntheticCandles(asset, interval),
+    live: false,
+    source: 'synthetic',
+    spot: BASE[asset],
+  }
+  candleCache.set(cacheKey, { at: Date.now(), value: result })
+  return result
 }
 
-/** Fetch candles. Falls back through live sources then synthetic. */
 export async function fetchCandles(
   asset: string,
-  interval: ChartInterval = '60m',
+  interval: ChartInterval = '15m',
 ): Promise<Candle[]> {
   const { candles } = await fetchCandlesResult(asset, interval)
   return candles
 }
 
-/** Multi-timeframe pack: HTF bias (4H/1H) + 15m entries. */
 export interface MultiTimeframeFeed {
   h4: CandleFetchResult
   h1: CandleFetchResult
   m15: CandleFetchResult
   live: boolean
+  spot?: number
+  source: MarketSource
 }
 
 export async function fetchMultiTimeframe(asset: string): Promise<MultiTimeframeFeed> {
-  const [h4, h1, m15] = await Promise.all([
-    fetchCandlesResult(asset, '240m'),
+  // One 60m pull covers 1H + aggregated 4H (fewer upstream calls → fewer rate limits)
+  const [h1raw, m15] = await Promise.all([
     fetchCandlesResult(asset, '60m'),
     fetchCandlesResult(asset, '15m'),
   ])
+
+  const h4Candles =
+    h1raw.live && h1raw.candles.length >= 40
+      ? aggregateBars(h1raw.candles, 4)
+      : h1raw.candles
+  const h4: CandleFetchResult = {
+    candles: h4Candles,
+    live: h1raw.live,
+    source: h1raw.source,
+    spot: h1raw.spot,
+  }
+  const h1 = h1raw
+
+  let spot = m15.spot ?? h1.spot ?? h4.spot
+  try {
+    const tv = await fetchTradingViewQuote(asset)
+    spot = tv.price
+  } catch {
+    /* keep */
+  }
+
+  const live = h4.live && h1.live && m15.live
+  const source: MarketSource = live
+    ? m15.source
+    : m15.source === 'synthetic' && h1.source === 'synthetic'
+      ? 'synthetic'
+      : m15.source
+
   return {
-    h4,
-    h1,
-    m15,
-    live: h4.live || h1.live || m15.live,
+    h4: spot != null && h4.live ? { ...h4, candles: pinSpot(h4.candles, spot), spot } : h4,
+    h1: spot != null && h1.live ? { ...h1, candles: pinSpot(h1.candles, spot), spot } : h1,
+    m15: spot != null ? { ...m15, candles: pinSpot(m15.candles, spot), spot } : m15,
+    live,
+    spot,
+    source,
   }
 }
 

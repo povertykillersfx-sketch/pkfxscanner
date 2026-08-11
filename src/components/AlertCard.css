@@ -159,6 +159,22 @@
   background: rgba(22, 163, 74, 0.12);
 }
 
+.demo-pill {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  border-radius: var(--radius-pill);
+  padding: 0.12rem 0.4rem;
+}
+
+[data-theme='light'] .demo-pill {
+  color: #991b1b;
+  background: rgba(239, 68, 68, 0.1);
+}
+
 .alert-ai-note {
   color: var(--text-muted);
   font-size: 0.88rem;

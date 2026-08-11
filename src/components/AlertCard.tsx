@@ -43,7 +43,12 @@ export function AlertCard({ alert }: AlertCardProps) {
             {alert.sentiment}
           </span>
           <span className="alert-session">{alert.session}</span>
-          {alert.live && <span className="live-pill" title="Built from live market data">LIVE</span>}
+          {alert.live && <span className="live-pill" title="Built from live market OHLC">LIVE</span>}
+          {!alert.live && (
+            <span className="demo-pill" title="Not live market OHLC — demo/fallback feed">
+              DEMO
+            </span>
+          )}
           <span className={`trend-orb ${isBearish ? 'down' : 'up'}`}>
             {isBearish ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
           </span>
@@ -77,6 +82,12 @@ export function AlertCard({ alert }: AlertCardProps) {
             {alert.entry && (
               <p className="alert-entry">
                 15m entry: <strong>{alert.entry}</strong>
+                {alert.spot && alert.spot !== alert.entry && (
+                  <>
+                    {' '}
+                    · market <strong>{alert.spot}</strong>
+                  </>
+                )}
               </p>
             )}
 

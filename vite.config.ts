@@ -9,8 +9,9 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api/yahoo': {
-        target: 'https://query1.finance.yahoo.com',
+        target: 'https://query2.finance.yahoo.com',
         changeOrigin: true,
+        secure: true,
         rewrite: (path) => path.replace(/^\/api\/yahoo/, ''),
       },
     },
@@ -20,8 +21,9 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api/yahoo': {
-        target: 'https://query1.finance.yahoo.com',
+        target: 'https://query2.finance.yahoo.com',
         changeOrigin: true,
+        secure: true,
         rewrite: (path) => path.replace(/^\/api\/yahoo/, ''),
       },
     },

@@ -11,9 +11,9 @@ import {
   type MultiTimeframeFeed,
 } from './marketData'
 
-/** Bump key so old 1H-only entries regenerate under MTF rules */
-const ALERTS_KEY = 'pkfx_live_alerts_v2_mtf'
-const REFRESH_MS = 15 * 60 * 1000
+/** Bump key so stale demo/synthetic signals regenerate from real OHLC */
+const ALERTS_KEY = 'pkfx_live_alerts_v3_real'
+const REFRESH_MS = 10 * 60 * 1000
 
 function utcDateKey(d = new Date()): string {
   return d.toISOString().slice(0, 10)
@@ -194,6 +194,8 @@ export interface MarketSignal {
   aiNote: string
   live: boolean
   changePct: number
+  spot?: string
+  dataSource?: string
 }
 
 /**
@@ -231,7 +233,9 @@ export function analyzeMultiTimeframe(
     strategy = `${strategy} (wait 15m)`
   }
 
-  const { entry, microSwingHigh, microSwingLow } = entryFrom15m(feed.m15.candles, sentiment)
+  const { entry: rawEntry, microSwingHigh, microSwingLow } = entryFrom15m(feed.m15.candles, sentiment)
+  // Prefer verified live spot for the 15m entry so it matches TradingView / market
+  const entry = feed.spot != null && Number.isFinite(feed.spot) ? feed.spot : rawEntry
   const { targets, reversals } = levelsFromHtf(
     asset,
     sentiment,
@@ -243,8 +247,12 @@ export function analyzeMultiTimeframe(
   )
 
   const bias = sentiment === 'Bullish' ? 'buy-side' : 'sell-side'
-  const src = feed.live ? 'live market data' : 'cached/fallback prices'
-  const aiNote = `PKFX MTF on ${asset} (${session}): 4H ${h4.sentiment.toLowerCase()} (${h4.changePct >= 0 ? '+' : ''}${h4.changePct.toFixed(2)}%) → 1H ${h1.sentiment.toLowerCase()} → entry on 15m at ${formatPrice(asset, entry)}. ${bias} bias from higher timeframes; targets from 1H/4H structure, invalidation from 15m. Source: ${src}.`
+  const src = feed.live
+    ? `live OHLC (${feed.source})`
+    : feed.source === 'tradingview-spot'
+      ? 'TradingView spot (OHLC fallback)'
+      : 'DEMO / synthetic — not live market'
+  const aiNote = `PKFX MTF on ${asset} (${session}): 4H ${h4.sentiment.toLowerCase()} (${h4.changePct >= 0 ? '+' : ''}${h4.changePct.toFixed(2)}%) → 1H ${h1.sentiment.toLowerCase()} → 15m entry ${formatPrice(asset, entry)}${feed.spot != null ? ` · market ${formatPrice(asset, feed.spot)}` : ''}. ${bias} bias from HTF; targets from 1H/4H structure. Feed: ${src}.`
 
   return {
     sentiment,
@@ -255,6 +263,8 @@ export function analyzeMultiTimeframe(
     aiNote,
     live: feed.live,
     changePct: m15Read.changePct,
+    spot: feed.spot != null ? formatPrice(asset, feed.spot) : undefined,
+    dataSource: feed.source,
   }
 }
 
@@ -266,10 +276,11 @@ export function analyzeMarket(
   live: boolean,
 ): MarketSignal {
   return analyzeMultiTimeframe(asset, session, {
-    h4: { candles, live },
-    h1: { candles, live },
-    m15: { candles, live },
+    h4: { candles, live, source: live ? 'yahoo' : 'synthetic' },
+    h1: { candles, live, source: live ? 'yahoo' : 'synthetic' },
+    m15: { candles, live, source: live ? 'yahoo' : 'synthetic' },
     live,
+    source: live ? 'yahoo' : 'synthetic',
   })
 }
 
@@ -324,6 +335,8 @@ function createSignal(
     entry: analysis.entry,
     aiNote: analysis.aiNote,
     live: analysis.live,
+    spot: analysis.spot,
+    dataSource: analysis.dataSource,
   }
 }
 
