@@ -94,7 +94,12 @@ export function AlertCard({ alert }: AlertCardProps) {
         )}
       </article>
 
-      {chartOpen && <ChartModal asset={alert.asset} onClose={() => setChartOpen(false)} />}
+      {chartOpen && (
+        <ChartModal
+          alert={alert}
+          onClose={() => setChartOpen(false)}
+        />
+      )}
     </>
   )
 }
