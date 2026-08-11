@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
@@ -18,37 +18,12 @@ interface ChartModalProps {
   onClose: () => void
 }
 
-function chartEmbedUrl(symbol: string): string {
-  const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
-  const params = new URLSearchParams({
-    symbol,
-    interval: '60',
-    theme,
-    style: '1',
-    locale: 'en',
-    toolbar_bg: theme === 'light' ? 'f8fafc' : '0a0218',
-    enable_publishing: 'false',
-    hide_top_toolbar: 'false',
-    hide_legend: 'false',
-    save_image: 'false',
-    withdateranges: 'true',
-    allow_symbol_change: 'true',
-    calendar: 'false',
-    hideideas: '1',
-    studies: '[]',
-  })
-  return `https://s.tradingview.com/widgetembed/?${params.toString()}`
-}
-
 export function ChartModal({ alert, onClose }: ChartModalProps) {
   const symbol = tradingViewSymbol(alert.asset)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const widgetId = useId().replace(/:/g, '')
   const [floatOpen, setFloatOpen] = useState(true)
   const [favorited, setFavorited] = useState(false)
-  const [embedSrc, setEmbedSrc] = useState(() => chartEmbedUrl(symbol))
-
-  useEffect(() => {
-    setEmbedSrc(chartEmbedUrl(symbol))
-  }, [symbol])
 
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -68,6 +43,57 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    el.innerHTML = ''
+
+    const widgetHost = document.createElement('div')
+    widgetHost.className = 'tradingview-widget-container__widget'
+    widgetHost.id = `tv_chart_${widgetId}`
+    el.appendChild(widgetHost)
+
+    const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
+
+    const script = document.createElement('script')
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
+    script.type = 'text/javascript'
+    script.async = true
+    script.innerHTML = JSON.stringify({
+      autosize: true,
+      symbol,
+      interval: '60',
+      timezone: 'Etc/UTC',
+      theme,
+      style: '1',
+      locale: 'en',
+      backgroundColor: theme === 'light' ? '#ffffff' : '#0a0218',
+      gridColor: theme === 'light' ? 'rgba(15, 23, 42, 0.06)' : 'rgba(191, 0, 255, 0.08)',
+      toolbar_bg: theme === 'light' ? '#f8fafc' : '#120424',
+      enable_publishing: false,
+      hide_top_toolbar: false,
+      hide_legend: false,
+      /** Left drawings toolbar (trendlines, fibs, shapes, etc.) */
+      hide_side_toolbar: false,
+      allow_symbol_change: true,
+      save_image: true,
+      calendar: true,
+      details: true,
+      hotlist: false,
+      show_popup_button: true,
+      withdateranges: true,
+      watchlist: false,
+      studies: ['STD;SMA', 'Volume@tv-basicstudies'],
+      support_host: 'https://www.tradingview.com',
+    })
+    el.appendChild(script)
+
+    return () => {
+      el.innerHTML = ''
+    }
+  }, [symbol, widgetId])
+
   const isBearish = alert.sentiment === 'Bearish'
 
   return createPortal(
@@ -75,7 +101,7 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
       <header className="chart-desktop-bar">
         <h2 id="chart-desktop-title" className="font-display">
           {alert.asset}
-          <span className="chart-symbol"> · TradingView</span>
+          <span className="chart-symbol"> · Full TradingView</span>
         </h2>
         <div className="chart-desktop-actions">
           {!floatOpen && (
@@ -97,16 +123,7 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
         </div>
       </header>
 
-      <div className="chart-desktop-frame">
-        <iframe
-          key={embedSrc}
-          className="chart-iframe"
-          title={`${alert.asset} TradingView chart`}
-          src={embedSrc}
-          allow="fullscreen"
-          allowFullScreen
-        />
-      </div>
+      <div className="chart-desktop-frame tradingview-widget-container" ref={containerRef} />
 
       {floatOpen && (
         <FloatingAlertPanel
@@ -198,7 +215,9 @@ function FloatingAlertPanel({
 
       <div className="floating-alert-body">
         <div className="floating-meta">
-          <span>{alert.session} · {alert.strategy}</span>
+          <span>
+            {alert.session} · {alert.strategy}
+          </span>
           <span>{alert.date}</span>
         </div>
 

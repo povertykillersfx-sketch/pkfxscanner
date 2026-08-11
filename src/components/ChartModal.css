@@ -91,7 +91,7 @@ html.chart-open body {
   color: var(--neon-bright);
 }
 
-/* Full remaining page under the bar — no letterbox */
+/* Full remaining page under the bar */
 .chart-desktop-frame {
   position: absolute;
   top: 52px;
@@ -106,14 +106,21 @@ html.chart-open body {
   background: #000;
 }
 
-.chart-iframe {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  margin: 0;
-  padding: 0;
-  background: #000;
+.chart-desktop-frame.tradingview-widget-container,
+.chart-desktop-frame .tradingview-widget-container__widget {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.chart-desktop-frame iframe {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* ——— Floating alert over chart ——— */
