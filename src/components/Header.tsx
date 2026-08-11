@@ -1,5 +1,5 @@
 import { Menu } from 'lucide-react'
-import { USER } from '../data/mockData'
+import { getCurrentUser } from '../auth'
 import './Header.css'
 
 interface HeaderProps {
@@ -7,14 +7,18 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
+  const user = getCurrentUser()
+  const firstName = user?.firstName ?? 'Trader'
+  const avatar = user?.avatar
+
   return (
     <header className="app-header animate-fade-up">
       <button className="menu-toggle" type="button" aria-label="Open menu" onClick={onMenuClick}>
         <Menu size={22} />
       </button>
-      <img className="header-avatar" src={USER.avatar} alt="" width={40} height={40} />
+      {avatar && <img className="header-avatar" src={avatar} alt="" width={40} height={40} />}
       <h1 className="header-welcome">
-        Welcome <span className="name">{USER.firstName}</span>{' '}
+        Welcome <span className="name">{firstName}</span>{' '}
         <span className="wave" aria-hidden>
           👋
         </span>

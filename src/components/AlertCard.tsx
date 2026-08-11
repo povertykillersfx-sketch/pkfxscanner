@@ -9,88 +9,93 @@ import {
   X,
 } from 'lucide-react'
 import type { Alert } from '../data/mockData'
+import { ChartModal } from './ChartModal'
 import './AlertCard.css'
 
 interface AlertCardProps {
   alert: Alert
-  defaultExpanded?: boolean
 }
 
-export function AlertCard({ alert, defaultExpanded = false }: AlertCardProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded)
+export function AlertCard({ alert }: AlertCardProps) {
+  const [expanded, setExpanded] = useState(false)
   const [favorited, setFavorited] = useState(false)
+  const [chartOpen, setChartOpen] = useState(false)
   const isBearish = alert.sentiment === 'Bearish'
 
   return (
-    <article className={`alert-card ${expanded ? 'expanded' : ''}`}>
-      <header className="alert-row">
-        <span className="alert-asset">{alert.asset}</span>
-        <span className={`badge ${isBearish ? 'badge-bearish' : 'badge-bullish'}`}>
-          {alert.sentiment}
-        </span>
-        <span className="alert-strategy">{alert.strategy}</span>
-        <span className={`trend-orb ${isBearish ? 'down' : 'up'}`}>
-          {isBearish ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
-        </span>
-        <span className="alert-date">
-          <span className="date-dot" aria-hidden />
-          {alert.date}
-        </span>
-        <button
-          type="button"
-          className="expand-btn"
-          aria-expanded={expanded}
-          aria-label={expanded ? 'Collapse alert' : 'Expand alert'}
-          onClick={() => setExpanded((v) => !v)}
-        >
-          {expanded ? <X size={16} /> : <ChevronDown size={16} />}
-        </button>
-      </header>
+    <>
+      <article className={`alert-card ${expanded ? 'expanded' : ''}`}>
+        <header className="alert-row">
+          <span className="alert-asset">{alert.asset}</span>
+          <span className={`badge ${isBearish ? 'badge-bearish' : 'badge-bullish'}`}>
+            {alert.sentiment}
+          </span>
+          <span className="alert-strategy">{alert.strategy}</span>
+          <span className={`trend-orb ${isBearish ? 'down' : 'up'}`}>
+            {isBearish ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+          </span>
+          <span className="alert-date">
+            <span className="date-dot" aria-hidden />
+            {alert.date}
+          </span>
+          <button
+            type="button"
+            className="expand-btn"
+            aria-expanded={expanded}
+            aria-label={expanded ? 'Collapse alert' : 'Expand alert'}
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? <X size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </header>
 
-      {expanded && (
-        <div className="alert-body animate-fade-up">
-          {alert.trending && (
-            <div className="trending-label">
-              <Rocket size={14} />
-              <span>TRENDING</span>
-            </div>
-          )}
+        {expanded && (
+          <div className="alert-body animate-fade-up">
+            {alert.trending && (
+              <div className="trending-label">
+                <Rocket size={14} />
+                <span>TRENDING</span>
+              </div>
+            )}
 
-          <div className="levels-grid">
-            <div className="levels-col">
-              <h4>Possible Targets</h4>
-              {(alert.targets ?? ['—', '—']).map((t) => (
-                <div key={`t-${t}`} className="level-bar target">
-                  {t}
-                </div>
-              ))}
+            <div className="levels-grid">
+              <div className="levels-col">
+                <h4>Possible Targets</h4>
+                {(alert.targets ?? ['—', '—']).map((t) => (
+                  <div key={`t-${t}`} className="level-bar target">
+                    {t}
+                  </div>
+                ))}
+              </div>
+              <div className="levels-col">
+                <h4>Possible Reversals</h4>
+                {(alert.reversals ?? ['—', '—']).map((r) => (
+                  <div key={`r-${r}`} className="level-bar reversal">
+                    {r}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="levels-col">
-              <h4>Possible Reversals</h4>
-              {(alert.reversals ?? ['—', '—']).map((r) => (
-                <div key={`r-${r}`} className="level-bar reversal">
-                  {r}
-                </div>
-              ))}
+
+            <div className="alert-actions">
+              <button type="button" className="btn-dark" onClick={() => setChartOpen(true)}>
+                VIEW CHART
+              </button>
+              <button
+                type="button"
+                className={`fav-btn ${favorited ? 'on' : ''}`}
+                aria-label="Favorite"
+                onClick={() => setFavorited((v) => !v)}
+              >
+                <Heart size={18} fill={favorited ? 'currentColor' : 'none'} />
+              </button>
             </div>
           </div>
+        )}
+      </article>
 
-          <div className="alert-actions">
-            <button type="button" className="btn-dark">
-              VIEW CHART
-            </button>
-            <button
-              type="button"
-              className={`fav-btn ${favorited ? 'on' : ''}`}
-              aria-label="Favorite"
-              onClick={() => setFavorited((v) => !v)}
-            >
-              <Heart size={18} fill={favorited ? 'currentColor' : 'none'} />
-            </button>
-          </div>
-        </div>
-      )}
-    </article>
+      {chartOpen && <ChartModal asset={alert.asset} onClose={() => setChartOpen(false)} />}
+    </>
   )
 }
 
@@ -99,7 +104,7 @@ interface AlertsPanelProps {
   title?: string
   onEditScanner?: () => void
   limit?: number
-  expandFirst?: boolean
+  emptyHint?: string
 }
 
 export function AlertsPanel({
@@ -107,7 +112,7 @@ export function AlertsPanel({
   title = 'My Alerts',
   onEditScanner,
   limit,
-  expandFirst = false,
+  emptyHint = 'No symbols in your scanner yet. Click Edit Scanner to add instruments.',
 }: AlertsPanelProps) {
   const [showAll, setShowAll] = useState(false)
   const visible = showAll || !limit ? alerts : alerts.slice(0, limit)
@@ -123,11 +128,22 @@ export function AlertsPanel({
         )}
       </div>
 
-      <div className="alerts-grid">
-        {visible.map((alert, i) => (
-          <AlertCard key={alert.id} alert={alert} defaultExpanded={expandFirst && i === 0} />
-        ))}
-      </div>
+      {alerts.length === 0 ? (
+        <div className="alerts-empty">
+          <p>{emptyHint}</p>
+          {onEditScanner && (
+            <button type="button" className="btn btn-primary" onClick={onEditScanner}>
+              Edit Scanner
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="alerts-grid">
+          {visible.map((alert) => (
+            <AlertCard key={alert.id} alert={alert} />
+          ))}
+        </div>
+      )}
 
       {limit && alerts.length > limit && (
         <div className="alerts-footer">

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
 import { SignIn } from './pages/SignIn'
+import { SignUp } from './pages/SignUp'
 import { Dashboard } from './pages/Dashboard'
 import { AlertsPage } from './pages/AlertsPage'
 import { EBooks } from './pages/EBooks'
@@ -13,7 +14,6 @@ import {
   ForgotPassword,
   Logout,
   More,
-  SignUp,
 } from './pages/Placeholder'
 
 export default function App() {

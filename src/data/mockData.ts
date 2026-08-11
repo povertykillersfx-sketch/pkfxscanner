@@ -32,6 +32,7 @@ export interface Ebook {
   coverTitle: string
 }
 
+/** Available symbols users can add to their scanner */
 export const INSTRUMENTS = [
   'EURUSD',
   'GBPUSD',
@@ -44,61 +45,31 @@ export const INSTRUMENTS = [
   'AUDUSD',
 ] as const
 
-export const USER = {
+export type Instrument = (typeof INSTRUMENTS)[number]
+
+/** TradingView symbol ids for chart embeds */
+export const TRADINGVIEW_SYMBOLS: Record<string, string> = {
+  EURUSD: 'FX:EURUSD',
+  GBPUSD: 'FX:GBPUSD',
+  USDJPY: 'FX:USDJPY',
+  NZDUSD: 'FX:NZDUSD',
+  USDZAR: 'FX:USDZAR',
+  GOLD: 'OANDA:XAUUSD',
+  US30: 'FOREXCOM:US30',
+  NASDAQ: 'NASDAQ:NDX',
+  AUDUSD: 'FX:AUDUSD',
+}
+
+export function tradingViewSymbol(asset: string): string {
+  return TRADINGVIEW_SYMBOLS[asset] ?? `FX:${asset}`
+}
+
+export const DEMO_USER = {
   firstName: 'Kamogelo',
   fullName: 'Kamogelo Dube',
   email: 'povertykillersfx@gmail.com',
   plan: 'free',
-  avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Kamogelo&backgroundColor=b6e3f4',
 }
-
-export const ALERTS: Alert[] = [
-  {
-    id: '1',
-    asset: 'GOLD',
-    sentiment: 'Bearish',
-    strategy: 'Momentum',
-    date: '2026-07-29',
-    trending: true,
-    targets: ['3320.50', '3305.20'],
-    reversals: ['3365.80', '3380.10'],
-  },
-  {
-    id: '2',
-    asset: 'GOLD',
-    sentiment: 'Bullish',
-    strategy: 'Momentum',
-    date: '2026-07-29',
-  },
-  {
-    id: '3',
-    asset: 'GOLD',
-    sentiment: 'Bearish',
-    strategy: 'Momentum',
-    date: '2026-07-28',
-  },
-  {
-    id: '4',
-    asset: 'GOLD',
-    sentiment: 'Bullish',
-    strategy: 'Momentum',
-    date: '2026-07-28',
-  },
-  {
-    id: '5',
-    asset: 'GOLD',
-    sentiment: 'Bearish',
-    strategy: 'Momentum',
-    date: '2026-07-27',
-  },
-  {
-    id: '6',
-    asset: 'GOLD',
-    sentiment: 'Bullish',
-    strategy: 'Momentum',
-    date: '2026-07-27',
-  },
-]
 
 export const STATS = {
   savedAlerts: 2,
@@ -179,3 +150,54 @@ export const COURSE_SECTIONS: CourseSection[] = [
     ],
   },
 ]
+
+/** Demo price levels used when generating sample alerts per symbol */
+const SAMPLE_LEVELS: Record<string, { targets: string[]; reversals: string[] }> = {
+  GOLD: { targets: ['3320.50', '3305.20'], reversals: ['3365.80', '3380.10'] },
+  EURUSD: { targets: ['1.0820', '1.0785'], reversals: ['1.0910', '1.0945'] },
+  GBPUSD: { targets: ['1.2640', '1.2595'], reversals: ['1.2740', '1.2785'] },
+  USDJPY: { targets: ['148.20', '147.55'], reversals: ['149.80', '150.40'] },
+  NZDUSD: { targets: ['0.5980', '0.5945'], reversals: ['0.6055', '0.6090'] },
+  USDZAR: { targets: ['18.20', '18.05'], reversals: ['18.55', '18.72'] },
+  US30: { targets: ['39850', '39620'], reversals: ['40280', '40510'] },
+  NASDAQ: { targets: ['17820', '17690'], reversals: ['18140', '18275'] },
+  AUDUSD: { targets: ['0.6520', '0.6485'], reversals: ['0.6610', '0.6645'] },
+}
+
+function daysAgo(n: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Build dashboard alerts for the user's selected scanner symbols */
+export function alertsForSymbols(symbols: string[]): Alert[] {
+  if (symbols.length === 0) return []
+
+  const alerts: Alert[] = []
+  symbols.forEach((asset, si) => {
+    const levels = SAMPLE_LEVELS[asset] ?? { targets: ['—', '—'], reversals: ['—', '—'] }
+    alerts.push({
+      id: `${asset}-bear-${si}`,
+      asset,
+      sentiment: 'Bearish',
+      strategy: 'Momentum',
+      date: daysAgo(si % 3),
+      trending: si === 0,
+      targets: levels.targets,
+      reversals: levels.reversals,
+    })
+    alerts.push({
+      id: `${asset}-bull-${si}`,
+      asset,
+      sentiment: 'Bullish',
+      strategy: 'Momentum',
+      date: daysAgo(si % 3),
+    })
+  })
+  return alerts
+}
+
+export function avatarUrl(seed: string): string {
+  return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4`
+}

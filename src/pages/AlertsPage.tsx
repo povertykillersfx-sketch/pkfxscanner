@@ -1,18 +1,31 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertsPanel } from '../components/AlertCard'
 import { ScannerModal } from '../components/ScannerModal'
 import { StatsRow } from '../components/StatsRow'
-import { ALERTS } from '../data/mockData'
+import { alertsForSymbols } from '../data/mockData'
+import { getScannerSymbols } from '../scanner'
 import './Dashboard.css'
 
 export function AlertsPage() {
   const [scannerOpen, setScannerOpen] = useState(false)
+  const [symbols, setSymbols] = useState<string[]>(() => getScannerSymbols())
+
+  useEffect(() => {
+    function onChange(e: Event) {
+      const detail = (e as CustomEvent<string[]>).detail
+      setSymbols(Array.isArray(detail) ? detail : getScannerSymbols())
+    }
+    window.addEventListener('pkfx-scanner-change', onChange)
+    return () => window.removeEventListener('pkfx-scanner-change', onChange)
+  }, [])
+
+  const alerts = alertsForSymbols(symbols)
 
   return (
     <div className="dashboard-page">
       <div className="dashboard-top">
         <AlertsPanel
-          alerts={ALERTS}
+          alerts={alerts}
           onEditScanner={() => setScannerOpen(true)}
           limit={6}
         />
@@ -32,8 +45,13 @@ export function AlertsPage() {
           </div>
         </aside>
       </div>
-      <StatsRow />
-      {scannerOpen && <ScannerModal onClose={() => setScannerOpen(false)} />}
+      <StatsRow savedAlerts={alerts.length} />
+      {scannerOpen && (
+        <ScannerModal
+          onClose={() => setScannerOpen(false)}
+          onSaved={(next) => setSymbols(next)}
+        />
+      )}
     </div>
   )
 }

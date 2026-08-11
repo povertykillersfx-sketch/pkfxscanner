@@ -6,13 +6,17 @@ import {
 import { STATS } from '../data/mockData'
 import './StatsRow.css'
 
-const items = [
-  { label: 'Saved Alerts', value: String(STATS.savedAlerts), icon: Bell },
-  { label: 'Win Rate', value: STATS.winRate, icon: Clock3 },
-  { label: 'Strategy Score', value: STATS.strategyScore, icon: Trophy },
-]
+interface StatsRowProps {
+  savedAlerts?: number
+}
 
-export function StatsRow() {
+export function StatsRow({ savedAlerts }: StatsRowProps) {
+  const items = [
+    { label: 'Saved Alerts', value: String(savedAlerts ?? STATS.savedAlerts), icon: Bell },
+    { label: 'Win Rate', value: STATS.winRate, icon: Clock3 },
+    { label: 'Strategy Score', value: STATS.strategyScore, icon: Trophy },
+  ]
+
   return (
     <div className="stats-row animate-fade-up stagger-3">
       {items.map(({ label, value, icon: Icon }) => (

@@ -1,4 +1,4 @@
-import { USER } from '../data/mockData'
+import { getCurrentUser } from '../auth'
 import './ProfileModal.css'
 
 interface ProfileModalProps {
@@ -6,6 +6,9 @@ interface ProfileModalProps {
 }
 
 export function ProfileModal({ onClose }: ProfileModalProps) {
+  const user = getCurrentUser()
+  if (!user) return null
+
   return (
     <div className="overlay" role="presentation" onClick={onClose}>
       <div
@@ -20,11 +23,11 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
         </button>
 
         <div className="profile-avatar-wrap">
-          <img src={USER.avatar} alt="" className="profile-avatar" />
+          <img src={user.avatar} alt="" className="profile-avatar" />
         </div>
 
         <h2 id="profile-name" className="profile-name font-display">
-          {USER.fullName}
+          {user.fullName}
         </h2>
 
         <p className="profile-section-title">Basic Information</p>
@@ -32,11 +35,11 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
         <div className="profile-fields">
           <div className="profile-field">
             <label>Email Address</label>
-            <p>{USER.email}</p>
+            <p>{user.email}</p>
           </div>
           <div className="profile-field">
             <label>Current Plan</label>
-            <p>{USER.plan}</p>
+            <p>{user.plan}</p>
           </div>
         </div>
       </div>

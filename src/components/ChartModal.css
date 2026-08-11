@@ -1,0 +1,53 @@
+.chart-modal {
+  width: min(960px, 96vw);
+  height: min(720px, 90vh);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1rem 0.85rem;
+}
+
+.chart-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding-right: 0.25rem;
+}
+
+.chart-modal-header h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.chart-symbol {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.chart-close {
+  position: static;
+}
+
+.chart-frame {
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-video);
+}
+
+.chart-open-tv {
+  display: inline-flex;
+  align-self: flex-end;
+  margin-top: 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--neon-bright);
+}
+
+.chart-open-tv:hover {
+  text-decoration: underline;
+}

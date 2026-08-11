@@ -55,20 +55,6 @@ export function More() {
   )
 }
 
-export function SignUp() {
-  return (
-    <div className="cyber-bg placeholder-auth">
-      <div className="panel panel-glow animate-fade-up placeholder-auth-card">
-        <h2 className="font-display">Sign Up</h2>
-        <p>Account creation will be wired to auth next. Use Login to explore the dashboard.</p>
-        <Link to="/" className="btn btn-primary">
-          Back to Sign In
-        </Link>
-      </div>
-    </div>
-  )
-}
-
 export function ForgotPassword() {
   return (
     <div className="cyber-bg placeholder-auth">
