@@ -1,5 +1,4 @@
 import { Download } from 'lucide-react'
-import { Logo } from '../components/Logo'
 import { EBOOKS } from '../data/mockData'
 import './EBooks.css'
 
@@ -12,7 +11,7 @@ export function EBooks() {
             <div className="ebook-cover">
               <pre className="cover-title font-display">{book.coverTitle}</pre>
               <div className="cover-logo">
-                <Logo size="sm" />
+                <img src="/brand/logo-mark.png" alt="" width={36} height={36} />
               </div>
             </div>
             <div className="ebook-body">

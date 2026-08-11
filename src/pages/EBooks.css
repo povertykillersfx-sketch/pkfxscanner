@@ -47,12 +47,15 @@
 }
 
 .cover-logo {
-  transform: scale(0.7);
-  transform-origin: center bottom;
+  display: grid;
+  place-items: center;
 }
 
-.cover-logo .logo-pk {
-  color: #fff;
+.cover-logo img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .ebook-body {

@@ -22,7 +22,12 @@
 }
 
 .sidebar-logo {
-  padding: 0.25rem 0.4rem 0.75rem;
+  padding: 0.25rem 0.25rem 0.85rem;
+}
+
+.sidebar-logo .logo-img {
+  height: 48px;
+  max-width: 100%;
 }
 
 .sidebar-nav {
