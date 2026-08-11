@@ -5,42 +5,13 @@ import {
   type MarketSession,
   type Sentiment,
 } from './data/mockData'
+import { fetchCandlesResult, type Candle } from './marketData'
 
-const ALERTS_KEY = 'pkfx_ai_alerts'
-
-/** Approximate mid-market reference prices for AI level generation */
-const BASE_PRICES: Record<string, number> = {
-  EURUSD: 1.085,
-  GBPUSD: 1.268,
-  USDJPY: 148.6,
-  NZDUSD: 0.602,
-  USDZAR: 18.35,
-  GOLD: 3345,
-  US30: 40050,
-  NASDAQ: 17980,
-  AUDUSD: 0.656,
-}
+const ALERTS_KEY = 'pkfx_live_alerts_v1'
+const REFRESH_MS = 25 * 60 * 1000
 
 function utcDateKey(d = new Date()): string {
   return d.toISOString().slice(0, 10)
-}
-
-function hashSeed(input: string): number {
-  let h = 2166136261
-  for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return h >>> 0
-}
-
-function mulberry32(seed: number) {
-  return function rand() {
-    let t = (seed += 0x6d2b79f5)
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
 }
 
 function formatPrice(asset: string, value: number): string {
@@ -51,36 +22,124 @@ function formatPrice(asset: string, value: number): string {
   return value.toFixed(4)
 }
 
-function buildLevels(asset: string, sentiment: Sentiment, seed: string) {
-  const rand = mulberry32(hashSeed(seed))
-  const base = BASE_PRICES[asset] ?? 1
-  const step =
-    asset === 'GOLD' || asset === 'US30' || asset === 'NASDAQ'
-      ? base * 0.0025
-      : asset === 'USDJPY'
-        ? 0.18
-        : asset === 'USDZAR'
-          ? 0.08
-          : 0.0022
-
-  const entry = base + (rand() - 0.5) * step * 0.6
-  const dir = sentiment === 'Bearish' ? -1 : 1
-
-  const targets = [
-    formatPrice(asset, entry + dir * step * (1.1 + rand() * 0.5)),
-    formatPrice(asset, entry + dir * step * (1.9 + rand() * 0.6)),
-  ]
-  const reversals = [
-    formatPrice(asset, entry - dir * step * (0.9 + rand() * 0.4)),
-    formatPrice(asset, entry - dir * step * (1.7 + rand() * 0.5)),
-  ]
-
-  return { entry: formatPrice(asset, entry), targets, reversals }
+function ema(values: number[], period: number): number[] {
+  if (!values.length) return []
+  const k = 2 / (period + 1)
+  const out: number[] = [values[0]!]
+  for (let i = 1; i < values.length; i++) {
+    out.push(values[i]! * k + out[i - 1]! * (1 - k))
+  }
+  return out
 }
 
-function aiNote(asset: string, session: MarketSession, sentiment: Sentiment): string {
+function atr(candles: Candle[], period = 14): number {
+  if (candles.length < 2) return candles[0] ? Math.abs(candles[0].high - candles[0].low) : 0
+  const trs: number[] = []
+  for (let i = 1; i < candles.length; i++) {
+    const cur = candles[i]!
+    const prev = candles[i - 1]!
+    trs.push(Math.max(cur.high - cur.low, Math.abs(cur.high - prev.close), Math.abs(cur.low - prev.close)))
+  }
+  const slice = trs.slice(-period)
+  return slice.reduce((a, b) => a + b, 0) / Math.max(slice.length, 1)
+}
+
+/** Bars to weight for a given session (hourly). */
+function sessionLookback(session: MarketSession): number {
+  switch (session) {
+    case 'Sydney':
+      return 6
+    case 'Asian':
+      return 8
+    case 'London':
+      return 8
+    case 'New York':
+      return 7
+    default:
+      return 8
+  }
+}
+
+export interface MarketSignal {
+  sentiment: Sentiment
+  strategy: string
+  entry: string
+  targets: string[]
+  reversals: string[]
+  aiNote: string
+  live: boolean
+  changePct: number
+}
+
+/** Build a directional signal from live (or fallback) candles — no OpenAI required. */
+export function analyzeMarket(
+  asset: string,
+  session: MarketSession,
+  candles: Candle[],
+  live: boolean,
+): MarketSignal {
+  const lookback = sessionLookback(session)
+  const window = candles.slice(-Math.max(lookback + 5, 20))
+  const closes = window.map((c) => c.close)
+  const last = window[window.length - 1]!
+  const first = window[Math.max(0, window.length - lookback)]!
+  const changePct = ((last.close - first.open) / first.open) * 100
+  const range = atr(window, 14)
+  const fast = ema(closes, 9)
+  const slow = ema(closes, 21)
+  const fastNow = fast[fast.length - 1]!
+  const slowNow = slow[slow.length - 1]!
+  const fastPrev = fast[fast.length - 2] ?? fastNow
+  const slowPrev = slow[slow.length - 2] ?? slowNow
+
+  const emaBull = fastNow > slowNow
+  const crossUp = fastPrev <= slowPrev && fastNow > slowNow
+  const crossDown = fastPrev >= slowPrev && fastNow < slowNow
+  const swingHigh = Math.max(...window.slice(-lookback).map((c) => c.high))
+  const swingLow = Math.min(...window.slice(-lookback).map((c) => c.low))
+  const brokeHigh = last.close > swingHigh * 0.999 && changePct > 0.05
+  const brokeLow = last.close < swingLow * 1.001 && changePct < -0.05
+
+  let sentiment: Sentiment = changePct >= 0 && emaBull ? 'Bullish' : 'Bearish'
+  let strategy = 'Momentum'
+
+  if (crossUp || brokeHigh) {
+    sentiment = 'Bullish'
+    strategy = brokeHigh ? 'Breakout' : 'EMA Cross'
+  } else if (crossDown || brokeLow) {
+    sentiment = 'Bearish'
+    strategy = brokeLow ? 'Breakout' : 'EMA Cross'
+  } else if (Math.abs(changePct) < 0.08 && range > 0) {
+    strategy = 'Range'
+    sentiment = last.close >= (swingHigh + swingLow) / 2 ? 'Bullish' : 'Bearish'
+  }
+
+  const dir = sentiment === 'Bullish' ? 1 : -1
+  const step = Math.max(range, Math.abs(last.close) * 0.0008)
+  const entry = last.close
+  const targets = [
+    formatPrice(asset, entry + dir * step * 1.2),
+    formatPrice(asset, entry + dir * step * 2.1),
+  ]
+  const reversals = [
+    formatPrice(asset, entry - dir * step * 0.9),
+    formatPrice(asset, entry - dir * step * 1.7),
+  ]
+
   const bias = sentiment === 'Bullish' ? 'buy-side momentum' : 'sell-side pressure'
-  return `AI noticed ${bias} on ${asset} during the ${session} session. Targets below are for this current signal.`
+  const src = live ? 'live market data' : 'cached/fallback prices'
+  const aiNote = `PKFX scanned ${src} on ${asset} (${session}): ${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% over the session window, ${strategy.toLowerCase()} bias with ${bias}. Targets use ATR from recent bars.`
+
+  return {
+    sentiment,
+    strategy,
+    entry: formatPrice(asset, entry),
+    targets,
+    reversals,
+    aiNote,
+    live,
+    changePct,
+  }
 }
 
 /**
@@ -92,17 +151,13 @@ export function sessionsDueToday(now = new Date()): MarketSession[] {
   const due: MarketSession[] = []
 
   for (const session of MARKET_SESSIONS) {
-    // Sydney fires late prior evening — count it for "today" if we're past midnight
-    // or if current hour has reached its signal hour.
     if (session.id === 'Sydney') {
-      // Sydney signal at 22:00 UTC previous calendar stretch; available all day after it fires
       if (hour >= session.signalHourUtc || hour < 6) due.push(session.id)
       continue
     }
     if (hour >= session.signalHourUtc) due.push(session.id)
   }
 
-  // Cap at 4
   return due.slice(0, MAX_SIGNALS_PER_DAY)
 }
 
@@ -111,39 +166,37 @@ function createSignal(
   session: MarketSession,
   date: string,
   now: Date,
+  analysis: MarketSignal,
 ): Alert {
-  const seed = `${asset}|${date}|${session}`
-  const rand = mulberry32(hashSeed(seed))
-  const sentiment: Sentiment = rand() > 0.5 ? 'Bullish' : 'Bearish'
-  const levels = buildLevels(asset, sentiment, seed)
   const sessionMeta = MARKET_SESSIONS.find((s) => s.id === session)!
-
-  const noticed = new Date(Date.UTC(
-    Number(date.slice(0, 4)),
-    Number(date.slice(5, 7)) - 1,
-    Number(date.slice(8, 10)),
-    sessionMeta.signalHourUtc,
-    Math.floor(rand() * 50),
-    Math.floor(rand() * 50),
-  ))
-  // Don't show future notice times
+  const noticed = new Date(
+    Date.UTC(
+      Number(date.slice(0, 4)),
+      Number(date.slice(5, 7)) - 1,
+      Number(date.slice(8, 10)),
+      sessionMeta.signalHourUtc,
+      now.getUTCMinutes(),
+      now.getUTCSeconds(),
+    ),
+  )
   if (noticed.getTime() > now.getTime()) {
-    noticed.setTime(now.getTime() - Math.floor(rand() * 20 * 60 * 1000))
+    noticed.setTime(now.getTime())
   }
 
   return {
     id: `${asset}-${date}-${session}`,
     asset,
-    sentiment,
-    strategy: 'Momentum',
+    sentiment: analysis.sentiment,
+    strategy: analysis.strategy,
     date,
     noticedAt: noticed.toISOString(),
     session,
     trending: session === sessionsDueToday(now).at(-1),
-    targets: levels.targets,
-    reversals: levels.reversals,
-    entry: levels.entry,
-    aiNote: aiNote(asset, session, sentiment),
+    targets: analysis.targets,
+    reversals: analysis.reversals,
+    entry: analysis.entry,
+    aiNote: analysis.aiNote,
+    live: analysis.live,
   }
 }
 
@@ -163,21 +216,26 @@ function writeStored(alerts: Alert[]) {
   window.dispatchEvent(new CustomEvent('pkfx-alerts-change', { detail: alerts }))
 }
 
+function shouldRefreshLive(existing: Alert, now: Date, latestSession: MarketSession | undefined): boolean {
+  if (existing.session !== latestSession) return false
+  const age = now.getTime() - new Date(existing.noticedAt).getTime()
+  return age >= REFRESH_MS
+}
+
 /**
- * Sync AI alerts for scanner symbols.
- * - Up to 4 signals/day per symbol (one per session: Sydney / Asian / London / New York)
- * - Alerts stay until a newer signal for that symbol+session replaces them
- * - Viewing an alert never removes it
+ * Sync AI alerts for scanner symbols using live market candles.
+ * - Up to 4 signals/day per symbol (one per session)
+ * - Direction/levels come from price action (EMA/ATR/breakout) — OpenAI not required
+ * - Current session signal refreshes periodically from live prices
+ * - Viewing never deletes; older sessions stay until replaced next day
  */
-export function syncAlertsForSymbols(symbols: string[], now = new Date()): Alert[] {
+export async function syncAlertsForSymbols(symbols: string[], now = new Date()): Promise<Alert[]> {
   const date = utcDateKey(now)
   const dueSessions = sessionsDueToday(now)
+  const latestSession = dueSessions.at(-1)
   const stored = readStored()
 
-  // Keep existing alerts for current scanner symbols until replaced by a newer signal.
-  // Viewing never deletes; only a new signal for the same symbol+session replaces it.
   const bySessionKey = new Map<string, Alert>()
-
   for (const alert of stored) {
     if (!symbols.includes(alert.asset)) continue
     const key = `${alert.asset}|${alert.session}`
@@ -187,14 +245,48 @@ export function syncAlertsForSymbols(symbols: string[], now = new Date()): Alert
     }
   }
 
+  const market = await Promise.all(
+    symbols.map(async (asset) => {
+      const result = await fetchCandlesResult(asset, '60m')
+      return [asset, result] as const
+    }),
+  )
+  const byAsset = new Map(market)
+
   for (const asset of symbols) {
+    const feed = byAsset.get(asset)
+    if (!feed) continue
+    const analysisCache = new Map<MarketSession, MarketSignal>()
+
     for (const session of dueSessions) {
       const key = `${asset}|${session}`
       const existing = bySessionKey.get(key)
-      // Create today's signal only if we don't already have today's for this session
-      if (!existing || existing.date !== date) {
-        bySessionKey.set(key, createSignal(asset, session, date, now))
+      const needsCreate = !existing || existing.date !== date
+      const needsRefresh = existing && existing.date === date && shouldRefreshLive(existing, now, latestSession)
+
+      if (!needsCreate && !needsRefresh) {
+        if (existing) {
+          bySessionKey.set(key, {
+            ...existing,
+            trending: session === latestSession,
+          })
+        }
+        continue
       }
+
+      let analysis = analysisCache.get(session)
+      if (!analysis) {
+        analysis = analyzeMarket(asset, session, feed.candles, feed.live)
+        analysisCache.set(session, analysis)
+      }
+
+      const base = createSignal(asset, session, date, now, analysis)
+      bySessionKey.set(key, {
+        ...base,
+        // Keep original notice time for first fire; bump on live refresh of current session
+        noticedAt: needsRefresh && existing ? now.toISOString() : base.noticedAt,
+        id: existing?.date === date ? existing.id : base.id,
+      })
     }
   }
 
@@ -206,14 +298,18 @@ export function syncAlertsForSymbols(symbols: string[], now = new Date()): Alert
   return next
 }
 
+/** Sync wrapper kept for callers that still expect sync reads of last stored state. */
 export function getAlerts(): Alert[] {
   return readStored().sort(
     (a, b) => new Date(b.noticedAt).getTime() - new Date(a.noticedAt).getTime(),
   )
 }
 
+/** Prefer async syncAlertsForSymbols for live market reads. */
 export function getAlertsForSymbols(symbols: string[]): Alert[] {
-  return syncAlertsForSymbols(symbols)
+  // Return stored immediately; kick a background live sync if symbols present.
+  void syncAlertsForSymbols(symbols)
+  return getAlerts().filter((a) => symbols.includes(a.asset))
 }
 
 /** Latest AI signal for a symbol (for chart / preview targets) */

@@ -39,6 +39,7 @@ export function AlertCard({ alert }: AlertCardProps) {
             {alert.sentiment}
           </span>
           <span className="alert-session">{alert.session}</span>
+          {alert.live && <span className="live-pill" title="Built from live market data">LIVE</span>}
           <span className={`trend-orb ${isBearish ? 'down' : 'up'}`}>
             {isBearish ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
           </span>
@@ -126,6 +127,8 @@ interface AlertsPanelProps {
   onEditScanner?: () => void
   limit?: number
   emptyHint?: string
+  loading?: boolean
+  liveFeed?: boolean
 }
 
 export function AlertsPanel({
@@ -134,6 +137,8 @@ export function AlertsPanel({
   onEditScanner,
   limit,
   emptyHint = 'No symbols in your scanner yet. Click Edit Scanner to add instruments.',
+  loading = false,
+  liveFeed = false,
 }: AlertsPanelProps) {
   const [showAll, setShowAll] = useState(false)
   const visible = showAll || !limit ? alerts : alerts.slice(0, limit)
@@ -144,7 +149,8 @@ export function AlertsPanel({
         <div>
           <h2 className="font-display">{title}</h2>
           <p className="alerts-sub">
-            Up to 4 AI signals/day per symbol · Sydney · Asian · London · New York
+            {liveFeed ? 'Live market scan' : loading ? 'Scanning markets…' : 'Market scan'} · up to 4
+            signals/day · Sydney · Asian · London · New York
           </p>
         </div>
         {onEditScanner && (
@@ -154,7 +160,11 @@ export function AlertsPanel({
         )}
       </div>
 
-      {alerts.length === 0 ? (
+      {loading && alerts.length === 0 ? (
+        <div className="alerts-empty">
+          <p>Reading live market data…</p>
+        </div>
+      ) : alerts.length === 0 ? (
         <div className="alerts-empty">
           <p>{emptyHint}</p>
           {onEditScanner && (

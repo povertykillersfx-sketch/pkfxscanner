@@ -19,6 +19,8 @@ export interface Alert {
   /** Short AI note for the current market read */
   aiNote?: string
   entry?: string
+  /** True when levels/direction came from a live market feed */
+  live?: boolean
 }
 
 export interface CourseVideo {
