@@ -18,10 +18,15 @@
   display: grid;
   place-items: center;
   color: var(--neon-bright);
-  background: rgba(191, 0, 255, 0.15);
+  background: var(--bg-stat-icon);
   border: 1px solid var(--border);
   box-shadow: var(--glow-sm);
   flex-shrink: 0;
+}
+
+[data-theme='light'] .stat-icon {
+  border-color: transparent;
+  color: #9333ea;
 }
 
 .stat-meta {

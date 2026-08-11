@@ -12,7 +12,7 @@
   border: 2px solid var(--neon);
   box-shadow: var(--glow-md);
   overflow: hidden;
-  background: rgba(191, 0, 255, 0.1);
+  background: var(--bg-stat-icon);
 }
 
 .profile-avatar {
@@ -32,7 +32,7 @@
   color: var(--text-muted);
   font-size: 0.95rem;
   margin-bottom: 1.25rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .profile-fields {
@@ -58,6 +58,10 @@
   font-weight: 600;
   padding-bottom: 0.4rem;
   border-bottom: 2px solid var(--neon);
-  box-shadow: 0 4px 12px -6px rgba(191, 0, 255, 0.6);
+  box-shadow: none;
   word-break: break-all;
+}
+
+[data-theme='dark'] .profile-field p {
+  box-shadow: 0 4px 12px -6px rgba(191, 0, 255, 0.6);
 }

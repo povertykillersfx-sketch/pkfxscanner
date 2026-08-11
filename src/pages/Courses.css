@@ -5,20 +5,31 @@
 }
 
 .section-banner {
-  background: linear-gradient(90deg, rgba(191, 0, 255, 0.2), rgba(255, 0, 204, 0.12), rgba(191, 0, 255, 0.2));
+  background: var(--bg-banner);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0.65rem 1rem;
   text-align: center;
   margin-bottom: 0.9rem;
-  box-shadow: var(--glow-sm), inset 0 0 20px rgba(191, 0, 255, 0.1);
+  box-shadow: var(--glow-sm);
+}
+
+[data-theme='light'] .section-banner {
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .section-banner h2 {
-  font-size: 0.95rem;
-  letter-spacing: 0.18em;
+  font-size: 0.9rem;
+  letter-spacing: 0.14em;
   color: var(--text);
   text-shadow: var(--glow-text);
+  font-weight: 700;
+}
+
+[data-theme='light'] .section-banner h2 {
+  color: #4b5563;
+  letter-spacing: 0.12em;
 }
 
 .course-grid {
@@ -36,7 +47,7 @@
 
 .course-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--glow-md);
+  box-shadow: var(--shadow-panel-glow);
 }
 
 .course-meta {
@@ -89,9 +100,7 @@
   position: relative;
   display: grid;
   place-items: center;
-  background:
-    radial-gradient(circle at 60% 40%, rgba(191, 0, 255, 0.4), transparent 55%),
-    linear-gradient(160deg, #2e1065, #05010d);
+  background: var(--bg-video-thumb);
 }
 
 .player-label {
@@ -99,9 +108,9 @@
   font-weight: 700;
   text-align: center;
   padding: 0 1rem;
-  color: var(--neon-bright);
+  color: #f5e9ff;
   text-shadow: var(--glow-text);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .player-available .play-btn {
@@ -111,7 +120,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(191, 0, 255, 0.4);
+  background: color-mix(in srgb, var(--neon) 40%, transparent);
   border: 2px solid var(--neon-bright);
   color: #fff;
   box-shadow: var(--glow-md);

@@ -7,7 +7,7 @@
 .logo-mark {
   flex-shrink: 0;
   border-radius: 10px;
-  box-shadow: 0 0 14px rgba(191, 0, 255, 0.55);
+  box-shadow: var(--logo-glow);
   overflow: hidden;
 }
 
@@ -35,8 +35,11 @@
 .logo-text {
   font-family: var(--font-display);
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.02em;
   line-height: 1;
+}
+
+[data-theme='dark'] .logo-text {
   animation: glitch-flicker 6s infinite;
 }
 
@@ -53,13 +56,13 @@
 }
 
 .logo-pk {
-  color: var(--text);
+  color: var(--logo-pk);
 }
 
 .logo-fx {
   color: var(--neon-bright);
   font-style: italic;
-  text-shadow: var(--glow-text);
+  text-shadow: var(--logo-fx-shadow);
   position: relative;
 }
 
@@ -72,5 +75,5 @@
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--neon), transparent);
   transform: rotate(-18deg);
-  box-shadow: 0 0 8px var(--neon);
+  box-shadow: var(--glow-sm);
 }

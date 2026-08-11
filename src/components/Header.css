@@ -24,18 +24,23 @@
   border: 2px solid var(--neon);
   box-shadow: var(--glow-sm);
   object-fit: cover;
-  background: #1a0a2e;
+  background: var(--bg-stat-icon);
 }
 
 .header-welcome {
   font-family: var(--font-body);
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
 }
 
 .header-welcome .name {
+  color: var(--text);
+  text-shadow: none;
+}
+
+[data-theme='dark'] .header-welcome .name {
   color: var(--neon-bright);
   text-shadow: var(--glow-text);
 }

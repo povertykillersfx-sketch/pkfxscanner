@@ -22,6 +22,10 @@
 }
 
 .edit-scanner .gear {
+  filter: none;
+}
+
+[data-theme='dark'] .edit-scanner .gear {
   filter: drop-shadow(0 0 4px var(--neon));
 }
 
@@ -34,19 +38,19 @@
 .alert-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: rgba(8, 0, 20, 0.45);
+  background: var(--bg-card-inner);
   overflow: hidden;
   transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow-card);
 }
 
 .alert-card:hover {
-  border-color: rgba(191, 0, 255, 0.45);
+  border-color: var(--border-strong);
 }
 
 .alert-card.expanded {
   border-color: var(--border-strong);
-  box-shadow: var(--glow-sm);
-  grid-column: span 1;
+  box-shadow: var(--glow-sm), var(--shadow-card);
 }
 
 .alert-row {
@@ -60,7 +64,7 @@
 .alert-asset {
   font-weight: 800;
   font-size: 0.95rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .alert-strategy {
@@ -80,16 +84,14 @@
 
 .trend-orb.down {
   color: var(--bearish);
-  border-color: rgba(255, 45, 106, 0.6);
-  background: rgba(255, 45, 106, 0.12);
-  box-shadow: 0 0 8px rgba(255, 45, 106, 0.35);
+  border-color: color-mix(in srgb, var(--bearish) 55%, transparent);
+  background: color-mix(in srgb, var(--bearish) 12%, transparent);
 }
 
 .trend-orb.up {
   color: var(--bullish);
-  border-color: rgba(0, 229, 255, 0.6);
-  background: rgba(0, 229, 255, 0.12);
-  box-shadow: 0 0 8px rgba(0, 229, 255, 0.35);
+  border-color: color-mix(in srgb, var(--bullish) 55%, transparent);
+  background: color-mix(in srgb, var(--bullish) 12%, transparent);
 }
 
 .alert-date {
@@ -106,7 +108,7 @@
   height: 8px;
   border-radius: 50%;
   background: #fbbf24;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.7);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.45);
 }
 
 .expand-btn {
@@ -115,10 +117,16 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(191, 0, 255, 0.15);
+  background: color-mix(in srgb, var(--neon) 12%, transparent);
   border: 1px solid var(--border);
   color: var(--text);
   transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+[data-theme='light'] .expand-btn {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
 }
 
 .expand-btn:hover {
@@ -128,7 +136,7 @@
 
 .alert-body {
   padding: 0 0.85rem 0.9rem;
-  border-top: 1px solid rgba(191, 0, 255, 0.15);
+  border-top: 1px solid var(--border-soft);
 }
 
 .trending-label {
@@ -137,10 +145,11 @@
   gap: 0.35rem;
   margin: 0.75rem 0 0.5rem;
   font-family: var(--font-display);
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
   color: var(--neon-bright);
   text-shadow: var(--glow-text);
+  font-weight: 700;
 }
 
 .levels-grid {
@@ -167,15 +176,15 @@
 }
 
 .level-bar.target {
-  background: rgba(255, 45, 106, 0.2);
-  border: 1px solid rgba(255, 45, 106, 0.45);
-  color: #ffb3c8;
+  background: var(--badge-bearish-bg);
+  border: 1px solid var(--badge-bearish-border);
+  color: var(--badge-bearish-fg);
 }
 
 .level-bar.reversal {
-  background: rgba(0, 229, 255, 0.15);
-  border: 1px solid rgba(0, 229, 255, 0.45);
-  color: #b8fbff;
+  background: var(--badge-bullish-bg);
+  border: 1px solid var(--badge-bullish-border);
+  color: var(--badge-bullish-fg);
 }
 
 .alert-actions {
@@ -191,15 +200,14 @@
   display: grid;
   place-items: center;
   color: var(--bearish);
-  border: 1px solid rgba(255, 45, 106, 0.4);
+  border: 1px solid color-mix(in srgb, var(--bearish) 40%, transparent);
   flex-shrink: 0;
   transition: box-shadow 0.15s, background 0.15s;
 }
 
 .fav-btn:hover,
 .fav-btn.on {
-  background: rgba(255, 45, 106, 0.15);
-  box-shadow: 0 0 12px rgba(255, 45, 106, 0.4);
+  background: color-mix(in srgb, var(--bearish) 12%, transparent);
 }
 
 .alerts-footer {
