@@ -18,17 +18,45 @@ interface ChartModalProps {
   onClose: () => void
 }
 
+function chartEmbedUrl(symbol: string): string {
+  const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
+  const params = new URLSearchParams({
+    symbol,
+    interval: '60',
+    theme,
+    style: '1',
+    locale: 'en',
+    toolbar_bg: theme === 'light' ? 'f8fafc' : '0a0218',
+    enable_publishing: 'false',
+    hide_top_toolbar: 'false',
+    hide_legend: 'false',
+    save_image: 'false',
+    withdateranges: 'true',
+    allow_symbol_change: 'true',
+    calendar: 'false',
+    hideideas: '1',
+    studies: '[]',
+  })
+  return `https://s.tradingview.com/widgetembed/?${params.toString()}`
+}
+
 export function ChartModal({ alert, onClose }: ChartModalProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
   const symbol = tradingViewSymbol(alert.asset)
   const [floatOpen, setFloatOpen] = useState(true)
   const [favorited, setFavorited] = useState(false)
+  const [embedSrc, setEmbedSrc] = useState(() => chartEmbedUrl(symbol))
+
+  useEffect(() => {
+    setEmbedSrc(chartEmbedUrl(symbol))
+  }, [symbol])
 
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    document.documentElement.classList.add('chart-open')
     return () => {
       document.body.style.overflow = prev
+      document.documentElement.classList.remove('chart-open')
     }
   }, [])
 
@@ -39,44 +67,6 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-
-    el.innerHTML = ''
-    const widget = document.createElement('div')
-    widget.className = 'tradingview-widget-container__widget'
-    widget.style.height = '100%'
-    widget.style.width = '100%'
-    el.appendChild(widget)
-
-    const script = document.createElement('script')
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
-    script.type = 'text/javascript'
-    script.async = true
-    script.innerHTML = JSON.stringify({
-      autosize: true,
-      symbol,
-      interval: '60',
-      timezone: 'Etc/UTC',
-      theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark',
-      style: '1',
-      locale: 'en',
-      allow_symbol_change: true,
-      calendar: false,
-      support_host: 'https://www.tradingview.com',
-      hide_top_toolbar: false,
-      hide_legend: false,
-      save_image: false,
-      withdateranges: true,
-    })
-    el.appendChild(script)
-
-    return () => {
-      el.innerHTML = ''
-    }
-  }, [symbol])
 
   const isBearish = alert.sentiment === 'Bearish'
 
@@ -107,7 +97,16 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
         </div>
       </header>
 
-      <div className="chart-desktop-frame tradingview-widget-container" ref={containerRef} />
+      <div className="chart-desktop-frame">
+        <iframe
+          key={embedSrc}
+          className="chart-iframe"
+          title={`${alert.asset} TradingView chart`}
+          src={embedSrc}
+          allow="fullscreen"
+          allowFullScreen
+        />
+      </div>
 
       {floatOpen && (
         <FloatingAlertPanel

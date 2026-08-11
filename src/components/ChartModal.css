@@ -1,31 +1,49 @@
+html.chart-open,
+html.chart-open body {
+  overflow: hidden !important;
+  width: 100%;
+  height: 100%;
+}
+
 .chart-desktop {
   position: fixed;
   inset: 0;
   z-index: 10050;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-void);
+  display: block;
+  background: #000;
   width: 100vw;
   height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .chart-desktop-bar {
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.65rem 1rem;
-  background: var(--bg-sidebar);
+  padding: 0 1rem;
+  background: rgba(10, 2, 24, 0.92);
   border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-sidebar);
-  z-index: 2;
+  backdrop-filter: blur(10px);
+}
+
+[data-theme='light'] .chart-desktop-bar {
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .chart-desktop-bar h2 {
   font-size: 1rem;
   font-weight: 700;
   margin: 0;
+  color: var(--text);
 }
 
 .chart-symbol {
@@ -73,22 +91,35 @@
   color: var(--neon-bright);
 }
 
+/* Full remaining page under the bar — no letterbox */
 .chart-desktop-frame {
-  flex: 1;
-  min-height: 0;
+  position: absolute;
+  top: 52px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
+  height: calc(100vh - 52px);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   background: #000;
 }
 
-.chart-desktop-frame iframe {
-  width: 100% !important;
-  height: 100% !important;
+.chart-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: #000;
 }
 
 /* ——— Floating alert over chart ——— */
 .floating-alert {
   position: fixed;
-  z-index: 320;
+  z-index: 10060;
   width: min(340px, calc(100vw - 24px));
   padding: 0;
   cursor: grab;
