@@ -1,0 +1,14 @@
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .sidebar-backdrop {
+    display: block;
+  }
+}

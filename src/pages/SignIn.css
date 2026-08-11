@@ -1,0 +1,84 @@
+.signin-page {
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  overflow: hidden;
+}
+
+.signin-scan {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(191, 0, 255, 0.08),
+    transparent
+  );
+  animation: scan-line 7s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.signin-card {
+  width: min(380px, 100%);
+  padding: 2.25rem 1.75rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.signin-logo {
+  margin-bottom: 1.5rem;
+}
+
+.signin-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--text);
+  text-shadow: var(--glow-text);
+}
+
+.signin-fields {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1.15rem;
+}
+
+.signin-btn {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1.05rem;
+  margin-bottom: 1.25rem;
+}
+
+.signin-signup {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-bottom: 0.65rem;
+}
+
+.signin-signup a {
+  color: var(--neon-bright);
+  font-weight: 700;
+  text-shadow: var(--glow-text);
+}
+
+.signin-signup a:hover {
+  text-decoration: underline;
+}
+
+.signin-forgot {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.signin-forgot:hover {
+  color: var(--neon-soft);
+}

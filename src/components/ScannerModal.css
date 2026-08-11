@@ -1,0 +1,78 @@
+.scanner-modal {
+  text-align: left;
+}
+
+.scanner-title {
+  font-size: 1.2rem;
+  margin-bottom: 0.65rem;
+  padding-right: 2rem;
+  text-shadow: var(--glow-text);
+}
+
+.scanner-desc {
+  color: var(--text-muted);
+  font-size: 0.98rem;
+  margin-bottom: 1.35rem;
+  line-height: 1.45;
+}
+
+.scanner-select-wrap {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+
+.scanner-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.75rem 1rem;
+  background: rgba(8, 0, 20, 0.7);
+  border: 1px solid var(--cyan);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.35);
+  text-align: left;
+  color: var(--text);
+}
+
+.scanner-select-trigger strong {
+  color: var(--cyan);
+}
+
+.scanner-select-trigger .chevron {
+  margin-left: auto;
+  color: var(--cyan);
+}
+
+.scanner-dropdown {
+  margin-top: 0.4rem;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 2, 24, 0.95);
+  box-shadow: var(--glow-md);
+}
+
+.scanner-dropdown button {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 1rem;
+  color: var(--text-muted);
+  transition: background 0.12s, color 0.12s;
+}
+
+.scanner-dropdown button:hover {
+  background: rgba(191, 0, 255, 0.12);
+  color: var(--text);
+}
+
+.scanner-dropdown button.selected {
+  background: linear-gradient(90deg, rgba(0, 120, 255, 0.45), rgba(191, 0, 255, 0.35));
+  color: #fff;
+  box-shadow: inset 0 0 12px rgba(0, 240, 255, 0.2);
+}
+
+.scanner-save {
+  width: 100%;
+}

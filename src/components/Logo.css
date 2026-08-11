@@ -1,0 +1,76 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.logo-mark {
+  flex-shrink: 0;
+  border-radius: 10px;
+  box-shadow: 0 0 14px rgba(191, 0, 255, 0.55);
+  overflow: hidden;
+}
+
+.logo-sm .logo-mark {
+  width: 36px;
+  height: 36px;
+}
+
+.logo-md .logo-mark {
+  width: 42px;
+  height: 42px;
+}
+
+.logo-lg .logo-mark {
+  width: 52px;
+  height: 52px;
+}
+
+.logo-mark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  animation: glitch-flicker 6s infinite;
+}
+
+.logo-sm .logo-text {
+  font-size: 1.15rem;
+}
+
+.logo-md .logo-text {
+  font-size: 1.35rem;
+}
+
+.logo-lg .logo-text {
+  font-size: 1.7rem;
+}
+
+.logo-pk {
+  color: var(--text);
+}
+
+.logo-fx {
+  color: var(--neon-bright);
+  font-style: italic;
+  text-shadow: var(--glow-text);
+  position: relative;
+}
+
+.logo-fx::after {
+  content: '';
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  top: 48%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--neon), transparent);
+  transform: rotate(-18deg);
+  box-shadow: 0 0 8px var(--neon);
+}

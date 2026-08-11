@@ -1,0 +1,63 @@
+.modal-profile {
+  text-align: center;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.profile-avatar-wrap {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  border: 2px solid var(--neon);
+  box-shadow: var(--glow-md);
+  overflow: hidden;
+  background: rgba(191, 0, 255, 0.1);
+}
+
+.profile-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  text-shadow: var(--glow-text);
+}
+
+.profile-section-title {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 1.25rem;
+  letter-spacing: 0.04em;
+}
+
+.profile-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  text-align: left;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.profile-field label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-field p {
+  font-size: 1rem;
+  font-weight: 600;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid var(--neon);
+  box-shadow: 0 4px 12px -6px rgba(191, 0, 255, 0.6);
+  word-break: break-all;
+}
