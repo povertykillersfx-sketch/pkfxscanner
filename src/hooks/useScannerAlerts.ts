@@ -1,13 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Alert } from '../data/mockData'
-import { getAlerts, syncAlertsForSymbols } from '../alerts'
+import {
+  getAlerts,
+  getCurrentTrades,
+  organizeAlertsForScanner,
+  syncAlertsForSymbols,
+} from '../alerts'
 import { getScannerSymbols } from '../scanner'
 
 /** Live market alert sync for dashboard / alerts pages. */
 export function useScannerAlerts() {
   const [symbols, setSymbols] = useState<string[]>(() => getScannerSymbols())
   const [alerts, setAlerts] = useState<Alert[]>(() =>
-    getAlerts().filter((a) => getScannerSymbols().includes(a.asset)),
+    organizeAlertsForScanner(
+      getAlerts().filter((a) => getScannerSymbols().includes(a.asset)),
+      getScannerSymbols(),
+    ),
   )
   const [loading, setLoading] = useState(true)
   const [liveFeed, setLiveFeed] = useState(false)
@@ -24,10 +32,17 @@ export function useScannerAlerts() {
       try {
         const next = await syncAlertsForSymbols(syms)
         if (cancelled) return
-        setAlerts(next)
+        setAlerts(organizeAlertsForScanner(next, syms))
         setLiveFeed(next.some((a) => a.live))
       } catch {
-        if (!cancelled) setAlerts(getAlerts().filter((a) => syms.includes(a.asset)))
+        if (!cancelled) {
+          setAlerts(
+            organizeAlertsForScanner(
+              getAlerts().filter((a) => syms.includes(a.asset)),
+              syms,
+            ),
+          )
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -41,7 +56,8 @@ export function useScannerAlerts() {
     function onAlerts(e: Event) {
       const detail = (e as CustomEvent<Alert[]>).detail
       if (Array.isArray(detail) && !cancelled) {
-        setAlerts(detail)
+        const syms = getScannerSymbols()
+        setAlerts(organizeAlertsForScanner(detail.filter((a) => syms.includes(a.asset)), syms))
         setLiveFeed(detail.some((a) => a.live))
         setLoading(false)
       }
@@ -64,10 +80,21 @@ export function useScannerAlerts() {
     setSymbols(next)
     setLoading(true)
     const alertsNext = await syncAlertsForSymbols(next)
-    setAlerts(alertsNext)
+    setAlerts(organizeAlertsForScanner(alertsNext, next))
     setLiveFeed(alertsNext.some((a) => a.live))
     setLoading(false)
   }
 
-  return { symbols, setSymbols, alerts, setAlerts, loading, liveFeed, reloadWithSymbols }
+  const currentTrades = useMemo(() => getCurrentTrades(alerts, symbols), [alerts, symbols])
+
+  return {
+    symbols,
+    setSymbols,
+    alerts,
+    currentTrades,
+    setAlerts,
+    loading,
+    liveFeed,
+    reloadWithSymbols,
+  }
 }

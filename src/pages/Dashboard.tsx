@@ -7,13 +7,15 @@ import './Dashboard.css'
 
 export function Dashboard() {
   const [scannerOpen, setScannerOpen] = useState(false)
-  const { alerts, loading, liveFeed, reloadWithSymbols } = useScannerAlerts()
+  const { alerts, currentTrades, symbols, loading, liveFeed, reloadWithSymbols } = useScannerAlerts()
 
   return (
     <div className="dashboard-page">
       <div className="dashboard-top">
         <AlertsPanel
-          alerts={alerts}
+          alerts={currentTrades}
+          symbols={symbols}
+          currentOnly
           onEditScanner={() => setScannerOpen(true)}
           limit={8}
           loading={loading}

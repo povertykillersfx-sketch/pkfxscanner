@@ -1,97 +1,59 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  dispose,
-  init,
-  type Chart,
-  type Period,
-} from 'klinecharts'
-import {
-  Circle,
-  Crosshair,
-  Eraser,
   GripVertical,
   Heart,
-  Minus,
-  MousePointer2,
-  MoveUpRight,
-  Pencil,
   Rocket,
-  Slash,
-  Spline,
-  Square,
-  Tag,
   TrendingDown,
   TrendingUp,
-  Type,
   X,
 } from 'lucide-react'
 import type { Alert } from '../data/mockData'
 import { tradingViewSymbol } from '../data/mockData'
-import { fetchCandles, type ChartInterval } from '../marketData'
 import './ChartModal.css'
+
+declare global {
+  interface Window {
+    TradingView?: {
+      widget: new (options: Record<string, unknown>) => unknown
+    }
+  }
+}
 
 interface ChartModalProps {
   alert: Alert
   onClose: () => void
 }
 
-type DrawingTool =
-  | 'segment'
-  | 'rayLine'
-  | 'straightLine'
-  | 'horizontalStraightLine'
-  | 'horizontalRayLine'
-  | 'verticalStraightLine'
-  | 'priceLine'
-  | 'fibonacciLine'
-  | 'parallelStraightLine'
-  | 'priceChannelLine'
-  | 'rect'
-  | 'circle'
-  | 'brush'
-  | 'simpleAnnotation'
-  | 'simpleTag'
-  | null
-
-const DRAW_TOOLS: { id: Exclude<DrawingTool, null>; label: string; icon: typeof Slash }[] = [
-  { id: 'segment', label: 'Trend line', icon: Slash },
-  { id: 'rayLine', label: 'Ray', icon: MoveUpRight },
-  { id: 'straightLine', label: 'Extended line', icon: Minus },
-  { id: 'horizontalStraightLine', label: 'Horizontal line', icon: Minus },
-  { id: 'horizontalRayLine', label: 'Horizontal ray', icon: MoveUpRight },
-  { id: 'verticalStraightLine', label: 'Vertical line', icon: Minus },
-  { id: 'priceLine', label: 'Price line', icon: Crosshair },
-  { id: 'fibonacciLine', label: 'Fibonacci', icon: Spline },
-  { id: 'parallelStraightLine', label: 'Parallel lines', icon: Minus },
-  { id: 'priceChannelLine', label: 'Price channel', icon: Minus },
-  { id: 'rect', label: 'Rectangle', icon: Square },
-  { id: 'circle', label: 'Circle', icon: Circle },
-  { id: 'brush', label: 'Brush', icon: Pencil },
-  { id: 'simpleAnnotation', label: 'Text', icon: Type },
-  { id: 'simpleTag', label: 'Price tag', icon: Tag },
-]
-
-const TIMEFRAMES: { id: ChartInterval; label: string; period: Period }[] = [
-  { id: '15m', label: '15m', period: { type: 'minute', span: 15 } },
-  { id: '60m', label: '1H', period: { type: 'hour', span: 1 } },
-  { id: '240m', label: '4H', period: { type: 'hour', span: 4 } },
-  { id: '1d', label: '1D', period: { type: 'day', span: 1 } },
-]
+function loadTvScript(): Promise<void> {
+  if (window.TradingView) return Promise.resolve()
+  const existing = document.querySelector<HTMLScriptElement>('script[data-pkfx-tv]')
+  if (existing) {
+    return new Promise((resolve, reject) => {
+      existing.addEventListener('load', () => resolve())
+      existing.addEventListener('error', () => reject(new Error('tv.js failed')))
+      if (window.TradingView) resolve()
+    })
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = 'https://s3.tradingview.com/tv.js'
+    script.async = true
+    script.dataset.pkfxTv = '1'
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('tv.js failed'))
+    document.body.appendChild(script)
+  })
+}
 
 export function ChartModal({ alert, onClose }: ChartModalProps) {
   const symbol = tradingViewSymbol(alert.asset)
-  const chartElRef = useRef<HTMLDivElement>(null)
-  const chartRef = useRef<Chart | null>(null)
-  const intervalRef = useRef<ChartInterval>('60m')
-  const activeToolRef = useRef<DrawingTool>('segment')
+  const containerId = `pkfx_tv_${useId().replace(/:/g, '')}`
   const [floatOpen, setFloatOpen] = useState(true)
   const [favorited, setFavorited] = useState(false)
-  const [activeTool, setActiveTool] = useState<DrawingTool>('segment')
-  const [interval, setInterval] = useState<ChartInterval>('60m')
-  const [status, setStatus] = useState('Loading chart…')
-  activeToolRef.current = activeTool
+  const [ready, setReady] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -112,71 +74,50 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
   }, [onClose])
 
   useEffect(() => {
-    const el = chartElRef.current
-    if (!el) return
-
-    const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
-    const chart = init(el, {
-      styles: theme === 'dark' ? darkStyles() : lightStyles(),
-    })
-    if (!chart) return
-    chartRef.current = chart
-
-    const precision = ['GOLD', 'US30', 'NASDAQ', 'USDJPY', 'USDZAR'].includes(alert.asset) ? 2 : 4
-    chart.setSymbol({ ticker: alert.asset, pricePrecision: precision, volumePrecision: 0 })
-    chart.setPeriod({ type: 'hour', span: 1 })
-    chart.createIndicator('MA', false)
-    chart.createIndicator('VOL')
-
     let cancelled = false
-    setStatus('Loading market data…')
+    setReady(false)
+    setError('')
 
-    chart.setDataLoader({
-      getBars: async ({ callback }) => {
-        const candles = await fetchCandles(alert.asset, intervalRef.current)
-        if (cancelled) return
-        callback(candles)
-        setStatus('')
-        if (activeToolRef.current) {
-          chart.createOverlay(activeToolRef.current)
-        }
-      },
-    })
-
-    const onResize = () => chart.resize()
-    window.addEventListener('resize', onResize)
+    loadTvScript()
+      .then(() => {
+        if (cancelled || !window.TradingView) return
+        const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
+        // Classic TradingView.widget includes left drawing toolbar when hide_side_toolbar is false
+        void new window.TradingView.widget({
+          autosize: true,
+          symbol,
+          interval: '60',
+          timezone: 'Etc/UTC',
+          theme,
+          style: '1',
+          locale: 'en',
+          toolbar_bg: theme === 'light' ? '#f8fafc' : '#120424',
+          enable_publishing: false,
+          hide_top_toolbar: false,
+          hide_legend: false,
+          hide_side_toolbar: false,
+          allow_symbol_change: false,
+          save_image: true,
+          details: true,
+          hotlist: false,
+          calendar: true,
+          withdateranges: true,
+          show_popup_button: true,
+          studies: ['STD;SMA', 'Volume@tv-basicstudies'],
+          container_id: containerId,
+        })
+        if (!cancelled) setReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) setError('Could not load TradingView. Try Open in TradingView.')
+      })
 
     return () => {
       cancelled = true
-      window.removeEventListener('resize', onResize)
-      dispose(el)
-      chartRef.current = null
+      const node = document.getElementById(containerId)
+      if (node) node.innerHTML = ''
     }
-  }, [alert.asset])
-
-
-  function selectTool(tool: DrawingTool) {
-    const chart = chartRef.current
-    if (!chart) return
-    setActiveTool(tool)
-    if (tool) chart.createOverlay(tool)
-  }
-
-  function clearDrawings() {
-    chartRef.current?.removeOverlay()
-    setActiveTool(null)
-  }
-
-  function changeInterval(next: ChartInterval) {
-    const chart = chartRef.current
-    const tf = TIMEFRAMES.find((t) => t.id === next)
-    if (!chart || !tf) return
-    intervalRef.current = next
-    setInterval(next)
-    setStatus('Loading market data…')
-    chart.setPeriod(tf.period)
-    chart.resetData()
-  }
+  }, [symbol, containerId])
 
   const isBearish = alert.sentiment === 'Bearish'
 
@@ -185,20 +126,8 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
       <header className="chart-desktop-bar">
         <h2 id="chart-desktop-title" className="font-display">
           {alert.asset}
-          <span className="chart-symbol"> · Full chart + drawings</span>
+          <span className="chart-symbol"> · Full TradingView + Drawings</span>
         </h2>
-        <div className="chart-tf-group" role="group" aria-label="Timeframes">
-          {TIMEFRAMES.map((tf) => (
-            <button
-              key={tf.id}
-              type="button"
-              className={`chart-tf ${interval === tf.id ? 'active' : ''}`}
-              onClick={() => changeInterval(tf.id)}
-            >
-              {tf.label}
-            </button>
-          ))}
-        </div>
         <div className="chart-desktop-actions">
           {!floatOpen && (
             <button type="button" className="btn btn-outline chart-show-alert" onClick={() => setFloatOpen(true)}>
@@ -219,55 +148,10 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
         </div>
       </header>
 
-      <div className="chart-workspace">
-        <aside className="draw-toolbar" aria-label="Drawing tools">
-          <button
-            type="button"
-            className={`draw-tool ${activeTool === null ? 'active' : ''}`}
-            title="Cursor"
-            aria-label="Cursor"
-            onClick={() => setActiveTool(null)}
-          >
-            <MousePointer2 size={16} />
-          </button>
-          <button
-            type="button"
-            className="draw-tool"
-            title="Crosshair"
-            aria-label="Crosshair"
-            onClick={() => setActiveTool(null)}
-          >
-            <Crosshair size={16} />
-          </button>
-          <div className="draw-sep" />
-          {DRAW_TOOLS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              className={`draw-tool ${activeTool === id ? 'active' : ''}`}
-              title={label}
-              aria-label={label}
-              onClick={() => selectTool(id)}
-            >
-              <Icon size={16} />
-            </button>
-          ))}
-          <div className="draw-sep" />
-          <button
-            type="button"
-            className="draw-tool danger"
-            title="Clear drawings"
-            aria-label="Clear drawings"
-            onClick={clearDrawings}
-          >
-            <Eraser size={16} />
-          </button>
-        </aside>
-
-        <div className="chart-desktop-frame">
-          {status && <div className="chart-loading">{status}</div>}
-          <div ref={chartElRef} className="chart-kline-host" />
-        </div>
+      <div className="chart-desktop-frame">
+        {!ready && !error && <div className="chart-loading">Loading TradingView…</div>}
+        {error && <div className="chart-loading chart-error">{error}</div>}
+        <div id={containerId} className="chart-tv-host" />
       </div>
 
       {floatOpen && (
@@ -282,34 +166,6 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
     </div>,
     document.body,
   )
-}
-
-function darkStyles() {
-  return {
-    grid: { horizontal: { color: 'rgba(191,0,255,0.08)' }, vertical: { color: 'rgba(191,0,255,0.06)' } },
-    candle: {
-      bar: { upColor: '#22c55e', downColor: '#ef4444', noChangeColor: '#a78bb8' },
-      priceMark: { high: { color: '#c084fc' }, low: { color: '#c084fc' } },
-    },
-    indicator: { lastValueMark: { text: { color: '#f5e9ff' } } },
-    xAxis: { axisLine: { color: 'rgba(191,0,255,0.25)' }, tickText: { color: '#a78bb8' } },
-    yAxis: { axisLine: { color: 'rgba(191,0,255,0.25)' }, tickText: { color: '#a78bb8' } },
-    crosshair: {
-      horizontal: { line: { color: 'rgba(224,64,255,0.55)' }, text: { backgroundColor: '#bf00ff' } },
-      vertical: { line: { color: 'rgba(224,64,255,0.55)' }, text: { backgroundColor: '#bf00ff' } },
-    },
-  }
-}
-
-function lightStyles() {
-  return {
-    grid: { horizontal: { color: 'rgba(15,23,42,0.06)' }, vertical: { color: 'rgba(15,23,42,0.04)' } },
-    candle: {
-      bar: { upColor: '#16a34a', downColor: '#dc2626', noChangeColor: '#6b7280' },
-    },
-    xAxis: { tickText: { color: '#6b7280' } },
-    yAxis: { tickText: { color: '#6b7280' } },
-  }
 }
 
 interface FloatingAlertPanelProps {
@@ -330,7 +186,7 @@ function FloatingAlertPanel({
   const panelRef = useRef<HTMLDivElement>(null)
   const dragOffset = useRef({ x: 0, y: 0 })
   const dragging = useRef(false)
-  const [pos, setPos] = useState({ x: 72, y: 72 })
+  const [pos, setPos] = useState({ x: 24, y: 72 })
 
   const onPointerDown = useCallback((e: ReactPointerEvent<HTMLElement>) => {
     const target = e.target as HTMLElement
@@ -373,6 +229,9 @@ function FloatingAlertPanel({
         <span className="floating-drag" aria-hidden>
           <GripVertical size={16} />
         </span>
+        {alert.trending && (
+          <span className="current-dot" title="Current running trade" aria-label="Current running trade" />
+        )}
         <span className="alert-asset">{alert.asset}</span>
         <span className={`badge ${isBearish ? 'badge-bearish' : 'badge-bullish'}`}>
           {alert.sentiment}
@@ -393,18 +252,22 @@ function FloatingAlertPanel({
           </span>
           <span>{alert.date}</span>
         </div>
+
         {alert.aiNote && <p className="floating-ai-note">{alert.aiNote}</p>}
+
         {alert.trending && (
           <div className="trending-label">
             <Rocket size={14} />
             <span>CURRENT SIGNAL · {alert.session}</span>
           </div>
         )}
+
         {alert.entry && (
           <p className="floating-entry">
             Entry noticed: <strong>{alert.entry}</strong>
           </p>
         )}
+
         <div className="levels-grid">
           <div className="levels-col">
             <h4>Possible Targets</h4>
@@ -423,6 +286,7 @@ function FloatingAlertPanel({
             ))}
           </div>
         </div>
+
         <div className="alert-actions">
           <button
             type="button"

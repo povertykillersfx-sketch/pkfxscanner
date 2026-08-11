@@ -22,10 +22,11 @@ export function AlertCard({ alert }: AlertCardProps) {
   const [favorited, setFavorited] = useState(false)
   const [chartOpen, setChartOpen] = useState(false)
   const isBearish = alert.sentiment === 'Bearish'
+  const isCurrent = Boolean(alert.trending)
 
   return (
     <>
-      <article className={`alert-card ${expanded ? 'expanded' : ''}`}>
+      <article className={`alert-card ${expanded ? 'expanded' : ''} ${isCurrent ? 'is-current' : ''}`}>
         <header className="alert-row">
           <button
             type="button"
@@ -33,6 +34,9 @@ export function AlertCard({ alert }: AlertCardProps) {
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
           >
+            {isCurrent && (
+              <span className="current-dot" title="Current running trade" aria-label="Current running trade" />
+            )}
             {alert.asset}
           </button>
           <span className={`badge ${isBearish ? 'badge-bearish' : 'badge-bullish'}`}>
@@ -62,10 +66,11 @@ export function AlertCard({ alert }: AlertCardProps) {
           <div className="alert-body animate-fade-up">
             <p className="alert-ai-note">{alert.aiNote}</p>
 
-            {alert.trending && (
+            {isCurrent && (
               <div className="trending-label">
+                <span className="current-dot" aria-hidden />
                 <Rocket size={14} />
-                <span>CURRENT SIGNAL · {alert.session}</span>
+                <span>CURRENT TRADE · {alert.session}</span>
               </div>
             )}
 
@@ -111,12 +116,7 @@ export function AlertCard({ alert }: AlertCardProps) {
         )}
       </article>
 
-      {chartOpen && (
-        <ChartModal
-          alert={alert}
-          onClose={() => setChartOpen(false)}
-        />
-      )}
+      {chartOpen && <ChartModal alert={alert} onClose={() => setChartOpen(false)} />}
     </>
   )
 }
@@ -129,6 +129,9 @@ interface AlertsPanelProps {
   emptyHint?: string
   loading?: boolean
   liveFeed?: boolean
+  /** When true, only the current running trade per selected symbol is shown */
+  currentOnly?: boolean
+  symbols?: string[]
 }
 
 export function AlertsPanel({
@@ -139,9 +142,16 @@ export function AlertsPanel({
   emptyHint = 'No symbols in your scanner yet. Click Edit Scanner to add instruments.',
   loading = false,
   liveFeed = false,
+  currentOnly = false,
+  symbols = [],
 }: AlertsPanelProps) {
   const [showAll, setShowAll] = useState(false)
-  const visible = showAll || !limit ? alerts : alerts.slice(0, limit)
+
+  const scoped = currentOnly
+    ? alerts.filter((a) => a.trending && (symbols.length === 0 || symbols.includes(a.asset)))
+    : alerts.filter((a) => symbols.length === 0 || symbols.includes(a.asset))
+
+  const visible = showAll || !limit ? scoped : scoped.slice(0, limit)
 
   return (
     <section className="alerts-panel panel panel-glow animate-fade-up">
@@ -149,8 +159,14 @@ export function AlertsPanel({
         <div>
           <h2 className="font-display">{title}</h2>
           <p className="alerts-sub">
-            {liveFeed ? 'Live market scan' : loading ? 'Scanning markets…' : 'Market scan'} · up to 4
-            signals/day · Sydney · Asian · London · New York
+            {currentOnly
+              ? 'Current trades for your selected scanner symbols'
+              : liveFeed
+                ? 'Live market scan'
+                : loading
+                  ? 'Scanning markets…'
+                  : 'Market scan'}{' '}
+            · {symbols.length ? symbols.join(' · ') : 'no symbols selected'}
           </p>
         </div>
         {onEditScanner && (
@@ -160,11 +176,11 @@ export function AlertsPanel({
         )}
       </div>
 
-      {loading && alerts.length === 0 ? (
+      {loading && scoped.length === 0 ? (
         <div className="alerts-empty">
           <p>Reading live market data…</p>
         </div>
-      ) : alerts.length === 0 ? (
+      ) : scoped.length === 0 ? (
         <div className="alerts-empty">
           <p>{emptyHint}</p>
           {onEditScanner && (
@@ -181,7 +197,7 @@ export function AlertsPanel({
         </div>
       )}
 
-      {limit && alerts.length > limit && (
+      {limit && scoped.length > limit && (
         <div className="alerts-footer">
           <button type="button" className="btn btn-ghost view-more" onClick={() => setShowAll((v) => !v)}>
             {showAll ? (

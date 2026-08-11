@@ -290,12 +290,50 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
     }
   }
 
-  const next = [...bySessionKey.values()].sort(
-    (a, b) => new Date(b.noticedAt).getTime() - new Date(a.noticedAt).getTime(),
-  )
+  const next = organizeAlertsForScanner([...bySessionKey.values()], symbols)
 
   writeStored(next)
   return next
+}
+
+/**
+ * Keep only scanner symbols, group by symbol order, current trade first per symbol.
+ * Never interleave different symbols' sessions.
+ */
+export function organizeAlertsForScanner(alerts: Alert[], symbols: string[]): Alert[] {
+  const out: Alert[] = []
+  const latestSession = sessionsDueToday().at(-1)
+
+  for (const asset of symbols) {
+    const forSymbol = alerts
+      .filter((a) => a.asset === asset)
+      .sort((a, b) => new Date(b.noticedAt).getTime() - new Date(a.noticedAt).getTime())
+
+    if (!forSymbol.length) continue
+
+    const currentIdx = latestSession
+      ? forSymbol.findIndex((a) => a.session === latestSession)
+      : 0
+    const activeIdx = currentIdx >= 0 ? currentIdx : 0
+
+    const marked = forSymbol.map((a, i) => ({
+      ...a,
+      trending: i === activeIdx,
+    }))
+
+    marked.sort((a, b) => {
+      if (a.trending !== b.trending) return a.trending ? -1 : 1
+      return new Date(b.noticedAt).getTime() - new Date(a.noticedAt).getTime()
+    })
+    out.push(...marked)
+  }
+
+  return out
+}
+
+/** One current running trade per selected scanner symbol */
+export function getCurrentTrades(alerts: Alert[], symbols: string[]): Alert[] {
+  return organizeAlertsForScanner(alerts, symbols).filter((a) => a.trending)
 }
 
 /** Sync wrapper kept for callers that still expect sync reads of last stored state. */
