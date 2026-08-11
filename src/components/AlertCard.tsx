@@ -76,7 +76,7 @@ export function AlertCard({ alert }: AlertCardProps) {
 
             {alert.entry && (
               <p className="alert-entry">
-                Entry noticed: <strong>{alert.entry}</strong>
+                15m entry: <strong>{alert.entry}</strong>
               </p>
             )}
 
@@ -160,12 +160,12 @@ export function AlertsPanel({
           <h2 className="font-display">{title}</h2>
           <p className="alerts-sub">
             {currentOnly
-              ? 'Current trades for your selected scanner symbols'
+              ? 'Current 15m entries · bias from 4H→1H'
               : liveFeed
-                ? 'Live market scan'
+                ? 'Live MTF scan (4H→1H→15m)'
                 : loading
                   ? 'Scanning markets…'
-                  : 'Market scan'}{' '}
+                  : 'MTF market scan'}{' '}
             · {symbols.length ? symbols.join(' · ') : 'no symbols selected'}
           </p>
         </div>

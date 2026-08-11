@@ -86,7 +86,7 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
         void new window.TradingView.widget({
           autosize: true,
           symbol,
-          interval: '60',
+          interval: '15',
           timezone: 'Etc/UTC',
           theme,
           style: '1',
@@ -264,7 +264,7 @@ function FloatingAlertPanel({
 
         {alert.entry && (
           <p className="floating-entry">
-            Entry noticed: <strong>{alert.entry}</strong>
+            15m entry: <strong>{alert.entry}</strong>
           </p>
         )}
 

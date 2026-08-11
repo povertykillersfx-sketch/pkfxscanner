@@ -334,6 +334,28 @@ export async function fetchCandles(
   return candles
 }
 
+/** Multi-timeframe pack: HTF bias (4H/1H) + 15m entries. */
+export interface MultiTimeframeFeed {
+  h4: CandleFetchResult
+  h1: CandleFetchResult
+  m15: CandleFetchResult
+  live: boolean
+}
+
+export async function fetchMultiTimeframe(asset: string): Promise<MultiTimeframeFeed> {
+  const [h4, h1, m15] = await Promise.all([
+    fetchCandlesResult(asset, '240m'),
+    fetchCandlesResult(asset, '60m'),
+    fetchCandlesResult(asset, '15m'),
+  ])
+  return {
+    h4,
+    h1,
+    m15,
+    live: h4.live || h1.live || m15.live,
+  }
+}
+
 export function isKnownInstrument(asset: string): asset is Instrument {
   return asset in YAHOO_SYMBOLS
 }
