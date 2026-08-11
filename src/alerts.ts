@@ -166,7 +166,7 @@ function writeStored(alerts: Alert[]) {
 /**
  * Sync AI alerts for scanner symbols.
  * - Up to 4 signals/day per symbol (one per session: Sydney / Asian / London / New York)
- * - Alerts stay until a newer signal for that symbol+session day replaces them
+ * - Alerts stay until a newer signal for that symbol+session replaces them
  * - Viewing an alert never removes it
  */
 export function syncAlertsForSymbols(symbols: string[], now = new Date()): Alert[] {
@@ -174,31 +174,31 @@ export function syncAlertsForSymbols(symbols: string[], now = new Date()): Alert
   const dueSessions = sessionsDueToday(now)
   const stored = readStored()
 
-  // Keep alerts that are still relevant: today's signals for current symbols,
-  // and do NOT drop them just because they were viewed.
-  const keepOthers = stored.filter((a) => {
-    if (!symbols.includes(a.asset)) return false
-    // Drop only when a new calendar day starts for that symbol's old alerts
-    // (they'll be replaced by today's session signals below). Keep today's.
-    return a.date === date
-  })
+  // Keep existing alerts for current scanner symbols until replaced by a newer signal.
+  // Viewing never deletes; only a new signal for the same symbol+session replaces it.
+  const bySessionKey = new Map<string, Alert>()
 
-  const byKey = new Map(keepOthers.map((a) => [`${a.asset}|${a.date}|${a.session}`, a]))
+  for (const alert of stored) {
+    if (!symbols.includes(alert.asset)) continue
+    const key = `${alert.asset}|${alert.session}`
+    const existing = bySessionKey.get(key)
+    if (!existing || new Date(alert.noticedAt) >= new Date(existing.noticedAt)) {
+      bySessionKey.set(key, alert)
+    }
+  }
 
   for (const asset of symbols) {
     for (const session of dueSessions) {
-      const key = `${asset}|${date}|${session}`
-      // Only create if missing — never wipe an existing alert until a new one replaces it
-      if (!byKey.has(key)) {
-        byKey.set(key, createSignal(asset, session, date, now))
+      const key = `${asset}|${session}`
+      const existing = bySessionKey.get(key)
+      // Create today's signal only if we don't already have today's for this session
+      if (!existing || existing.date !== date) {
+        bySessionKey.set(key, createSignal(asset, session, date, now))
       }
     }
   }
 
-  // If a brand-new session signal appears, it replaces the same key (same session same day).
-  // Cross-day: old dates are already filtered out above when day rolls.
-
-  const next = [...byKey.values()].sort(
+  const next = [...bySessionKey.values()].sort(
     (a, b) => new Date(b.noticedAt).getTime() - new Date(a.noticedAt).getTime(),
   )
 
