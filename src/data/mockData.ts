@@ -1,14 +1,24 @@
 export type Sentiment = 'Bullish' | 'Bearish'
+export type MarketSession = 'Sydney' | 'Asian' | 'London' | 'New York'
 
 export interface Alert {
   id: string
   asset: string
   sentiment: Sentiment
   strategy: string
+  /** Calendar day the signal belongs to (YYYY-MM-DD, UTC) */
   date: string
+  /** ISO timestamp when AI posted the signal */
+  noticedAt: string
+  session: MarketSession
   trending?: boolean
-  targets?: string[]
-  reversals?: string[]
+  /** AI possible targets for this signal */
+  targets: string[]
+  /** AI possible reversals for this signal */
+  reversals: string[]
+  /** Short AI note for the current market read */
+  aiNote?: string
+  entry?: string
 }
 
 export interface CourseVideo {
@@ -46,6 +56,21 @@ export const INSTRUMENTS = [
 ] as const
 
 export type Instrument = (typeof INSTRUMENTS)[number]
+
+/** Trading sessions that can produce alerts (max 4 signals/day per symbol) */
+export const MARKET_SESSIONS: {
+  id: MarketSession
+  /** UTC hour when this session's AI signal can fire */
+  signalHourUtc: number
+  label: string
+}[] = [
+  { id: 'Sydney', signalHourUtc: 22, label: 'Sydney' },
+  { id: 'Asian', signalHourUtc: 1, label: 'Asian' },
+  { id: 'London', signalHourUtc: 8, label: 'London' },
+  { id: 'New York', signalHourUtc: 13, label: 'New York' },
+]
+
+export const MAX_SIGNALS_PER_DAY = 4
 
 /** TradingView symbol ids for chart embeds */
 export const TRADINGVIEW_SYMBOLS: Record<string, string> = {
@@ -150,53 +175,6 @@ export const COURSE_SECTIONS: CourseSection[] = [
     ],
   },
 ]
-
-/** Demo price levels used when generating sample alerts per symbol */
-const SAMPLE_LEVELS: Record<string, { targets: string[]; reversals: string[] }> = {
-  GOLD: { targets: ['3320.50', '3305.20'], reversals: ['3365.80', '3380.10'] },
-  EURUSD: { targets: ['1.0820', '1.0785'], reversals: ['1.0910', '1.0945'] },
-  GBPUSD: { targets: ['1.2640', '1.2595'], reversals: ['1.2740', '1.2785'] },
-  USDJPY: { targets: ['148.20', '147.55'], reversals: ['149.80', '150.40'] },
-  NZDUSD: { targets: ['0.5980', '0.5945'], reversals: ['0.6055', '0.6090'] },
-  USDZAR: { targets: ['18.20', '18.05'], reversals: ['18.55', '18.72'] },
-  US30: { targets: ['39850', '39620'], reversals: ['40280', '40510'] },
-  NASDAQ: { targets: ['17820', '17690'], reversals: ['18140', '18275'] },
-  AUDUSD: { targets: ['0.6520', '0.6485'], reversals: ['0.6610', '0.6645'] },
-}
-
-function daysAgo(n: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
-}
-
-/** Build dashboard alerts for the user's selected scanner symbols */
-export function alertsForSymbols(symbols: string[]): Alert[] {
-  if (symbols.length === 0) return []
-
-  const alerts: Alert[] = []
-  symbols.forEach((asset, si) => {
-    const levels = SAMPLE_LEVELS[asset] ?? { targets: ['—', '—'], reversals: ['—', '—'] }
-    alerts.push({
-      id: `${asset}-bear-${si}`,
-      asset,
-      sentiment: 'Bearish',
-      strategy: 'Momentum',
-      date: daysAgo(si % 3),
-      trending: si === 0,
-      targets: levels.targets,
-      reversals: levels.reversals,
-    })
-    alerts.push({
-      id: `${asset}-bull-${si}`,
-      asset,
-      sentiment: 'Bullish',
-      strategy: 'Momentum',
-      date: daysAgo(si % 3),
-    })
-  })
-  return alerts
-}
 
 export function avatarUrl(seed: string): string {
   return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4`

@@ -4,7 +4,7 @@
 
 .alerts-panel-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
@@ -14,6 +14,13 @@
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--text);
+}
+
+.alerts-sub {
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-weight: 600;
 }
 
 .edit-scanner {
@@ -67,10 +74,49 @@
   letter-spacing: 0.02em;
 }
 
-.alert-strategy {
+.alert-asset-btn {
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  color: var(--neon-bright);
+  text-align: left;
+}
+
+.alert-asset-btn:hover {
+  text-decoration: underline;
+}
+
+.alert-strategy,
+.alert-session {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  justify-self: start;
+}
+
+.alert-session {
+  color: var(--neon-soft);
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--neon) 10%, transparent);
+}
+
+.alert-ai-note {
   color: var(--text-muted);
   font-size: 0.88rem;
-  justify-self: start;
+  line-height: 1.4;
+  margin: 0.65rem 0 0.35rem;
+}
+
+.alert-entry {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.55rem;
+}
+
+.alert-entry strong {
+  color: var(--text);
 }
 
 .trend-orb {

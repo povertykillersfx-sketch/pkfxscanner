@@ -177,6 +177,23 @@ html.chart-open body {
   margin-bottom: 0.35rem;
 }
 
+.floating-ai-note {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+  margin-bottom: 0.45rem;
+}
+
+.floating-entry {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 0.45rem;
+}
+
+.floating-entry strong {
+  color: var(--text);
+}
+
 .floating-alert .levels-grid {
   margin-top: 0.35rem;
 }

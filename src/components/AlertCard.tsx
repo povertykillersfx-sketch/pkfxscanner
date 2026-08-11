@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react'
 import type { Alert } from '../data/mockData'
+import { formatSessionTime } from '../alerts'
 import { ChartModal } from './ChartModal'
 import './AlertCard.css'
 
@@ -26,17 +27,24 @@ export function AlertCard({ alert }: AlertCardProps) {
     <>
       <article className={`alert-card ${expanded ? 'expanded' : ''}`}>
         <header className="alert-row">
-          <span className="alert-asset">{alert.asset}</span>
+          <button
+            type="button"
+            className="alert-asset-btn"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+          >
+            {alert.asset}
+          </button>
           <span className={`badge ${isBearish ? 'badge-bearish' : 'badge-bullish'}`}>
             {alert.sentiment}
           </span>
-          <span className="alert-strategy">{alert.strategy}</span>
+          <span className="alert-session">{alert.session}</span>
           <span className={`trend-orb ${isBearish ? 'down' : 'up'}`}>
             {isBearish ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
           </span>
           <span className="alert-date">
             <span className="date-dot" aria-hidden />
-            {alert.date}
+            {formatSessionTime(alert.noticedAt)}
           </span>
           <button
             type="button"
@@ -51,17 +59,25 @@ export function AlertCard({ alert }: AlertCardProps) {
 
         {expanded && (
           <div className="alert-body animate-fade-up">
+            <p className="alert-ai-note">{alert.aiNote}</p>
+
             {alert.trending && (
               <div className="trending-label">
                 <Rocket size={14} />
-                <span>TRENDING</span>
+                <span>CURRENT SIGNAL · {alert.session}</span>
               </div>
+            )}
+
+            {alert.entry && (
+              <p className="alert-entry">
+                Entry noticed: <strong>{alert.entry}</strong>
+              </p>
             )}
 
             <div className="levels-grid">
               <div className="levels-col">
                 <h4>Possible Targets</h4>
-                {(alert.targets ?? ['—', '—']).map((t) => (
+                {alert.targets.map((t) => (
                   <div key={`t-${t}`} className="level-bar target">
                     {t}
                   </div>
@@ -69,7 +85,7 @@ export function AlertCard({ alert }: AlertCardProps) {
               </div>
               <div className="levels-col">
                 <h4>Possible Reversals</h4>
-                {(alert.reversals ?? ['—', '—']).map((r) => (
+                {alert.reversals.map((r) => (
                   <div key={`r-${r}`} className="level-bar reversal">
                     {r}
                   </div>
@@ -125,7 +141,12 @@ export function AlertsPanel({
   return (
     <section className="alerts-panel panel panel-glow animate-fade-up">
       <div className="alerts-panel-header">
-        <h2 className="font-display">{title}</h2>
+        <div>
+          <h2 className="font-display">{title}</h2>
+          <p className="alerts-sub">
+            Up to 4 AI signals/day per symbol · Sydney · Asian · London · New York
+          </p>
+        </div>
         {onEditScanner && (
           <button type="button" className="btn btn-outline edit-scanner" onClick={onEditScanner}>
             <span className="gear">⚙</span> Edit Scanner

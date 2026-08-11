@@ -187,6 +187,7 @@ function FloatingAlertPanel({
         <span className={`badge ${isBearish ? 'badge-bearish' : 'badge-bullish'}`}>
           {alert.sentiment}
         </span>
+        <span className="alert-session">{alert.session}</span>
         <span className={`trend-orb ${isBearish ? 'down' : 'up'}`}>
           {isBearish ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
         </span>
@@ -197,21 +198,29 @@ function FloatingAlertPanel({
 
       <div className="floating-alert-body">
         <div className="floating-meta">
-          <span>{alert.strategy}</span>
+          <span>{alert.session} · {alert.strategy}</span>
           <span>{alert.date}</span>
         </div>
+
+        {alert.aiNote && <p className="floating-ai-note">{alert.aiNote}</p>}
 
         {alert.trending && (
           <div className="trending-label">
             <Rocket size={14} />
-            <span>TRENDING</span>
+            <span>CURRENT SIGNAL · {alert.session}</span>
           </div>
+        )}
+
+        {alert.entry && (
+          <p className="floating-entry">
+            Entry noticed: <strong>{alert.entry}</strong>
+          </p>
         )}
 
         <div className="levels-grid">
           <div className="levels-col">
             <h4>Possible Targets</h4>
-            {(alert.targets ?? ['—', '—']).map((t) => (
+            {alert.targets.map((t) => (
               <div key={`t-${t}`} className="level-bar target">
                 {t}
               </div>
@@ -219,7 +228,7 @@ function FloatingAlertPanel({
           </div>
           <div className="levels-col">
             <h4>Possible Reversals</h4>
-            {(alert.reversals ?? ['—', '—']).map((r) => (
+            {alert.reversals.map((r) => (
               <div key={`r-${r}`} className="level-bar reversal">
                 {r}
               </div>

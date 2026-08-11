@@ -2,24 +2,31 @@ import { useEffect, useState } from 'react'
 import { AlertsPanel } from '../components/AlertCard'
 import { ScannerModal } from '../components/ScannerModal'
 import { StatsRow } from '../components/StatsRow'
-import { alertsForSymbols } from '../data/mockData'
+import type { Alert } from '../data/mockData'
+import { getAlertsForSymbols } from '../alerts'
 import { getScannerSymbols } from '../scanner'
 import './Dashboard.css'
 
 export function AlertsPage() {
   const [scannerOpen, setScannerOpen] = useState(false)
-  const [symbols, setSymbols] = useState<string[]>(() => getScannerSymbols())
+  const [alerts, setAlerts] = useState<Alert[]>(() => getAlertsForSymbols(getScannerSymbols()))
 
   useEffect(() => {
-    function onChange(e: Event) {
-      const detail = (e as CustomEvent<string[]>).detail
-      setSymbols(Array.isArray(detail) ? detail : getScannerSymbols())
+    function refresh(next?: string[]) {
+      const syms = next ?? getScannerSymbols()
+      setAlerts(getAlertsForSymbols(syms))
     }
-    window.addEventListener('pkfx-scanner-change', onChange)
-    return () => window.removeEventListener('pkfx-scanner-change', onChange)
+    function onScanner(e: Event) {
+      const detail = (e as CustomEvent<string[]>).detail
+      refresh(Array.isArray(detail) ? detail : undefined)
+    }
+    const timer = window.setInterval(() => refresh(), 60_000)
+    window.addEventListener('pkfx-scanner-change', onScanner)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('pkfx-scanner-change', onScanner)
+    }
   }, [])
-
-  const alerts = alertsForSymbols(symbols)
 
   return (
     <div className="dashboard-page">
@@ -27,7 +34,7 @@ export function AlertsPage() {
         <AlertsPanel
           alerts={alerts}
           onEditScanner={() => setScannerOpen(true)}
-          limit={6}
+          limit={12}
         />
         <aside className="how-it-works panel animate-fade-up stagger-2">
           <h2 className="font-display">How it works?</h2>
@@ -49,7 +56,9 @@ export function AlertsPage() {
       {scannerOpen && (
         <ScannerModal
           onClose={() => setScannerOpen(false)}
-          onSaved={(next) => setSymbols(next)}
+          onSaved={(next) => {
+            setAlerts(getAlertsForSymbols(next))
+          }}
         />
       )}
     </div>

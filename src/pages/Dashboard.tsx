@@ -2,24 +2,51 @@ import { useEffect, useState } from 'react'
 import { AlertsPanel } from '../components/AlertCard'
 import { ScannerModal } from '../components/ScannerModal'
 import { StatsRow } from '../components/StatsRow'
-import { alertsForSymbols } from '../data/mockData'
+import type { Alert } from '../data/mockData'
+import { getAlertsForSymbols } from '../alerts'
 import { getScannerSymbols } from '../scanner'
 import './Dashboard.css'
 
-export function Dashboard() {
-  const [scannerOpen, setScannerOpen] = useState(false)
+function useScannerAlerts() {
   const [symbols, setSymbols] = useState<string[]>(() => getScannerSymbols())
+  const [alerts, setAlerts] = useState<Alert[]>(() => getAlertsForSymbols(getScannerSymbols()))
 
   useEffect(() => {
-    function onChange(e: Event) {
-      const detail = (e as CustomEvent<string[]>).detail
-      setSymbols(Array.isArray(detail) ? detail : getScannerSymbols())
+    function refresh(nextSymbols?: string[]) {
+      const syms = nextSymbols ?? getScannerSymbols()
+      setSymbols(syms)
+      setAlerts(getAlertsForSymbols(syms))
     }
-    window.addEventListener('pkfx-scanner-change', onChange)
-    return () => window.removeEventListener('pkfx-scanner-change', onChange)
+
+    function onScanner(e: Event) {
+      const detail = (e as CustomEvent<string[]>).detail
+      refresh(Array.isArray(detail) ? detail : undefined)
+    }
+
+    function onAlerts(e: Event) {
+      const detail = (e as CustomEvent<Alert[]>).detail
+      if (Array.isArray(detail)) setAlerts(detail)
+      else refresh()
+    }
+
+    // Re-check sessions periodically so new session signals appear without wiping old ones
+    const timer = window.setInterval(() => refresh(), 60_000)
+
+    window.addEventListener('pkfx-scanner-change', onScanner)
+    window.addEventListener('pkfx-alerts-change', onAlerts)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('pkfx-scanner-change', onScanner)
+      window.removeEventListener('pkfx-alerts-change', onAlerts)
+    }
   }, [])
 
-  const alerts = alertsForSymbols(symbols)
+  return { symbols, setSymbols, alerts, setAlerts }
+}
+
+export function Dashboard() {
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const { alerts, setAlerts, setSymbols } = useScannerAlerts()
 
   return (
     <div className="dashboard-page">
@@ -27,7 +54,7 @@ export function Dashboard() {
         <AlertsPanel
           alerts={alerts}
           onEditScanner={() => setScannerOpen(true)}
-          limit={4}
+          limit={8}
         />
 
         <aside className="how-it-works panel animate-fade-up stagger-2">
@@ -52,7 +79,10 @@ export function Dashboard() {
       {scannerOpen && (
         <ScannerModal
           onClose={() => setScannerOpen(false)}
-          onSaved={(next) => setSymbols(next)}
+          onSaved={(next) => {
+            setSymbols(next)
+            setAlerts(getAlertsForSymbols(next))
+          }}
         />
       )}
     </div>
