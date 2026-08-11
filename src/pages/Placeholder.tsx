@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { logout } from '../auth'
 import './Placeholder.css'
 
 interface PlaceholderProps {
@@ -83,6 +84,7 @@ export function ForgotPassword() {
 }
 
 export function Logout() {
+  logout()
   return (
     <div className="cyber-bg placeholder-auth">
       <div className="panel panel-glow animate-fade-up placeholder-auth-card">

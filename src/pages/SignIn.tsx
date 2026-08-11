@@ -2,15 +2,23 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
+import { login } from '../auth'
 import './SignIn.css'
 
 export function SignIn() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    const result = login(email, password)
+    if (!result.ok) {
+      setError(result.error)
+      return
+    }
+    setError('')
     navigate('/dashboard')
   }
 
@@ -30,7 +38,10 @@ export function SignIn() {
             type="email"
             placeholder="Email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              setError('')
+            }}
             autoComplete="email"
             required
           />
@@ -39,11 +50,16 @@ export function SignIn() {
             type="password"
             placeholder="Password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              setError('')
+            }}
             autoComplete="current-password"
             required
           />
         </div>
+
+        {error && <p className="signin-error">{error}</p>}
 
         <button type="submit" className="btn btn-primary signin-btn">
           Login
