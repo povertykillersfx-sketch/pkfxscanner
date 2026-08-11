@@ -1,12 +1,18 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
-import { RequireAuth } from './components/RequireAuth'
+import { AdminLayout } from './components/admin/AdminLayout'
+import { RequireAuth, RequireAdmin, RequireClient } from './components/RequireAuth'
 import { SignIn } from './pages/SignIn'
 import { SignUp } from './pages/SignUp'
 import { Dashboard } from './pages/Dashboard'
 import { AlertsPage } from './pages/AlertsPage'
 import { EBooks } from './pages/EBooks'
 import { Courses } from './pages/Courses'
+import { AdminDashboard } from './pages/admin/AdminDashboard'
+import { AdminRequests } from './pages/admin/AdminRequests'
+import { AdminTutorials } from './pages/admin/AdminTutorials'
+import { AdminMembers } from './pages/admin/AdminMembers'
+import { AdminEvents } from './pages/admin/AdminEvents'
 import {
   Billing,
   Community,
@@ -25,16 +31,28 @@ export default function App() {
       <Route path="/logout" element={<Logout />} />
 
       <Route element={<RequireAuth />}>
-        <Route element={<Layout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/alerts" element={<AlertsPage />} />
-          <Route path="/ebooks" element={<EBooks />} />
-          <Route path="/courses" element={<Courses />} />
-          <Route path="/community" element={<Community />} />
-          <Route path="/more" element={<More />} />
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/billing" element={<Billing />} />
-          <Route path="/profile" element={<Dashboard />} />
+        <Route element={<RequireClient />}>
+          <Route element={<Layout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/ebooks" element={<EBooks />} />
+            <Route path="/courses" element={<Courses />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/more" element={<More />} />
+            <Route path="/favorites" element={<Favorites />} />
+            <Route path="/billing" element={<Billing />} />
+            <Route path="/profile" element={<Dashboard />} />
+          </Route>
+        </Route>
+
+        <Route element={<RequireAdmin />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="requests" element={<AdminRequests />} />
+            <Route path="tutorials" element={<AdminTutorials />} />
+            <Route path="events" element={<AdminEvents />} />
+            <Route path="members" element={<AdminMembers />} />
+          </Route>
         </Route>
       </Route>
 

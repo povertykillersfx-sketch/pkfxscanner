@@ -1,15 +1,20 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
-import { login } from '../auth'
+import { getCurrentUser, login } from '../auth'
 import './SignIn.css'
 
 export function SignIn() {
   const navigate = useNavigate()
+  const existing = getCurrentUser()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+
+  if (existing) {
+    return <Navigate to={existing.role === 'admin' ? '/admin' : '/dashboard'} replace />
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -19,7 +24,7 @@ export function SignIn() {
       return
     }
     setError('')
-    navigate('/dashboard')
+    navigate(result.role === 'admin' ? '/admin' : '/dashboard')
   }
 
   return (
