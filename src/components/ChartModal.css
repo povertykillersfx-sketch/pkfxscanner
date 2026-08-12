@@ -111,6 +111,15 @@ html.chart-open body {
   height: 100%;
 }
 
+.chart-tv-iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #0b0614;
+}
+
 .chart-tv-host iframe,
 .chart-tv-host > div {
   width: 100% !important;
