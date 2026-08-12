@@ -9,21 +9,14 @@ import {
   type AdminCourse,
   type AdminEbook,
 } from '../../adminStore'
+import { deleteFileBlob, formatBytes, MAX_PDF_BYTES, putFileBlob } from '../../fileStore'
 import './admin.css'
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = () => reject(new Error('Could not read file'))
-    reader.readAsDataURL(file)
-  })
-}
 
 export function AdminTutorials() {
   const [courses, setCourses] = useState<AdminCourse[]>(() => getAdminCourses())
   const [books, setBooks] = useState<AdminEbook[]>(() => getAdminEbooks())
   const [bookMsg, setBookMsg] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   const [video, setVideo] = useState({ vimeoUrl: '', title: '', description: '', category: '' })
   const [book, setBook] = useState({
@@ -32,8 +25,6 @@ export function AdminTutorials() {
     description: '',
     category: '',
     url: '',
-    fileData: '',
-    fileName: '',
   })
 
   function addCourse(e: FormEvent) {
@@ -54,32 +45,49 @@ export function AdminTutorials() {
     setVideo({ vimeoUrl: '', title: '', description: '', category: '' })
   }
 
-  function publishEbook(partial: {
+  async function publishEbook(partial: {
     title: string
     coverUrl?: string
     description?: string
     category?: string
     url?: string
-    fileData?: string
-    fileName?: string
+    file?: File | null
   }) {
-    const next: AdminEbook[] = [
-      ...getAdminEbooks(),
-      {
-        id: `b-${Date.now()}`,
-        title: partial.title.trim(),
-        coverUrl: (partial.coverUrl || '').trim(),
-        description: (partial.description || '').trim() || 'PDF ebook from PKFX admin',
-        category: (partial.category || '').trim() || 'General',
-        url: partial.url?.trim() || undefined,
-        fileData: partial.fileData || undefined,
-        fileName: partial.fileName || undefined,
-      },
-    ]
-    setBooks(next)
-    saveAdminEbooks(next)
-    setBook({ title: '', coverUrl: '', description: '', category: '', url: '', fileData: '', fileName: '' })
-    setBookMsg('Published to client E-Books portal.')
+    const id = `b-${Date.now()}`
+    let hasFile = false
+    let fileName: string | undefined
+
+    if (partial.file) {
+      await putFileBlob(id, partial.file)
+      hasFile = true
+      fileName = partial.file.name
+    }
+
+    const entry: AdminEbook = {
+      id,
+      title: partial.title.trim(),
+      coverUrl: (partial.coverUrl || '').trim() || undefined,
+      description: (partial.description || '').trim() || 'PDF ebook from PKFX admin',
+      category: (partial.category || '').trim() || 'General',
+      url: partial.url?.trim() || undefined,
+      hasFile,
+      fileName,
+    }
+
+    const next = [...getAdminEbooks(), entry]
+    try {
+      saveAdminEbooks(next)
+      setBooks(next)
+      setBook({ title: '', coverUrl: '', description: '', category: '', url: '' })
+      setBookMsg(
+        hasFile
+          ? `Published “${entry.title}” (${formatBytes(partial.file!.size)}) to client E-Books.`
+          : `Published “${entry.title}” to client E-Books.`,
+      )
+    } catch (err) {
+      if (hasFile) await deleteFileBlob(id).catch(() => undefined)
+      throw err
+    }
   }
 
   /** Selecting a PDF immediately publishes it to the client E-Books page. */
@@ -89,42 +97,54 @@ export function AdminTutorials() {
       setBookMsg('Please upload a PDF file.')
       return
     }
-    if (file.size > 4.5 * 1024 * 1024) {
-      setBookMsg('PDF is too large for browser storage (max ~4.5MB). Use a URL instead.')
+    if (file.size > MAX_PDF_BYTES) {
+      setBookMsg(`PDF is too large (max ${formatBytes(MAX_PDF_BYTES)}). Try a smaller file or paste a PDF URL.`)
       return
     }
+    setUploading(true)
+    setBookMsg(`Uploading ${file.name} (${formatBytes(file.size)})…`)
     try {
-      const data = await readFileAsDataUrl(file)
       const title = book.title.trim() || file.name.replace(/\.pdf$/i, '')
-      publishEbook({
+      await publishEbook({
         title,
         coverUrl: book.coverUrl,
         description: book.description,
         category: book.category,
-        fileData: data,
-        fileName: file.name,
+        file,
       })
-    } catch {
-      setBookMsg('Could not read that PDF.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Upload failed.'
+      setBookMsg(msg)
+    } finally {
+      setUploading(false)
     }
   }
 
-  function addBook(e: FormEvent) {
+  async function addBook(e: FormEvent) {
     e.preventDefault()
-    if (!book.title.trim()) return
-    if (!book.fileData && !book.url.trim()) {
-      setBookMsg('Upload a PDF or paste a download URL.')
+    if (!book.title.trim()) {
+      setBookMsg('Add a title (or upload a PDF — title is taken from the filename).')
       return
     }
-    publishEbook({
-      title: book.title,
-      coverUrl: book.coverUrl,
-      description: book.description,
-      category: book.category,
-      url: book.url,
-      fileData: book.fileData,
-      fileName: book.fileName,
-    })
+    if (!book.url.trim()) {
+      setBookMsg('Upload a PDF above, or paste a download URL, then click Add Book.')
+      return
+    }
+    setUploading(true)
+    try {
+      await publishEbook({
+        title: book.title,
+        coverUrl: book.coverUrl,
+        description: book.description,
+        category: book.category,
+        url: book.url,
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not publish ebook.'
+      setBookMsg(msg)
+    } finally {
+      setUploading(false)
+    }
   }
 
   function removeCourse(id: string) {
@@ -133,7 +153,8 @@ export function AdminTutorials() {
     saveAdminCourses(next)
   }
 
-  function removeBook(id: string) {
+  async function removeBook(id: string) {
+    await deleteFileBlob(id).catch(() => undefined)
     const next = books.filter((b) => b.id !== id)
     setBooks(next)
     saveAdminEbooks(next)
@@ -172,6 +193,7 @@ export function AdminTutorials() {
           <section className="admin-card">
             <div className="admin-card-head">
               <h2>My Books</h2>
+              <span className="admin-muted">{books.length} published</span>
             </div>
             {books.length === 0 ? (
               <p className="admin-muted">No ebooks yet. Upload a PDF — it appears automatically on the client E-Books page.</p>
@@ -181,20 +203,15 @@ export function AdminTutorials() {
                   <div key={b.id} className="admin-list-row">
                     <div className="admin-list-main">
                       <h4>{b.title}</h4>
-                      <a
-                        className="admin-link"
-                        href={b.fileData || b.url || '#'}
-                        target="_blank"
-                        rel="noreferrer"
-                        download={b.fileName || `${b.title}.pdf`}
-                      >
-                        Download{b.fileName ? ` (${b.fileName})` : ''}
-                      </a>
+                      <p className="admin-muted">
+                        {b.fileName ? `${b.fileName} · stored` : b.url ? 'External URL' : 'No file'}
+                        {b.category ? ` · ${b.category}` : ''}
+                      </p>
                     </div>
                     <button type="button" className="admin-icon-btn" aria-label="Edit">
                       <Pencil size={15} />
                     </button>
-                    <button type="button" className="admin-icon-btn" aria-label="Delete" onClick={() => removeBook(b.id)}>
+                    <button type="button" className="admin-icon-btn" aria-label="Delete" onClick={() => void removeBook(b.id)}>
                       <Trash2 size={15} />
                     </button>
                   </div>
@@ -236,16 +253,21 @@ export function AdminTutorials() {
             <div className="admin-card-head">
               <h2>Add Ebook (PDF)</h2>
             </div>
-            <form className="admin-form" onSubmit={addBook}>
+            <form className="admin-form" onSubmit={(e) => void addBook(e)}>
               <div className="admin-field">
-                <label>Title</label>
-                <input value={book.title} onChange={(e) => setBook({ ...book, title: e.target.value })} required />
+                <label>Title (optional if uploading PDF)</label>
+                <input
+                  value={book.title}
+                  onChange={(e) => setBook({ ...book, title: e.target.value })}
+                  placeholder="Taken from filename when you upload"
+                />
               </div>
               <div className="admin-field">
-                <label>Upload PDF</label>
+                <label>Upload PDF (up to {formatBytes(MAX_PDF_BYTES)})</label>
                 <input
                   type="file"
                   accept="application/pdf,.pdf"
+                  disabled={uploading}
                   onChange={(e) => {
                     const input = e.target
                     void onPdfSelected(input.files?.[0] ?? null).finally(() => {
@@ -254,7 +276,7 @@ export function AdminTutorials() {
                   }}
                 />
                 <p className="admin-muted" style={{ marginTop: '0.35rem' }}>
-                  PDF uploads publish straight to the client E-Books portal.
+                  Files are stored in this browser and publish straight to the client E-Books portal.
                 </p>
               </div>
               <div className="admin-field">
@@ -278,9 +300,9 @@ export function AdminTutorials() {
                 <label>Or PDF URL</label>
                 <input value={book.url} onChange={(e) => setBook({ ...book, url: e.target.value })} placeholder="https://..." />
               </div>
-              {bookMsg && <p className="admin-muted">{bookMsg}</p>}
-              <button type="submit" className="admin-btn">
-                <Upload size={16} /> Add Book
+              {bookMsg && <p className={bookMsg.toLowerCase().includes('publish') ? 'admin-success' : 'admin-muted'}>{bookMsg}</p>}
+              <button type="submit" className="admin-btn" disabled={uploading}>
+                <Upload size={16} /> {uploading ? 'Publishing…' : 'Add Book (URL)'}
               </button>
             </form>
           </section>

@@ -21,11 +21,13 @@ export interface AdminEbook {
   coverUrl?: string
   description?: string
   category?: string
-  /** External or object URL for download */
+  /** External download URL (optional alternative to uploaded file) */
   url?: string
-  /** Uploaded PDF as data URL (auto-published to client portal) */
-  fileData?: string
+  /** True when the PDF blob is stored in IndexedDB under this id */
+  hasFile?: boolean
   fileName?: string
+  /** @deprecated legacy base64 in localStorage — avoided for new uploads */
+  fileData?: string
 }
 
 export interface TelegramSettings {
@@ -50,7 +52,26 @@ function readJson<T>(key: string, fallback: T): T {
 }
 
 function writeJson<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value))
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    throw new Error(
+      msg.includes('Quota') || msg.includes('quota')
+        ? 'Browser storage is full. Remove an old ebook or use a smaller file / PDF URL.'
+        : `Could not save: ${msg}`,
+    )
+  }
+}
+
+/** Persist ebook metadata only — never write large PDF payloads into localStorage. */
+export function serializeEbookForStorage(book: AdminEbook): AdminEbook {
+  const { fileData: _drop, ...rest } = book
+  return {
+    ...rest,
+    hasFile: Boolean(book.hasFile || book.fileData),
+    fileData: undefined,
+  }
 }
 
 export function getRequests(): AccessRequest[] {
@@ -77,8 +98,9 @@ export function getAdminEbooks(): AdminEbook[] {
 }
 
 export function saveAdminEbooks(books: AdminEbook[]) {
-  writeJson(EBOOKS_KEY, books)
-  window.dispatchEvent(new CustomEvent('pkfx-ebooks-change', { detail: books }))
+  const slim = books.map(serializeEbookForStorage)
+  writeJson(EBOOKS_KEY, slim)
+  window.dispatchEvent(new CustomEvent('pkfx-ebooks-change', { detail: slim }))
 }
 
 export function getTelegramSettings(): TelegramSettings {
