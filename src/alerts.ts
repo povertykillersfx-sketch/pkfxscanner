@@ -11,9 +11,8 @@ import {
   type MultiTimeframeFeed,
 } from './marketData'
 
-/** Bump key so stale demo/synthetic signals regenerate from real OHLC */
-const ALERTS_KEY = 'pkfx_live_alerts_v3_real'
-const REFRESH_MS = 10 * 60 * 1000
+/** Locked session signals — one alert per symbol/session/day (does not keep rewriting levels) */
+const ALERTS_KEY = 'pkfx_live_alerts_v4_sticky'
 
 function utcDateKey(d = new Date()): string {
   return d.toISOString().slice(0, 10)
@@ -313,8 +312,8 @@ function createSignal(
       Number(date.slice(5, 7)) - 1,
       Number(date.slice(8, 10)),
       sessionMeta.signalHourUtc,
-      now.getUTCMinutes(),
-      now.getUTCSeconds(),
+      0,
+      0,
     ),
   )
   if (noticed.getTime() > now.getTime()) {
@@ -356,15 +355,10 @@ function writeStored(alerts: Alert[]) {
   window.dispatchEvent(new CustomEvent('pkfx-alerts-change', { detail: alerts }))
 }
 
-function shouldRefreshLive(existing: Alert, now: Date, latestSession: MarketSession | undefined): boolean {
-  if (existing.session !== latestSession) return false
-  const age = now.getTime() - new Date(existing.noticedAt).getTime()
-  return age >= REFRESH_MS
-}
-
 /**
  * Sync AI alerts for scanner symbols using multi-timeframe live data.
  * Bias: 4H → 1H · Entry: 15m · Targets: HTF structure
+ * One locked alert per symbol + session + UTC day (no mid-session rewrite).
  */
 export async function syncAlertsForSymbols(symbols: string[], now = new Date()): Promise<Alert[]> {
   const date = utcDateKey(now)
@@ -372,63 +366,78 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
   const latestSession = dueSessions.at(-1)
   const stored = readStored()
 
+  // Keep all stored alerts (other symbols / prior sessions) so refresh does not wipe history
+  const byId = new Map<string, Alert>()
+  for (const alert of stored) {
+    byId.set(alert.id, alert)
+  }
+
   const bySessionKey = new Map<string, Alert>()
   for (const alert of stored) {
     if (!symbols.includes(alert.asset)) continue
-    const key = `${alert.asset}|${alert.session}`
+    if (alert.date !== date) continue
+    const key = `${alert.asset}|${alert.session}|${alert.date}`
     const existing = bySessionKey.get(key)
     if (!existing || new Date(alert.noticedAt) >= new Date(existing.noticedAt)) {
       bySessionKey.set(key, alert)
     }
   }
 
-  const market = await Promise.all(
-    symbols.map(async (asset) => {
-      const feed = await fetchMultiTimeframe(asset)
-      return [asset, feed] as const
-    }),
+  const missingAssets = symbols.filter((asset) =>
+    dueSessions.some((session) => !bySessionKey.has(`${asset}|${session}|${date}`)),
   )
-  const byAsset = new Map(market)
 
-  for (const asset of symbols) {
-    const feed = byAsset.get(asset)
-    if (!feed) continue
-    const analysisCache = new Map<MarketSession, MarketSignal>()
+  if (missingAssets.length > 0) {
+    const market = await Promise.all(
+      missingAssets.map(async (asset) => {
+        const feed = await fetchMultiTimeframe(asset)
+        return [asset, feed] as const
+      }),
+    )
+    const byAsset = new Map(market)
 
-    for (const session of dueSessions) {
-      const key = `${asset}|${session}`
-      const existing = bySessionKey.get(key)
-      const needsCreate = !existing || existing.date !== date
-      const needsRefresh = existing && existing.date === date && shouldRefreshLive(existing, now, latestSession)
+    for (const asset of missingAssets) {
+      const feed = byAsset.get(asset)
+      if (!feed) continue
+      const analysisCache = new Map<MarketSession, MarketSignal>()
 
-      if (!needsCreate && !needsRefresh) {
-        if (existing) {
-          bySessionKey.set(key, {
-            ...existing,
-            trending: session === latestSession,
-          })
+      for (const session of dueSessions) {
+        const key = `${asset}|${session}|${date}`
+        if (bySessionKey.has(key)) continue
+
+        let analysis = analysisCache.get(session)
+        if (!analysis) {
+          analysis = analyzeMultiTimeframe(asset, session, feed)
+          analysisCache.set(session, analysis)
         }
-        continue
-      }
 
-      let analysis = analysisCache.get(session)
-      if (!analysis) {
-        analysis = analyzeMultiTimeframe(asset, session, feed)
-        analysisCache.set(session, analysis)
+        const signal = createSignal(asset, session, date, now, analysis)
+        bySessionKey.set(key, signal)
+        byId.set(signal.id, signal)
       }
-
-      const base = createSignal(asset, session, date, now, analysis)
-      bySessionKey.set(key, {
-        ...base,
-        noticedAt: needsRefresh && existing ? now.toISOString() : base.noticedAt,
-        id: existing?.date === date ? existing.id : base.id,
-      })
     }
   }
 
-  const next = organizeAlertsForScanner([...bySessionKey.values()], symbols)
+  // Only update trending flags on today's scanner alerts — never rewrite levels
+  for (const [key, alert] of bySessionKey) {
+    const next = {
+      ...alert,
+      trending: alert.session === latestSession,
+    }
+    bySessionKey.set(key, next)
+    byId.set(next.id, next)
+  }
 
-  writeStored(next)
+  const merged = [...byId.values()]
+  const next = organizeAlertsForScanner(
+    merged.filter((a) => symbols.includes(a.asset) && a.date === date),
+    symbols,
+  )
+
+  // Persist: today's organized scanner alerts + any other stored alerts not in that set
+  const organizedIds = new Set(next.map((a) => a.id))
+  const preserved = merged.filter((a) => !organizedIds.has(a.id))
+  writeStored([...preserved, ...next])
   return next
 }
 
@@ -443,15 +452,15 @@ export function organizeAlertsForScanner(alerts: Alert[], symbols: string[]): Al
 
     if (!forSymbol.length) continue
 
-    const currentIdx = latestSession
-      ? forSymbol.findIndex((a) => a.session === latestSession)
-      : 0
-    const activeIdx = currentIdx >= 0 ? currentIdx : 0
-
-    const marked = forSymbol.map((a, i) => ({
+    const marked = forSymbol.map((a) => ({
       ...a,
-      trending: i === activeIdx,
+      trending: Boolean(latestSession && a.session === latestSession),
     }))
+
+    // If latest session alert is missing, keep the most recent one marked current
+    if (latestSession && !marked.some((a) => a.trending) && marked[0]) {
+      marked[0] = { ...marked[0], trending: true }
+    }
 
     marked.sort((a, b) => {
       if (a.trending !== b.trending) return a.trending ? -1 : 1
