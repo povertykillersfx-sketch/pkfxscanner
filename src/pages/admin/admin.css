@@ -391,6 +391,13 @@
   line-height: 1.4;
 }
 
+.admin-success {
+  color: #059669;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
 .admin-link {
   color: var(--admin-blue, #0052ff);
   font-weight: 700;

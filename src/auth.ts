@@ -27,6 +27,10 @@ const WIPE_FLAG = 'pkfx_live_wipe_v1'
 const ADMIN_EMAIL = 'povertykillersfx2@gmail.com'
 const ADMIN_PASSWORD = 'pkfx-admin'
 
+/** Primary client account for the owner (same browser local store as admin) */
+const OWNER_CLIENT_EMAIL = 'povertykillersfx@gmail.com'
+const OWNER_CLIENT_PASSWORD = 'pkfx-client'
+
 const LEGACY_KEYS = [
   'pkfx_users',
   'pkfx_users_v2',
@@ -96,6 +100,8 @@ function ensureAdminUser() {
   wipeLegacyDemoData()
 
   const users = readUsers()
+  let changed = false
+
   const admin: UserProfile = {
     firstName: 'Kamogelo',
     fullName: 'Kamogelo Dube',
@@ -107,17 +113,53 @@ function ensureAdminUser() {
     country: '27',
   }
 
-  const idx = users.findIndex((u) => u.email === ADMIN_EMAIL)
-  if (idx < 0) {
+  const adminIdx = users.findIndex((u) => u.email === ADMIN_EMAIL)
+  if (adminIdx < 0) {
     users.push(admin)
-    writeUsers(users)
+    changed = true
   } else {
-    const cur = users[idx]!
+    const cur = users[adminIdx]!
     if (cur.password !== ADMIN_PASSWORD || cur.role !== 'admin') {
-      users[idx] = { ...cur, ...admin }
-      writeUsers(users)
+      users[adminIdx] = { ...cur, ...admin }
+      changed = true
     }
   }
+
+  // Ensure the owner's client login always exists (active / approved)
+  const clientIdx = users.findIndex((u) => u.email === OWNER_CLIENT_EMAIL)
+  if (clientIdx < 0) {
+    users.push({
+      firstName: 'Kamogelo',
+      fullName: 'Kamogelo Dube',
+      email: OWNER_CLIENT_EMAIL,
+      password: OWNER_CLIENT_PASSWORD,
+      plan: 'pro',
+      role: 'client',
+      status: 'active',
+      country: 'South Africa',
+      joinedAt: new Date().toISOString(),
+    })
+    changed = true
+  } else {
+    const cur = users[clientIdx]!
+    if (
+      cur.role !== 'client' ||
+      cur.password !== OWNER_CLIENT_PASSWORD ||
+      cur.status !== 'active' ||
+      cur.plan === 'admin'
+    ) {
+      users[clientIdx] = {
+        ...cur,
+        role: 'client',
+        password: OWNER_CLIENT_PASSWORD,
+        status: 'active',
+        plan: cur.plan === 'admin' || cur.plan === 'free' ? 'pro' : cur.plan,
+      }
+      changed = true
+    }
+  }
+
+  if (changed) writeUsers(users)
 }
 
 ensureAdminUser()
@@ -129,7 +171,7 @@ export function register(input: {
 }): { ok: true } | { ok: false; error: string } {
   const fullName = input.fullName.trim()
   const email = normalizeEmail(input.email)
-  const password = input.password
+  const password = input.password.trim()
 
   if (!fullName) return { ok: false, error: 'Please enter your name.' }
   if (!email || !email.includes('@')) return { ok: false, error: 'Please enter a valid email.' }
@@ -196,14 +238,66 @@ export function login(
       user.role = 'admin'
       writeUsers(users)
     }
-  } else if (!user || user.password !== password) {
-    return { ok: false, error: 'Invalid email or password.' }
+  } else if (email === OWNER_CLIENT_EMAIL && password === OWNER_CLIENT_PASSWORD) {
+    // Self-heal owner client login
+    if (!user) {
+      user = {
+        firstName: 'Kamogelo',
+        fullName: 'Kamogelo Dube',
+        email: OWNER_CLIENT_EMAIL,
+        password: OWNER_CLIENT_PASSWORD,
+        plan: 'pro',
+        role: 'client',
+        status: 'active',
+        country: 'South Africa',
+        joinedAt: new Date().toISOString(),
+      }
+      users.push(user)
+      writeUsers(users)
+    } else {
+      user.password = OWNER_CLIENT_PASSWORD
+      user.role = 'client'
+      user.status = 'active'
+      writeUsers(users)
+    }
+  } else if (!user) {
+    return { ok: false, error: 'No account found for this email. Use Sign Up first.' }
+  } else if (user.password !== password) {
+    return { ok: false, error: 'Wrong password. Use Forgot password to reset it.' }
   }
 
   if (!user) return { ok: false, error: 'Invalid email or password.' }
 
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({ email: user.email, at: Date.now() }))
   return { ok: true, role: user.role === 'admin' ? 'admin' : 'client' }
+}
+
+/** Reset (or create) a client password for local demo auth. */
+export function resetPassword(
+  emailInput: string,
+  newPasswordInput: string,
+): { ok: true } | { ok: false; error: string } {
+  const email = normalizeEmail(emailInput)
+  const password = newPasswordInput.trim()
+  if (!email || !email.includes('@')) return { ok: false, error: 'Please enter a valid email.' }
+  if (password.length < 6) return { ok: false, error: 'Password must be at least 6 characters.' }
+  if (email === ADMIN_EMAIL) {
+    return { ok: false, error: 'Admin password cannot be reset here.' }
+  }
+
+  ensureAdminUser()
+  const users = readUsers()
+  const idx = users.findIndex((u) => u.email.toLowerCase() === email)
+  if (idx < 0) {
+    return { ok: false, error: 'No account found. Please Sign Up first.' }
+  }
+  const user = users[idx]!
+  if (user.role === 'admin') {
+    return { ok: false, error: 'Admin password cannot be reset here.' }
+  }
+  user.password = password
+  writeUsers(users)
+  return { ok: true }
 }
 
 export function logout() {
@@ -315,4 +409,9 @@ export function resetAllClients() {
 export const ADMIN_LOGIN = {
   email: ADMIN_EMAIL,
   password: ADMIN_PASSWORD,
+}
+
+export const CLIENT_LOGIN = {
+  email: OWNER_CLIENT_EMAIL,
+  password: OWNER_CLIENT_PASSWORD,
 }
