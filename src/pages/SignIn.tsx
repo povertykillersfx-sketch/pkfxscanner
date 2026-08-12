@@ -72,9 +72,9 @@ export function SignIn() {
         </button>
 
         <p className="signin-hint">
-          Client: povertykillersfx@gmail.com / pkfxtest
+          Super Admin: povertykillersfx2@gmail.com / pkfx-admin
           <br />
-          Admin: povertykillersfx2@gmail.com / pkfx-admin
+          New clients: use Sign Up
         </p>
 
         <p className="signin-signup">

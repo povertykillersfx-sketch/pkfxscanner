@@ -30,10 +30,10 @@ export interface TelegramSettings {
   chatId: string
 }
 
-const REQUESTS_KEY = 'pkfx_admin_requests'
-const COURSES_KEY = 'pkfx_admin_courses'
-const EBOOKS_KEY = 'pkfx_admin_ebooks'
-const TELEGRAM_KEY = 'pkfx_admin_telegram'
+const REQUESTS_KEY = 'pkfx_admin_requests_live_v1'
+const COURSES_KEY = 'pkfx_admin_courses_live_v1'
+const EBOOKS_KEY = 'pkfx_admin_ebooks_live_v1'
+const TELEGRAM_KEY = 'pkfx_admin_telegram_live_v1'
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -60,16 +60,7 @@ export function saveRequests(requests: AccessRequest[]) {
 }
 
 export function getAdminCourses(): AdminCourse[] {
-  const seeded: AdminCourse[] = [
-    { id: 'c1', title: 'What is forex?', category: 'Introduction', description: 'Intro to forex markets' },
-    { id: 'c2', title: 'Breakouts', category: 'Technical Analysis', description: 'How breakouts work' },
-  ]
-  const stored = readJson<AdminCourse[] | null>(COURSES_KEY, null)
-  if (!stored) {
-    writeJson(COURSES_KEY, seeded)
-    return seeded
-  }
-  return stored
+  return readJson<AdminCourse[]>(COURSES_KEY, [])
 }
 
 export function saveAdminCourses(courses: AdminCourse[]) {
@@ -77,16 +68,7 @@ export function saveAdminCourses(courses: AdminCourse[]) {
 }
 
 export function getAdminEbooks(): AdminEbook[] {
-  const seeded: AdminEbook[] = [
-    { id: 'b1', title: 'Candlestick Patterns', category: 'Technical Analysis', url: '#', description: 'Candlestick guide' },
-    { id: 'b2', title: 'What is Forex?', category: 'Introduction', url: '#', description: 'Forex basics' },
-  ]
-  const stored = readJson<AdminEbook[] | null>(EBOOKS_KEY, null)
-  if (!stored) {
-    writeJson(EBOOKS_KEY, seeded)
-    return seeded
-  }
-  return stored
+  return readJson<AdminEbook[]>(EBOOKS_KEY, [])
 }
 
 export function saveAdminEbooks(books: AdminEbook[]) {
@@ -103,4 +85,12 @@ export function getTelegramSettings(): TelegramSettings {
 
 export function saveTelegramSettings(settings: TelegramSettings) {
   writeJson(TELEGRAM_KEY, settings)
+}
+
+/** Wipe admin content stores for a clean live start. */
+export function resetAdminContent() {
+  writeJson(REQUESTS_KEY, [])
+  writeJson(COURSES_KEY, [])
+  writeJson(EBOOKS_KEY, [])
+  writeJson(TELEGRAM_KEY, { sample: '', botToken: '', chatId: '' })
 }

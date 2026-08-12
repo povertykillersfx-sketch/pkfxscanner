@@ -1,4 +1,4 @@
-import { DEMO_USER, avatarUrl } from './data/mockData'
+import { avatarUrl } from './data/mockData'
 
 export type UserRole = 'client' | 'admin'
 
@@ -17,14 +17,22 @@ export interface UserProfile {
 
 export type MemberStatus = 'lead' | 'pending' | 'active'
 
-const USERS_KEY = 'pkfx_users_v2'
-const LEGACY_USERS_KEY = 'pkfx_users'
+/** Live empty slate — only the super admin is seeded */
+const USERS_KEY = 'pkfx_users_live_v1'
 const SESSION_KEY = 'pkfx_auth'
+const WIPE_FLAG = 'pkfx_live_wipe_v1'
 
-const DEMO_EMAIL = DEMO_USER.email.toLowerCase()
-const DEMO_PASSWORD = 'pkfxtest'
 const ADMIN_EMAIL = 'povertykillersfx2@gmail.com'
 const ADMIN_PASSWORD = 'pkfx-admin'
+
+const LEGACY_KEYS = [
+  'pkfx_users',
+  'pkfx_users_v2',
+  'pkfx_admin_requests',
+  'pkfx_admin_courses',
+  'pkfx_admin_ebooks',
+  'pkfx_admin_telegram',
+]
 
 /** Fix common typos like "namegmail.com" → "name@gmail.com" */
 export function normalizeEmail(raw: string): string {
@@ -37,6 +45,22 @@ export function normalizeEmail(raw: string): string {
     email = `${email.slice(0, -'yahoo.com'.length)}@yahoo.com`
   }
   return email
+}
+
+function wipeLegacyDemoData() {
+  if (typeof localStorage === 'undefined') return
+  if (localStorage.getItem(WIPE_FLAG) === '1') return
+  for (const key of LEGACY_KEYS) {
+    localStorage.removeItem(key)
+  }
+  // Start live users store empty (admin re-seeded next)
+  localStorage.removeItem(USERS_KEY)
+  // Also clear any previous live admin content so tutorials/requests start empty
+  localStorage.removeItem('pkfx_admin_requests_live_v1')
+  localStorage.removeItem('pkfx_admin_courses_live_v1')
+  localStorage.removeItem('pkfx_admin_ebooks_live_v1')
+  localStorage.removeItem('pkfx_admin_telegram_live_v1')
+  localStorage.setItem(WIPE_FLAG, '1')
 }
 
 function readUsers(): UserProfile[] {
@@ -64,118 +88,37 @@ function writeUsers(users: UserProfile[]) {
   window.dispatchEvent(new CustomEvent('pkfx-users-change', { detail: users }))
 }
 
-function migrateLegacyUsers() {
-  try {
-    if (localStorage.getItem(USERS_KEY)) return
-    const legacy = localStorage.getItem(LEGACY_USERS_KEY)
-    if (!legacy) return
-    const parsed = JSON.parse(legacy) as Array<Partial<UserProfile>>
-    if (!Array.isArray(parsed)) return
-    const migrated = parsed
-      .map((u): UserProfile | null => {
-        const email = normalizeEmail(u.email || '')
-        if (!email.includes('@')) return null
-        return {
-          firstName: u.firstName || (u.fullName || 'Trader').split(/\s+/)[0] || 'Trader',
-          fullName: u.fullName || u.firstName || 'Trader',
-          email,
-          password: typeof u.password === 'string' ? u.password : '',
-          plan: u.plan || 'free',
-          role: email === ADMIN_EMAIL ? 'admin' : 'client',
-          phone: u.phone,
-          country: u.country,
-          mt4: u.mt4,
-          status: u.status || 'lead',
-        }
-      })
-      .filter((u): u is UserProfile => u !== null)
-    if (migrated.length) writeUsers(migrated)
-  } catch {
-    /* ignore */
-  }
-}
-
-function upsertUser(users: UserProfile[], next: UserProfile): boolean {
-  const idx = users.findIndex((u) => u.email.toLowerCase() === next.email.toLowerCase())
-  if (idx < 0) {
-    users.push(next)
-    return true
-  }
-  const cur = users[idx]!
-  const needs =
-    cur.password !== next.password ||
-    cur.role !== next.role ||
-    cur.plan !== next.plan ||
-    (next.status && cur.status !== next.status)
-  if (needs) {
-    users[idx] = { ...cur, ...next }
-    return true
-  }
-  return false
-}
-
-/** Always keep demo + admin accounts working (self-heal bad localStorage). */
-function ensureSeedUsers() {
+/** Keep the super admin account. Wipe old demo data once. Do not delete real clients. */
+function ensureAdminUser() {
   if (typeof localStorage === 'undefined') return
+  wipeLegacyDemoData()
 
-  migrateLegacyUsers()
   const users = readUsers()
-  let changed = false
-
-  // Force-known accounts so logins never "decline" for the official credentials
-  if (
-    upsertUser(users, {
-      firstName: DEMO_USER.firstName,
-      fullName: DEMO_USER.fullName,
-      email: DEMO_EMAIL,
-      password: DEMO_PASSWORD,
-      plan: DEMO_USER.plan,
-      role: 'client',
-      status: 'active',
-      country: '27',
-      phone: '',
-      mt4: '',
-    })
-  ) {
-    changed = true
+  const admin: UserProfile = {
+    firstName: 'Kamogelo',
+    fullName: 'Kamogelo Dube',
+    email: ADMIN_EMAIL,
+    password: ADMIN_PASSWORD,
+    plan: 'admin',
+    role: 'admin',
+    status: 'active',
+    country: '27',
   }
 
-  if (
-    upsertUser(users, {
-      firstName: 'Kamogelo',
-      fullName: 'Kamogelo Dube',
-      email: ADMIN_EMAIL,
-      password: ADMIN_PASSWORD,
-      plan: 'admin',
-      role: 'admin',
-      status: 'active',
-      country: '27',
-    })
-  ) {
-    changed = true
-  }
-
-  if (users.length < 8) {
-    const seeds: UserProfile[] = [
-      { firstName: 'Bongani', fullName: 'Bongani', email: 'bn4448007@gmail.com', password: 'lead1234', plan: 'free', role: 'client', status: 'lead', phone: '+263784492920', country: '263', mt4: '' },
-      { firstName: 'SIEGFRIED', fullName: 'SIEGFRIED', email: 'siegfried@example.com', password: 'lead1234', plan: 'free', role: 'client', status: 'lead', phone: '+264811234567', country: '264', mt4: '' },
-      { firstName: 'Thamsanqa', fullName: 'Thamsanqa', email: 'thamsanqa@example.com', password: 'lead1234', plan: 'free', role: 'client', status: 'lead', phone: '+27821234567', country: '27', mt4: '' },
-      { firstName: 'Shaibu', fullName: 'Shaibu', email: 'shaibu@example.com', password: 'lead1234', plan: 'free', role: 'client', status: 'lead', phone: '+255712345678', country: '255', mt4: '' },
-      { firstName: 'Luis', fullName: 'Luis', email: 'luis@example.com', password: 'active12', plan: 'pro', role: 'client', status: 'active', phone: '+244912345678', country: '244', mt4: 'MT5-8821' },
-      { firstName: 'Nonjabulo', fullName: 'Nonjabulo', email: 'nonjabulo@example.com', password: 'lead1234', plan: 'free', role: 'client', status: 'lead', phone: '+27831112233', country: '27', mt4: '' },
-    ]
-    for (const seed of seeds) {
-      if (!users.some((u) => u.email.toLowerCase() === seed.email.toLowerCase())) {
-        users.push(seed)
-        changed = true
-      }
+  const idx = users.findIndex((u) => u.email === ADMIN_EMAIL)
+  if (idx < 0) {
+    users.push(admin)
+    writeUsers(users)
+  } else {
+    const cur = users[idx]!
+    if (cur.password !== ADMIN_PASSWORD || cur.role !== 'admin') {
+      users[idx] = { ...cur, ...admin }
+      writeUsers(users)
     }
   }
-
-  if (changed) writeUsers(users)
 }
 
-ensureSeedUsers()
+ensureAdminUser()
 
 export function register(input: {
   fullName: string
@@ -189,11 +132,11 @@ export function register(input: {
   if (!fullName) return { ok: false, error: 'Please enter your name.' }
   if (!email || !email.includes('@')) return { ok: false, error: 'Please enter a valid email.' }
   if (password.length < 6) return { ok: false, error: 'Password must be at least 6 characters.' }
-  if (email === ADMIN_EMAIL || email === DEMO_EMAIL) {
+  if (email === ADMIN_EMAIL) {
     return { ok: false, error: 'That account already exists. Please sign in.' }
   }
 
-  ensureSeedUsers()
+  ensureAdminUser()
   const users = readUsers()
   if (users.some((u) => u.email.toLowerCase() === email)) {
     return { ok: false, error: 'An account with this email already exists. Please sign in.' }
@@ -225,52 +168,31 @@ export function login(
   if (!email) return { ok: false, error: 'Please enter your email.' }
   if (!password) return { ok: false, error: 'Please enter your password.' }
 
-  ensureSeedUsers()
+  ensureAdminUser()
   const users = readUsers()
   let user = users.find((u) => u.email.toLowerCase() === email)
 
-  // Last-resort hard accounts (even if storage is broken)
-  if (!user && email === DEMO_EMAIL && password === DEMO_PASSWORD) {
-    ensureSeedUsers()
-    user = readUsers().find((u) => u.email === DEMO_EMAIL)
-  }
-  if (!user && email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-    ensureSeedUsers()
-    user = readUsers().find((u) => u.email === ADMIN_EMAIL)
-  }
-
-  // Accept official passwords even if local record was corrupted
-  if (user) {
-    const isDemo = user.email === DEMO_EMAIL && password === DEMO_PASSWORD
-    const isAdmin = user.email === ADMIN_EMAIL && password === ADMIN_PASSWORD
-    if (user.password !== password && !isDemo && !isAdmin) {
-      return { ok: false, error: 'Invalid email or password.' }
-    }
-    if (isDemo || isAdmin) {
-      user.password = password
-      user.role = isAdmin ? 'admin' : 'client'
+  // Self-heal admin account
+  if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    if (!user) {
+      user = {
+        firstName: 'Kamogelo',
+        fullName: 'Kamogelo Dube',
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD,
+        plan: 'admin',
+        role: 'admin',
+        status: 'active',
+        country: '27',
+      }
+      users.push(user)
+      writeUsers(users)
+    } else {
+      user.password = ADMIN_PASSWORD
+      user.role = 'admin'
       writeUsers(users)
     }
-  } else if (
-    (email === DEMO_EMAIL && password === DEMO_PASSWORD) ||
-    (email === ADMIN_EMAIL && password === ADMIN_PASSWORD)
-  ) {
-    // recreate missing official account
-    const role: UserRole = email === ADMIN_EMAIL ? 'admin' : 'client'
-    const fresh: UserProfile = {
-      firstName: 'Kamogelo',
-      fullName: 'Kamogelo Dube',
-      email,
-      password,
-      plan: role === 'admin' ? 'admin' : 'free',
-      role,
-      status: 'active',
-      country: '27',
-    }
-    users.push(fresh)
-    writeUsers(users)
-    user = fresh
-  } else {
+  } else if (!user || user.password !== password) {
     return { ok: false, error: 'Invalid email or password.' }
   }
 
@@ -298,7 +220,7 @@ export function getCurrentUser(): (UserProfile & { avatar: string }) | null {
     if (!raw) return null
     const data = JSON.parse(raw) as { email?: string }
     if (!data.email) return null
-    ensureSeedUsers()
+    ensureAdminUser()
     const users = readUsers()
     const user = users.find((u) => u.email.toLowerCase() === data.email!.toLowerCase())
     if (!user) {
@@ -316,7 +238,7 @@ export function getCurrentUser(): (UserProfile & { avatar: string }) | null {
 }
 
 export function listMembers(): UserProfile[] {
-  ensureSeedUsers()
+  ensureAdminUser()
   return readUsers()
     .filter((u) => u.role !== 'admin')
     .sort((a, b) => a.fullName.localeCompare(b.fullName))
@@ -342,12 +264,14 @@ export function countMembersByStatus(status: MemberStatus): number {
   return listMembers().filter((m) => (m.status || 'lead') === status).length
 }
 
+/** Remove all client accounts (keeps super admin only). */
+export function resetAllClients() {
+  ensureAdminUser()
+  const adminOnly = readUsers().filter((u) => u.email === ADMIN_EMAIL)
+  writeUsers(adminOnly)
+}
+
 export const ADMIN_LOGIN = {
   email: ADMIN_EMAIL,
   password: ADMIN_PASSWORD,
-}
-
-export const CLIENT_LOGIN = {
-  email: DEMO_EMAIL,
-  password: DEMO_PASSWORD,
 }
