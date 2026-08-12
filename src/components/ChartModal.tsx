@@ -178,18 +178,25 @@ interface FloatingAlertPanelProps {
   onClose: () => void
 }
 
-function formatAlertCopy(alert: Alert): string {
-  const lines = [
-    `${alert.asset} · ${alert.sentiment} · ${alert.session}`,
-    alert.strategy ? `Strategy: ${alert.strategy}` : '',
-    alert.date ? `Date: ${alert.date}` : '',
-    alert.aiNote || '',
-    alert.entry ? `15m entry: ${alert.entry}` : '',
-    alert.spot && alert.spot !== alert.entry ? `Market: ${alert.spot}` : '',
-    alert.targets.length ? `Targets: ${alert.targets.join(', ')}` : '',
-    alert.reversals.length ? `Reversals: ${alert.reversals.join(', ')}` : '',
-  ]
-  return lines.filter(Boolean).join('\n')
+function copyText(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text)
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      resolve()
+    } catch (err) {
+      reject(err)
+    }
+  })
 }
 
 function FloatingAlertPanel({
@@ -203,7 +210,7 @@ function FloatingAlertPanel({
   const dragOffset = useRef({ x: 0, y: 0 })
   const dragging = useRef(false)
   const [pos, setPos] = useState({ x: 24, y: 72 })
-  const [copied, setCopied] = useState(false)
+  const [copiedTarget, setCopiedTarget] = useState<string | null>(null)
 
   const onPointerDown = useCallback((e: ReactPointerEvent<HTMLElement>) => {
     const target = e.target as HTMLElement
@@ -232,22 +239,14 @@ function FloatingAlertPanel({
     }
   }, [])
 
-  async function copyAlert() {
-    const text = formatAlertCopy(alert)
+  async function copyTarget(value: string) {
     try {
-      await navigator.clipboard.writeText(text)
+      await copyText(value)
+      setCopiedTarget(value)
+      window.setTimeout(() => setCopiedTarget((cur) => (cur === value ? null : cur)), 1400)
     } catch {
-      const ta = document.createElement('textarea')
-      ta.value = text
-      ta.style.position = 'fixed'
-      ta.style.left = '-9999px'
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
+      /* ignore */
     }
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1600)
   }
 
   return (
@@ -306,11 +305,23 @@ function FloatingAlertPanel({
         <div className="levels-grid">
           <div className="levels-col">
             <h4>Possible Targets</h4>
-            {alert.targets.map((t) => (
-              <div key={`t-${t}`} className="level-bar target">
-                {t}
-              </div>
-            ))}
+            {alert.targets.map((t) => {
+              const justCopied = copiedTarget === t
+              return (
+                <div key={`t-${t}`} className="level-bar target level-bar-copyable">
+                  <span>{t}</span>
+                  <button
+                    type="button"
+                    className="level-copy-btn"
+                    aria-label={`Copy target ${t}`}
+                    title={justCopied ? 'Copied' : 'Copy target'}
+                    onClick={() => void copyTarget(t)}
+                  >
+                    {justCopied ? <Check size={13} /> : <Copy size={13} />}
+                  </button>
+                </div>
+              )
+            })}
           </div>
           <div className="levels-col">
             <h4>Possible Reversals</h4>
@@ -323,10 +334,6 @@ function FloatingAlertPanel({
         </div>
 
         <div className="alert-actions">
-          <button type="button" className="btn btn-outline floating-copy" onClick={() => void copyAlert()}>
-            {copied ? <Check size={16} /> : <Copy size={16} />}
-            {copied ? 'Copied' : 'Copy'}
-          </button>
           <button
             type="button"
             className={`fav-btn ${favorited ? 'on' : ''}`}
