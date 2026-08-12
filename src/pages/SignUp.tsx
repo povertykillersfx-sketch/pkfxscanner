@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Logo } from '../components/Logo'
 import { register } from '../auth'
 import './SignIn.css'
 
 export function SignUp() {
-  const navigate = useNavigate()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [submitted, setSubmitted] = useState(false)
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -20,7 +20,28 @@ export function SignUp() {
       return
     }
     setError('')
-    navigate('/dashboard')
+    setSubmitted(true)
+  }
+
+  if (submitted) {
+    return (
+      <div className="cyber-bg signin-page">
+        <div className="signin-scan" aria-hidden />
+        <div className="signin-card panel panel-glow animate-fade-up">
+          <div className="signin-logo">
+            <Logo size="lg" />
+          </div>
+          <h1 className="signin-title font-display">Request sent</h1>
+          <p className="signin-sub">
+            Thanks for signing up. Your account is pending Super Admin approval. You will be able to sign in once
+            approved.
+          </p>
+          <Link to="/" className="btn btn-primary signin-btn">
+            Back to Sign In
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -32,6 +53,7 @@ export function SignUp() {
         </div>
 
         <h1 className="signin-title font-display">Sign Up</h1>
+        <p className="signin-sub">Create an account — access opens after Super Admin approval.</p>
 
         <div className="signin-fields">
           <input
@@ -77,7 +99,7 @@ export function SignUp() {
         {error && <p className="signin-error">{error}</p>}
 
         <button type="submit" className="btn btn-primary signin-btn">
-          Create Account
+          Request Access
         </button>
 
         <p className="signin-signup">

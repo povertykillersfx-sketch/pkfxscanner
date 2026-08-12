@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Check, RefreshCw, Send } from 'lucide-react'
 import { approveMember, listPendingRequests } from '../../auth'
@@ -6,11 +6,23 @@ import { getTelegramSettings, saveTelegramSettings } from '../../adminStore'
 import './admin.css'
 
 export function AdminRequests() {
-  const [tick, setTick] = useState(0)
-  const requests = listPendingRequests()
-  void tick
+  const [requests, setRequests] = useState(() => listPendingRequests())
   const [settings, setSettings] = useState(() => getTelegramSettings())
   const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    function refresh() {
+      setRequests(listPendingRequests())
+    }
+    window.addEventListener('pkfx-users-change', refresh)
+    window.addEventListener('storage', refresh)
+    const id = window.setInterval(refresh, 2000)
+    return () => {
+      window.removeEventListener('pkfx-users-change', refresh)
+      window.removeEventListener('storage', refresh)
+      window.clearInterval(id)
+    }
+  }, [])
 
   function onSave(e: FormEvent) {
     e.preventDefault()
@@ -29,7 +41,7 @@ export function AdminRequests() {
 
   function approve(email: string) {
     approveMember(email)
-    setTick((n) => n + 1)
+    setRequests(listPendingRequests())
   }
 
   return (
@@ -100,12 +112,14 @@ export function AdminRequests() {
               />
             </div>
             {message && <p className="admin-muted">{message}</p>}
-            <button type="submit" className="admin-btn">
-              <Send size={16} /> Setup Alerts
-            </button>
-            <button type="button" className="admin-btn" onClick={onTest}>
-              <RefreshCw size={16} /> Test Connection
-            </button>
+            <div className="admin-actions">
+              <button type="button" className="admin-btn ghost" onClick={onTest}>
+                <RefreshCw size={15} /> Test Connection
+              </button>
+              <button type="submit" className="admin-btn">
+                <Send size={15} /> Save
+              </button>
+            </div>
           </form>
         </section>
       </div>

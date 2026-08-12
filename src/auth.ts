@@ -200,7 +200,7 @@ export function register(input: {
   })
   writeUsers(users)
 
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ email, at: Date.now() }))
+  // Do NOT start a session — Super Admin must approve first
   return { ok: true }
 }
 
@@ -267,6 +267,17 @@ export function login(
   }
 
   if (!user) return { ok: false, error: 'Invalid email or password.' }
+
+  // Clients must be approved by Super Admin before entering the portal
+  if (user.role !== 'admin') {
+    const status = user.status || 'pending'
+    if (status === 'pending' || status === 'lead') {
+      return {
+        ok: false,
+        error: 'Your account is waiting for Super Admin approval. Please try again after you are approved.',
+      }
+    }
+  }
 
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({ email: user.email, at: Date.now() }))
   return { ok: true, role: user.role === 'admin' ? 'admin' : 'client' }

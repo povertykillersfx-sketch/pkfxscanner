@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Bell, Clock3, Hourglass } from 'lucide-react'
 import {
   countMembersByStatus,
@@ -13,14 +14,38 @@ function shortDay(isoDate: string): string {
   return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })
 }
 
-export function AdminDashboard() {
-  const pending = listPendingRequests().length
-  const activeUsers = countMembersByStatus('active')
-  const todayVisits = getTodayVisitCount()
+function readDash() {
   const joins = getJoinHistory(14)
-  const maxJoin = Math.max(1, ...joins.map((j) => j.count))
   const countries = getCountryBreakdown().slice(0, 6)
-  const maxCountry = Math.max(1, ...countries.map((c) => c.count))
+  return {
+    pending: listPendingRequests().length,
+    activeUsers: countMembersByStatus('active'),
+    todayVisits: getTodayVisitCount(),
+    joins,
+    maxJoin: Math.max(1, ...joins.map((j) => j.count)),
+    countries,
+    maxCountry: Math.max(1, ...countries.map((c) => c.count)),
+  }
+}
+
+export function AdminDashboard() {
+  const [dash, setDash] = useState(readDash)
+
+  useEffect(() => {
+    function refresh() {
+      setDash(readDash())
+    }
+    window.addEventListener('pkfx-users-change', refresh)
+    window.addEventListener('storage', refresh)
+    const id = window.setInterval(refresh, 2000)
+    return () => {
+      window.removeEventListener('pkfx-users-change', refresh)
+      window.removeEventListener('storage', refresh)
+      window.clearInterval(id)
+    }
+  }, [])
+
+  const { pending, activeUsers, todayVisits, joins, maxJoin, countries, maxCountry } = dash
 
   return (
     <div className="admin-page">

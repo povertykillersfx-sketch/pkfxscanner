@@ -1,19 +1,27 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
 import { getCurrentUser, login } from '../auth'
 import './SignIn.css'
 
 export function SignIn() {
   const navigate = useNavigate()
+  const location = useLocation()
   const existing = getCurrentUser()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState(
+    (location.state as { pendingApproval?: boolean } | null)?.pendingApproval
+      ? 'Your account is still waiting for Super Admin approval.'
+      : '',
+  )
 
   if (existing) {
-    return <Navigate to={existing.role === 'admin' ? '/admin' : '/dashboard'} replace />
+    const status = existing.status || (existing.role === 'admin' ? 'active' : 'pending')
+    if (existing.role === 'admin' || status === 'active') {
+      return <Navigate to={existing.role === 'admin' ? '/admin' : '/dashboard'} replace />
+    }
   }
 
   function handleSubmit(e: FormEvent) {
@@ -74,6 +82,8 @@ export function SignIn() {
 
         <p className="signin-hint">
           Same page for clients and Super Admin.
+          <br />
+          New signups wait for approval before access.
           <br />
           Client view: povertykillersfx@gmail.com / pkfx-client
           <br />
