@@ -27,12 +27,11 @@
   flex-direction: column;
 }
 
+/* Match TradingView embed value columns (right side of widget). */
 .econ-calendar-colheads {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 6.25rem 6.25rem 6.25rem;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.7rem 1.15rem 0.65rem 0.85rem;
+  position: relative;
+  display: block;
+  height: 2.35rem;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   font-size: 0.72rem;
@@ -44,12 +43,38 @@
 }
 
 .econ-calendar-colheads > span {
-  text-align: right;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 5.75rem;
+  text-align: center;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .econ-calendar-colheads .econ-col-main {
+  left: 0.85rem;
+  right: auto;
+  width: auto;
+  justify-content: flex-start;
   text-align: left;
   color: var(--text);
+}
+
+/* Centers tuned to TradingView's Actual / Forecast / Prior value columns */
+.econ-calendar-colheads .econ-col-actual {
+  right: calc(22% - 2.875rem);
+}
+
+.econ-calendar-colheads .econ-col-forecast {
+  right: calc(12.7% - 2.875rem);
+}
+
+.econ-calendar-colheads .econ-col-prior {
+  right: calc(3.4% - 2.875rem);
 }
 
 [data-theme='light'] .econ-calendar-colheads {
@@ -76,13 +101,52 @@
   border: 0;
 }
 
+@media (max-width: 900px) {
+  .econ-calendar-colheads .econ-col-actual {
+    right: calc(24.5% - 2.5rem);
+  }
+
+  .econ-calendar-colheads .econ-col-forecast {
+    right: calc(14.2% - 2.5rem);
+  }
+
+  .econ-calendar-colheads .econ-col-prior {
+    right: calc(3.8% - 2.5rem);
+  }
+
+  .econ-calendar-colheads > span {
+    width: 5rem;
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+  }
+}
+
 @media (max-width: 720px) {
   .econ-calendar-colheads {
-    grid-template-columns: minmax(0, 1fr) 4.5rem 4.5rem 4.5rem;
-    padding: 0.6rem 0.65rem 0.55rem 0.55rem;
-    font-size: 0.64rem;
-    letter-spacing: 0.06em;
-    gap: 0.2rem;
+    height: 2.1rem;
+  }
+
+  .econ-calendar-colheads .econ-col-main {
+    left: 0.5rem;
+    font-size: 0.6rem;
+  }
+
+  .econ-calendar-colheads .econ-col-actual {
+    right: calc(28% - 2.15rem);
+  }
+
+  .econ-calendar-colheads .econ-col-forecast {
+    right: calc(16% - 2.15rem);
+  }
+
+  .econ-calendar-colheads .econ-col-prior {
+    right: calc(4% - 2.15rem);
+  }
+
+  .econ-calendar-colheads > span {
+    width: 4.3rem;
+    font-size: 0.58rem;
+    letter-spacing: 0.04em;
   }
 
   .econ-calendar-frame,

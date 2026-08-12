@@ -50,9 +50,15 @@ export function EconomicCalendar() {
           <span className="econ-col-main" role="columnheader">
             Time / Event
           </span>
-          <span role="columnheader">Actual</span>
-          <span role="columnheader">Forecast</span>
-          <span role="columnheader">Prior</span>
+          <span className="econ-col-actual" role="columnheader">
+            Actual
+          </span>
+          <span className="econ-col-forecast" role="columnheader">
+            Forecast
+          </span>
+          <span className="econ-col-prior" role="columnheader">
+            Prior
+          </span>
         </div>
         <div className="tradingview-widget-container econ-calendar-widget" ref={hostRef} />
       </div>
