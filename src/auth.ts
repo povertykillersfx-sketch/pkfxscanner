@@ -4,6 +4,7 @@ export type UserRole = 'client' | 'admin'
 
 export interface UserProfile {
   firstName: string
+  surname?: string
   fullName: string
   email: string
   password: string
@@ -227,6 +228,7 @@ export function register(input: {
   const phone = `${dialCode} ${phoneLocal}`
   users.push({
     firstName,
+    surname,
     fullName,
     email,
     password,

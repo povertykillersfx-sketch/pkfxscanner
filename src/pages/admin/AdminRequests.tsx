@@ -73,6 +73,8 @@ export function AdminRequests() {
                   <div className="admin-list-main">
                     <h4>{r.fullName}</h4>
                     <p className="admin-muted">{r.email}</p>
+                    {r.phone && <p className="admin-muted">Phone: {r.phone}</p>}
+                    {r.country && <p className="admin-muted">Country: {r.country}</p>}
                     <p className="admin-muted">
                       Status: {r.status || 'pending'}
                       {r.joinedAt ? ` · Joined ${new Date(r.joinedAt).toLocaleString()}` : ''}

@@ -9,6 +9,12 @@ import {
 } from '../../auth'
 import './admin.css'
 
+function memberSurname(m: UserProfile): string {
+  if (m.surname?.trim()) return m.surname.trim()
+  const parts = (m.fullName || '').trim().split(/\s+/)
+  return parts.length > 1 ? parts.slice(1).join(' ') : '—'
+}
+
 export function AdminMembers() {
   const [members, setMembers] = useState(() => listMembers())
 
@@ -49,6 +55,10 @@ export function AdminMembers() {
     <div className="admin-page">
       <h1 className="admin-title">Members</h1>
       <section className="admin-card">
+        <div className="admin-card-head">
+          <h2>Client members</h2>
+          <span className="admin-muted">{members.length} total</span>
+        </div>
         {members.length === 0 ? (
           <div className="admin-empty">
             <div className="admin-empty-art" aria-hidden>
@@ -56,8 +66,8 @@ export function AdminMembers() {
             </div>
             <p>No members yet</p>
             <p className="admin-muted">
-              When clients sign up they appear as pending requests. Approve them to make them active. Use Revoke Access
-              to lock someone out.
+              When clients complete Sign Up, their details appear here automatically for you to approve, revoke, or
+              delete.
             </p>
           </div>
         ) : (
@@ -66,10 +76,12 @@ export function AdminMembers() {
               <thead>
                 <tr>
                   <th>Status</th>
-                  <th>Name</th>
-                  <th>MT4/5</th>
-                  <th>Contact</th>
+                  <th>First name</th>
+                  <th>Surname</th>
+                  <th>Email</th>
+                  <th>Phone</th>
                   <th>Country</th>
+                  <th>Joined</th>
                   <th></th>
                 </tr>
               </thead>
@@ -83,13 +95,18 @@ export function AdminMembers() {
                       <td>
                         <span className={`admin-status ${status}`}>{status}</span>
                       </td>
-                      <td>{m.fullName}</td>
-                      <td>{m.mt4 || '—'}</td>
+                      <td>{m.firstName || '—'}</td>
+                      <td>{memberSurname(m)}</td>
                       <td>
-                        {m.email}
-                        {m.phone ? `-${m.phone}` : ''}
+                        <a className="admin-link" href={`mailto:${m.email}`}>
+                          {m.email}
+                        </a>
                       </td>
+                      <td>{m.phone || '—'}</td>
                       <td>{m.country || '—'}</td>
+                      <td className="admin-muted">
+                        {m.joinedAt ? new Date(m.joinedAt).toLocaleString() : '—'}
+                      </td>
                       <td className="admin-member-actions">
                         {canApprove && (
                           <button type="button" className="admin-btn" onClick={() => approve(m)}>
@@ -115,7 +132,7 @@ export function AdminMembers() {
 
         <div className="admin-legend">
           <p>
-            <strong>Pending / Lead:</strong> Registered and waiting for approval (counts under Requests).
+            <strong>Pending / Lead:</strong> Registered and waiting for approval (also listed under Requests).
           </p>
           <p>
             <strong>Active:</strong> Approved / paid — can use the client portal. Use <strong>Revoke Access</strong> to
