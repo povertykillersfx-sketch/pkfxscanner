@@ -21,32 +21,74 @@
 .econ-calendar-frame {
   flex: 1;
   min-height: 640px;
-  padding: 0.35rem;
+  padding: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
+.econ-calendar-colheads {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6.25rem 6.25rem 6.25rem;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.7rem 1.15rem 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.econ-calendar-colheads > span {
+  text-align: right;
+}
+
+.econ-calendar-colheads .econ-col-main {
+  text-align: left;
+  color: var(--text);
+}
+
+[data-theme='light'] .econ-calendar-colheads {
+  background: color-mix(in srgb, var(--accent) 6%, #fff);
+  color: #6b7280;
+}
+
+[data-theme='light'] .econ-calendar-colheads .econ-col-main {
+  color: #374151;
+}
+
 .econ-calendar-widget {
   flex: 1;
   width: 100%;
-  min-height: 600px;
+  min-height: 560px;
   height: 100%;
 }
 
 .econ-calendar-widget .tradingview-widget-container__widget,
 .econ-calendar-widget iframe {
   width: 100% !important;
-  min-height: 600px;
+  min-height: 560px;
   height: 100% !important;
   border: 0;
 }
 
 @media (max-width: 720px) {
+  .econ-calendar-colheads {
+    grid-template-columns: minmax(0, 1fr) 4.5rem 4.5rem 4.5rem;
+    padding: 0.6rem 0.65rem 0.55rem 0.55rem;
+    font-size: 0.64rem;
+    letter-spacing: 0.06em;
+    gap: 0.2rem;
+  }
+
   .econ-calendar-frame,
   .econ-calendar-widget,
   .econ-calendar-widget .tradingview-widget-container__widget,
   .econ-calendar-widget iframe {
-    min-height: 520px;
+    min-height: 480px;
   }
 }
