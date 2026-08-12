@@ -263,6 +263,17 @@ html.chart-open body {
 .floating-alert .alert-actions {
   margin-top: 0.35rem;
   justify-content: space-between;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.floating-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .floating-hint {
