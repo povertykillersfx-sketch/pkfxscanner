@@ -1,6 +1,6 @@
 .admin-shell {
-  --admin-blue: #0052ff;
-  --admin-blue-soft: rgba(0, 82, 255, 0.12);
+  --admin-blue: var(--accent, #9333ea);
+  --admin-blue-soft: color-mix(in srgb, var(--accent, #9333ea) 16%, transparent);
   --admin-card: #ffffff;
   --admin-bg: #f3f5f9;
   --admin-text: #0f172a;
@@ -19,8 +19,8 @@
   --admin-text: #f5e9ff;
   --admin-muted: #a78bb8;
   --admin-border: rgba(191, 0, 255, 0.25);
-  --admin-blue: #7c3aed;
-  --admin-blue-soft: rgba(124, 58, 237, 0.2);
+  --admin-blue: var(--accent, #bf00ff);
+  --admin-blue-soft: color-mix(in srgb, var(--accent, #bf00ff) 22%, transparent);
 }
 
 .admin-main {

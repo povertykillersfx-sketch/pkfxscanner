@@ -48,8 +48,39 @@
   border: 1px solid var(--admin-border, #e2e8f0);
   border-radius: 10px;
   padding: 0.65rem 0.8rem;
-  background: #fff;
+  background: var(--admin-card, #fff);
   color: var(--admin-text, #0f172a);
+}
+
+.admin-search input[type='search']:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.admin-search-btn {
+  background: var(--bg-btn-primary) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.admin-search-btn:hover {
+  filter: brightness(1.08);
+}
+
+[data-theme='light'] .admin-search-btn {
+  background: var(--accent) !important;
+  box-shadow: none;
+}
+
+.admin-search-clear {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--admin-border)) !important;
+  color: var(--accent) !important;
+}
+
+.admin-search-clear:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .admin-kpi-row {

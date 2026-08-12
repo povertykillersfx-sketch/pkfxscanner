@@ -84,11 +84,11 @@ export function AdminRequests() {
               placeholder="Search by name, surname, email, or phone"
               aria-label="Search requests"
             />
-            <button type="submit" className="admin-btn">
+            <button type="submit" className="admin-btn admin-search-btn">
               <Search size={15} /> Search
             </button>
             {appliedQuery && (
-              <button type="button" className="admin-btn ghost" onClick={clearSearch}>
+              <button type="button" className="admin-btn ghost admin-search-clear" onClick={clearSearch}>
                 Clear
               </button>
             )}
