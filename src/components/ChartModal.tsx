@@ -89,7 +89,7 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
           autosize: true,
           symbol,
           interval: '15',
-          timezone: 'Etc/UTC',
+          timezone: 'Africa/Johannesburg',
           theme,
           style: '1',
           locale: 'en',
@@ -210,7 +210,7 @@ function FloatingAlertPanel({
   const dragOffset = useRef({ x: 0, y: 0 })
   const dragging = useRef(false)
   const [pos, setPos] = useState({ x: 24, y: 72 })
-  const [copiedTarget, setCopiedTarget] = useState<string | null>(null)
+  const [copiedValue, setCopiedValue] = useState<string | null>(null)
 
   const onPointerDown = useCallback((e: ReactPointerEvent<HTMLElement>) => {
     const target = e.target as HTMLElement
@@ -239,14 +239,29 @@ function FloatingAlertPanel({
     }
   }, [])
 
-  async function copyTarget(value: string) {
+  async function copyValue(value: string) {
     try {
       await copyText(value)
-      setCopiedTarget(value)
-      window.setTimeout(() => setCopiedTarget((cur) => (cur === value ? null : cur)), 1400)
+      setCopiedValue(value)
+      window.setTimeout(() => setCopiedValue((cur) => (cur === value ? null : cur)), 1400)
     } catch {
       /* ignore */
     }
+  }
+
+  function CopyLevelButton({ value }: { value: string }) {
+    const justCopied = copiedValue === value
+    return (
+      <button
+        type="button"
+        className="level-copy-btn"
+        aria-label={`Copy ${value}`}
+        title={justCopied ? 'Copied' : 'Copy'}
+        onClick={() => void copyValue(value)}
+      >
+        {justCopied ? <Check size={13} /> : <Copy size={13} />}
+      </button>
+    )
   }
 
   return (
@@ -297,37 +312,30 @@ function FloatingAlertPanel({
         )}
 
         {alert.entry && (
-          <p className="floating-entry">
-            15m entry: <strong>{alert.entry}</strong>
+          <p className="floating-entry level-bar-copyable">
+            <span>
+              15m entry: <strong>{alert.entry}</strong>
+            </span>
+            <CopyLevelButton value={alert.entry} />
           </p>
         )}
 
         <div className="levels-grid">
           <div className="levels-col">
             <h4>Possible Targets</h4>
-            {alert.targets.map((t) => {
-              const justCopied = copiedTarget === t
-              return (
-                <div key={`t-${t}`} className="level-bar target level-bar-copyable">
-                  <span>{t}</span>
-                  <button
-                    type="button"
-                    className="level-copy-btn"
-                    aria-label={`Copy target ${t}`}
-                    title={justCopied ? 'Copied' : 'Copy target'}
-                    onClick={() => void copyTarget(t)}
-                  >
-                    {justCopied ? <Check size={13} /> : <Copy size={13} />}
-                  </button>
-                </div>
-              )
-            })}
+            {alert.targets.map((t) => (
+              <div key={`t-${t}`} className="level-bar target level-bar-copyable">
+                <span>{t}</span>
+                <CopyLevelButton value={t} />
+              </div>
+            ))}
           </div>
           <div className="levels-col">
             <h4>Possible Reversals</h4>
             {alert.reversals.map((r) => (
-              <div key={`r-${r}`} className="level-bar reversal">
-                {r}
+              <div key={`r-${r}`} className="level-bar reversal level-bar-copyable">
+                <span>{r}</span>
+                <CopyLevelButton value={r} />
               </div>
             ))}
           </div>
@@ -342,7 +350,7 @@ function FloatingAlertPanel({
           >
             <Heart size={18} fill={favorited ? 'currentColor' : 'none'} />
           </button>
-          <span className="floating-hint">Drag to move</span>
+          <span className="floating-hint">Drag to move · SAST chart</span>
         </div>
       </div>
     </aside>

@@ -252,6 +252,13 @@ html.chart-open body {
   margin-bottom: 0.45rem;
 }
 
+.floating-entry.level-bar-copyable {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
 .floating-entry strong {
   color: var(--text);
 }
