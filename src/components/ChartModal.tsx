@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
@@ -17,45 +17,47 @@ import './ChartModal.css'
 
 const SA_TIMEZONE = 'Africa/Johannesburg'
 
+declare global {
+  interface Window {
+    TradingView?: {
+      widget: new (options: Record<string, unknown>) => unknown
+    }
+  }
+}
+
 interface ChartModalProps {
   alert: Alert
   onClose: () => void
 }
 
-function buildTvEmbedSrc(symbol: string, theme: 'light' | 'dark'): string {
-  const params = new URLSearchParams({
-    frameElementId: 'pkfx-tv-frame',
-    symbol,
-    interval: '15',
-    hidesidetoolbar: '0',
-    hidetoptoolbar: '0',
-    symboledit: '0',
-    saveimage: '1',
-    toolbarbg: theme === 'light' ? 'f8fafc' : '120424',
-    studies: '[]',
-    theme,
-    style: '1',
-    timezone: SA_TIMEZONE,
-    withdateranges: '1',
-    hideideas: '1',
-    hidevolume: '0',
-    locale: 'en',
-    details: '1',
-    calendar: '0',
-    hotlist: '0',
-    allow_symbol_change: '0',
+function loadTvScript(): Promise<void> {
+  if (window.TradingView) return Promise.resolve()
+  const existing = document.querySelector<HTMLScriptElement>('script[data-pkfx-tv]')
+  if (existing) {
+    return new Promise((resolve, reject) => {
+      existing.addEventListener('load', () => resolve())
+      existing.addEventListener('error', () => reject(new Error('tv.js failed')))
+      if (window.TradingView) resolve()
+    })
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = 'https://s3.tradingview.com/tv.js'
+    script.async = true
+    script.dataset.pkfxTv = '1'
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('tv.js failed'))
+    document.body.appendChild(script)
   })
-  return `https://s.tradingview.com/widgetembed/?${params.toString()}`
 }
 
 export function ChartModal({ alert, onClose }: ChartModalProps) {
   const symbol = tradingViewSymbol(alert.asset)
+  const containerId = `pkfx_tv_${useId().replace(/:/g, '')}`
   const [floatOpen, setFloatOpen] = useState(true)
   const [favorited, setFavorited] = useState(false)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState('')
-  const theme = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
-  const embedSrc = buildTvEmbedSrc(symbol, theme)
 
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -76,9 +78,53 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
   }, [onClose])
 
   useEffect(() => {
+    let cancelled = false
     setReady(false)
     setError('')
-  }, [symbol, embedSrc])
+
+    const host = document.getElementById(containerId)
+    if (host) host.innerHTML = ''
+
+    loadTvScript()
+      .then(() => {
+        if (cancelled || !window.TradingView) return
+        const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
+        // Full TradingView widget with left drawing toolbar + SAST timezone only
+        void new window.TradingView.widget({
+          autosize: true,
+          symbol,
+          interval: '15',
+          timezone: SA_TIMEZONE,
+          theme,
+          style: '1',
+          locale: 'en',
+          toolbar_bg: theme === 'light' ? '#f8fafc' : '#120424',
+          enable_publishing: false,
+          hide_top_toolbar: false,
+          hide_legend: false,
+          hide_side_toolbar: false,
+          allow_symbol_change: false,
+          save_image: true,
+          details: true,
+          hotlist: false,
+          calendar: true,
+          withdateranges: true,
+          show_popup_button: true,
+          studies: [],
+          container_id: containerId,
+        })
+        if (!cancelled) setReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) setError('Could not load TradingView. Try Open in TradingView.')
+      })
+
+    return () => {
+      cancelled = true
+      const node = document.getElementById(containerId)
+      if (node) node.innerHTML = ''
+    }
+  }, [symbol, containerId])
 
   const isBearish = alert.sentiment === 'Bearish'
   const openInTvHref = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(symbol)}&interval=15&timezone=${encodeURIComponent(SA_TIMEZONE)}`
@@ -88,7 +134,7 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
       <header className="chart-desktop-bar">
         <h2 id="chart-desktop-title" className="font-display">
           {alert.asset}
-          <span className="chart-symbol"> · TradingView · SAST (UTC+2)</span>
+          <span className="chart-symbol"> · Full TradingView + Drawings · SAST</span>
         </h2>
         <div className="chart-desktop-actions">
           {!floatOpen && (
@@ -106,20 +152,9 @@ export function ChartModal({ alert, onClose }: ChartModalProps) {
       </header>
 
       <div className="chart-desktop-frame">
-        {!ready && !error && <div className="chart-loading">Loading TradingView (SAST)…</div>}
+        {!ready && !error && <div className="chart-loading">Loading TradingView…</div>}
         {error && <div className="chart-loading chart-error">{error}</div>}
-        <iframe
-          key={embedSrc}
-          title={`${alert.asset} TradingView chart`}
-          className="chart-tv-iframe"
-          src={embedSrc}
-          allow="fullscreen"
-          onLoad={() => {
-            setReady(true)
-            setError('')
-          }}
-          onError={() => setError('Could not load TradingView. Try Open in TradingView.')}
-        />
+        <div id={containerId} className="chart-tv-host" />
       </div>
 
       {floatOpen && (
