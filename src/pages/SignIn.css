@@ -115,3 +115,132 @@
 .signin-forgot:hover {
   color: var(--neon-soft);
 }
+
+.signup-card {
+  width: min(420px, 100%);
+}
+
+.field.field-error {
+  border-color: var(--badge-bearish-border);
+  box-shadow: 0 0 0 1px var(--badge-bearish-border);
+}
+
+.phone-field {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-field, color-mix(in srgb, var(--panel) 80%, transparent));
+  overflow: visible;
+}
+
+.phone-field.has-error {
+  border-color: var(--badge-bearish-border);
+}
+
+.phone-dial-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.7rem;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-weight: 650;
+  font-size: 0.9rem;
+}
+
+.phone-dial-btn:hover {
+  color: var(--neon-bright);
+}
+
+.phone-flag {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.phone-dial {
+  font-variant-numeric: tabular-nums;
+}
+
+.phone-input {
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  flex: 1;
+  min-width: 0;
+}
+
+.phone-dial-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel, #120424);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+[data-theme='light'] .phone-dial-menu {
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+
+.phone-dial-search {
+  border: 0 !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.phone-dial-list {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.phone-dial-option {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.8rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.phone-dial-option:hover,
+.phone-dial-option.active {
+  background: color-mix(in srgb, var(--neon) 12%, transparent);
+}
+
+.phone-option-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-option-dial {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.phone-dial-empty {
+  padding: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin: 0;
+}

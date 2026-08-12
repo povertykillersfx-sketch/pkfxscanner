@@ -192,16 +192,26 @@ function ensureAdminUser() {
 ensureAdminUser()
 
 export function register(input: {
-  fullName: string
+  firstName: string
+  surname: string
   email: string
   password: string
+  phone: string
+  country: string
+  dialCode: string
 }): { ok: true } | { ok: false; error: string } {
-  const fullName = input.fullName.trim()
+  const firstName = input.firstName.trim()
+  const surname = input.surname.trim()
   const email = normalizeEmail(input.email)
   const password = input.password.trim()
+  const phoneLocal = input.phone.replace(/\s+/g, '').trim()
+  const dialCode = input.dialCode.trim() || '+27'
+  const country = input.country.trim() || 'South Africa'
 
-  if (!fullName) return { ok: false, error: 'Please enter your name.' }
+  if (!firstName) return { ok: false, error: 'Please enter your first name.' }
+  if (!surname) return { ok: false, error: 'Please enter your surname.' }
   if (!email || !email.includes('@')) return { ok: false, error: 'Please enter a valid email.' }
+  if (!phoneLocal || phoneLocal.length < 6) return { ok: false, error: 'Please enter a valid phone number.' }
   if (password.length < 6) return { ok: false, error: 'Password must be at least 6 characters.' }
   if (email === ADMIN_EMAIL) {
     return { ok: false, error: 'That account already exists. Please sign in.' }
@@ -213,12 +223,15 @@ export function register(input: {
     return { ok: false, error: 'An account with this email already exists. Please sign in.' }
   }
 
-  const firstName = fullName.split(/\s+/)[0] ?? fullName
+  const fullName = `${firstName} ${surname}`.trim()
+  const phone = `${dialCode} ${phoneLocal}`
   users.push({
     firstName,
     fullName,
     email,
     password,
+    phone,
+    country,
     plan: 'free',
     role: 'client',
     // New signups wait for admin approval (Requests KPI)
