@@ -23,6 +23,7 @@ export type MemberStatus = 'lead' | 'pending' | 'active'
 const USERS_KEY = 'pkfx_users_live_v1'
 const SESSION_KEY = 'pkfx_auth'
 const WIPE_FLAG = 'pkfx_live_wipe_v1'
+const PURGE_EMAILS_FLAG = 'pkfx_purge_emails_v2'
 
 const ADMIN_EMAIL = 'povertykillersfx2@gmail.com'
 const ADMIN_PASSWORD = 'pkfx-admin'
@@ -69,6 +70,31 @@ function wipeLegacyDemoData() {
   localStorage.setItem(WIPE_FLAG, '1')
 }
 
+/** One-time removals so specific emails can sign up again. */
+function purgeRequestedEmails() {
+  if (typeof localStorage === 'undefined') return
+  if (localStorage.getItem(PURGE_EMAILS_FLAG) === '1') return
+  const toRemove = new Set(['mukundimukhuba8@gmail.com'])
+  const users = readUsers()
+  const next = users.filter((u) => !toRemove.has(u.email.toLowerCase()))
+  if (next.length !== users.length) {
+    writeUsers(next)
+  }
+  // Clear session if it belonged to a purged user
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (raw) {
+      const data = JSON.parse(raw) as { email?: string }
+      if (data.email && toRemove.has(data.email.toLowerCase())) {
+        sessionStorage.removeItem(SESSION_KEY)
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  localStorage.setItem(PURGE_EMAILS_FLAG, '1')
+}
+
 function readUsers(): UserProfile[] {
   try {
     const raw = localStorage.getItem(USERS_KEY)
@@ -98,6 +124,7 @@ function writeUsers(users: UserProfile[]) {
 function ensureAdminUser() {
   if (typeof localStorage === 'undefined') return
   wipeLegacyDemoData()
+  purgeRequestedEmails()
 
   const users = readUsers()
   let changed = false
@@ -364,6 +391,29 @@ export function setMemberStatus(email: string, status: MemberStatus) {
 export function revokeMemberAccess(email: string) {
   // Back to waiting / unpaid
   setMemberStatus(email, 'pending')
+}
+
+/** Permanently delete a client account so they can sign up again. */
+export function removeMember(email: string): boolean {
+  ensureAdminUser()
+  const target = normalizeEmail(email)
+  if (!target || target === ADMIN_EMAIL) return false
+  const users = readUsers()
+  const next = users.filter((u) => u.email.toLowerCase() !== target)
+  if (next.length === users.length) return false
+  writeUsers(next)
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (raw) {
+      const data = JSON.parse(raw) as { email?: string }
+      if (data.email && data.email.toLowerCase() === target) {
+        sessionStorage.removeItem(SESSION_KEY)
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return true
 }
 
 export function approveMember(email: string) {

@@ -1,20 +1,45 @@
-import { useMemo, useState } from 'react'
-import { Check, X } from 'lucide-react'
-import { approveMember, listMembers, revokeMemberAccess, type UserProfile } from '../../auth'
+import { useEffect, useState } from 'react'
+import { Check, Trash2, X } from 'lucide-react'
+import {
+  approveMember,
+  listMembers,
+  removeMember,
+  revokeMemberAccess,
+  type UserProfile,
+} from '../../auth'
 import './admin.css'
 
 export function AdminMembers() {
-  const [tick, setTick] = useState(0)
-  const members = useMemo(() => listMembers(), [tick])
+  const [members, setMembers] = useState(() => listMembers())
+
+  useEffect(() => {
+    function refresh() {
+      setMembers(listMembers())
+    }
+    window.addEventListener('pkfx-users-change', refresh)
+    window.addEventListener('storage', refresh)
+    const id = window.setInterval(refresh, 2000)
+    return () => {
+      window.removeEventListener('pkfx-users-change', refresh)
+      window.removeEventListener('storage', refresh)
+      window.clearInterval(id)
+    }
+  }, [])
 
   function revoke(member: UserProfile) {
     revokeMemberAccess(member.email)
-    setTick((n) => n + 1)
+    setMembers(listMembers())
   }
 
   function approve(member: UserProfile) {
     approveMember(member.email)
-    setTick((n) => n + 1)
+    setMembers(listMembers())
+  }
+
+  function remove(member: UserProfile) {
+    if (!window.confirm(`Delete ${member.email}? They can sign up again afterwards.`)) return
+    removeMember(member.email)
+    setMembers(listMembers())
   }
 
   return (
@@ -59,7 +84,7 @@ export function AdminMembers() {
                         {m.phone ? `-${m.phone}` : ''}
                       </td>
                       <td>{m.country || '—'}</td>
-                      <td>
+                      <td className="admin-member-actions">
                         {(status === 'pending' || status === 'lead') && (
                           <button type="button" className="admin-btn" onClick={() => approve(m)}>
                             <Check size={14} /> Approve
@@ -70,6 +95,9 @@ export function AdminMembers() {
                             <X size={14} /> Revoke Access
                           </button>
                         )}
+                        <button type="button" className="admin-btn ghost" onClick={() => remove(m)}>
+                          <Trash2 size={14} /> Delete
+                        </button>
                       </td>
                     </tr>
                   )
@@ -85,6 +113,9 @@ export function AdminMembers() {
           </p>
           <p>
             <strong>Active:</strong> Approved / paid subscription (counts under Active Users).
+          </p>
+          <p>
+            <strong>Delete:</strong> Removes the account so they can sign up again.
           </p>
         </div>
       </section>

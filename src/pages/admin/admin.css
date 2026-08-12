@@ -404,6 +404,13 @@
   border: 1px solid color-mix(in srgb, var(--admin-blue, #0052ff) 35%, #e2e8f0);
 }
 
+.admin-member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
 .admin-success {
   color: #059669;
   font-size: 0.9rem;
