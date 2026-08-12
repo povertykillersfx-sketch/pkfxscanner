@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { X } from 'lucide-react'
-import { listMembers, revokeMemberAccess, type UserProfile } from '../../auth'
+import { Check, X } from 'lucide-react'
+import { approveMember, listMembers, revokeMemberAccess, type UserProfile } from '../../auth'
 import './admin.css'
 
 export function AdminMembers() {
@@ -9,6 +9,11 @@ export function AdminMembers() {
 
   function revoke(member: UserProfile) {
     revokeMemberAccess(member.email)
+    setTick((n) => n + 1)
+  }
+
+  function approve(member: UserProfile) {
+    approveMember(member.email)
     setTick((n) => n + 1)
   }
 
@@ -23,7 +28,7 @@ export function AdminMembers() {
             </div>
             <p>No members yet</p>
             <p className="admin-muted">
-              When clients sign up they will appear here as leads. Approve them to grant access.
+              When clients sign up they appear as pending requests. Approve them to make them active.
             </p>
           </div>
         ) : (
@@ -41,7 +46,7 @@ export function AdminMembers() {
               </thead>
               <tbody>
                 {members.map((m) => {
-                  const status = m.status || 'lead'
+                  const status = m.status || 'pending'
                   return (
                     <tr key={m.email}>
                       <td>
@@ -55,6 +60,11 @@ export function AdminMembers() {
                       </td>
                       <td>{m.country || '—'}</td>
                       <td>
+                        {(status === 'pending' || status === 'lead') && (
+                          <button type="button" className="admin-btn" onClick={() => approve(m)}>
+                            <Check size={14} /> Approve
+                          </button>
+                        )}
                         {status === 'active' && (
                           <button type="button" className="admin-btn admin-btn-danger" onClick={() => revoke(m)}>
                             <X size={14} /> Revoke Access
@@ -71,13 +81,10 @@ export function AdminMembers() {
 
         <div className="admin-legend">
           <p>
-            <strong>Lead:</strong> Client just signed up but hasn&apos;t opened an account yet.
+            <strong>Pending / Lead:</strong> Registered and waiting for approval (counts under Requests).
           </p>
           <p>
-            <strong>Pending:</strong> Client submitted a request and is waiting for approval.
-          </p>
-          <p>
-            <strong>Active:</strong> User has access to the platform.
+            <strong>Active:</strong> Approved / paid subscription (counts under Active Users).
           </p>
         </div>
       </section>

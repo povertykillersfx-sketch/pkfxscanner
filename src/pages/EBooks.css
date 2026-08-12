@@ -2,6 +2,22 @@
   padding-top: 0.25rem;
 }
 
+.ebooks-empty {
+  padding: 1.5rem;
+}
+
+.ebooks-empty p {
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+.cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
 .ebooks-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

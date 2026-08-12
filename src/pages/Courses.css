@@ -50,6 +50,13 @@
   box-shadow: var(--shadow-panel-glow);
 }
 
+.courses-empty {
+  color: var(--text-muted);
+  padding: 1rem 1.1rem 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
 .course-meta {
   padding: 1rem 1rem 0.75rem;
 }

@@ -1,11 +1,26 @@
-import { Bell, Clock3, Hourglass, Settings2 } from 'lucide-react'
-import { listMembers } from '../../auth'
-import { getRequests } from '../../adminStore'
+import { Bell, Clock3, Hourglass } from 'lucide-react'
+import {
+  countMembersByStatus,
+  getCountryBreakdown,
+  getJoinHistory,
+  listPendingRequests,
+} from '../../auth'
+import { getTodayVisitCount } from '../../analytics'
 import './admin.css'
 
+function shortDay(isoDate: string): string {
+  const d = new Date(`${isoDate}T12:00:00Z`)
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })
+}
+
 export function AdminDashboard() {
-  const pending = getRequests().filter((r) => r.status === 'pending').length
-  const activeUsers = listMembers().length
+  const pending = listPendingRequests().length
+  const activeUsers = countMembersByStatus('active')
+  const todayVisits = getTodayVisitCount()
+  const joins = getJoinHistory(14)
+  const maxJoin = Math.max(1, ...joins.map((j) => j.count))
+  const countries = getCountryBreakdown().slice(0, 6)
+  const maxCountry = Math.max(1, ...countries.map((c) => c.count))
 
   return (
     <div className="admin-page">
@@ -17,6 +32,7 @@ export function AdminDashboard() {
           <div>
             <div className="admin-kpi-label">Requests</div>
             <div className="admin-kpi-value">{pending}</div>
+            <div className="admin-kpi-sub">Waiting for approval</div>
           </div>
         </article>
         <article className="admin-card admin-kpi">
@@ -26,6 +42,7 @@ export function AdminDashboard() {
           <div>
             <div className="admin-kpi-label">Active Users</div>
             <div className="admin-kpi-value">{activeUsers}</div>
+            <div className="admin-kpi-sub">Approved / paid</div>
           </div>
         </article>
         <article className="admin-card admin-kpi">
@@ -33,8 +50,9 @@ export function AdminDashboard() {
             <Hourglass size={20} />
           </div>
           <div>
-            <div className="admin-kpi-label">Avg. Daily visits</div>
-            <div className="admin-kpi-value">0</div>
+            <div className="admin-kpi-label">Daily visits</div>
+            <div className="admin-kpi-value">{todayVisits}</div>
+            <div className="admin-kpi-sub">Site visits today</div>
           </div>
         </article>
       </div>
@@ -43,26 +61,52 @@ export function AdminDashboard() {
         <section className="admin-card">
           <div className="admin-card-head">
             <h2>Growth Overview</h2>
-            <button type="button" className="admin-btn admin-btn-outline">
-              <Settings2 size={16} /> Edit Scanner
-            </button>
+            <span className="admin-muted">New members joined (14 days)</span>
           </div>
-          <div className="admin-empty">
-            <div className="admin-empty-art" aria-hidden>
-              🚀
+          {joins.every((j) => j.count === 0) ? (
+            <div className="admin-empty">
+              <p className="admin-muted">No new signups yet. Growth bars appear as clients register.</p>
             </div>
-            <p>Charts</p>
-            <p className="admin-muted">Growth charts will appear here as members and visits increase.</p>
-          </div>
+          ) : (
+            <div className="growth-bars" role="img" aria-label="Join growth bar chart">
+              {joins.map((j) => (
+                <div key={j.date} className="growth-col">
+                  <div className="growth-bar-track">
+                    <div
+                      className="growth-bar"
+                      style={{ height: `${Math.max(6, (j.count / maxJoin) * 100)}%` }}
+                      title={`${j.count} joined`}
+                    />
+                  </div>
+                  <span className="growth-count">{j.count}</span>
+                  <span className="growth-label">{shortDay(j.date)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="admin-card">
           <div className="admin-card-head">
             <h2>User Demographics</h2>
           </div>
-          <div className="admin-empty">
-            <p className="admin-muted">Country and plan breakdown will show here once more members join.</p>
-          </div>
+          {countries.length === 0 ? (
+            <div className="admin-empty">
+              <p className="admin-muted">Country breakdown appears when members join.</p>
+            </div>
+          ) : (
+            <div className="demo-bars">
+              {countries.map((c) => (
+                <div key={c.country} className="demo-row">
+                  <span className="demo-name">{c.country}</span>
+                  <div className="demo-track">
+                    <div className="demo-fill" style={{ width: `${(c.count / maxCountry) * 100}%` }} />
+                  </div>
+                  <span className="demo-count">{c.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </div>

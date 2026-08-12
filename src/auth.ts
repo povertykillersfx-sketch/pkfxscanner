@@ -13,6 +13,8 @@ export interface UserProfile {
   country?: string
   mt4?: string
   status?: MemberStatus
+  /** ISO timestamp when the client registered */
+  joinedAt?: string
 }
 
 export type MemberStatus = 'lead' | 'pending' | 'active'
@@ -150,7 +152,9 @@ export function register(input: {
     password,
     plan: 'free',
     role: 'client',
-    status: 'lead',
+    // New signups wait for admin approval (Requests KPI)
+    status: 'pending',
+    joinedAt: new Date().toISOString(),
   })
   writeUsers(users)
 
@@ -253,15 +257,52 @@ export function setMemberStatus(email: string, status: MemberStatus) {
 }
 
 export function revokeMemberAccess(email: string) {
-  setMemberStatus(email, 'lead')
+  // Back to waiting / unpaid
+  setMemberStatus(email, 'pending')
 }
 
 export function approveMember(email: string) {
-  setMemberStatus(email, 'active')
+  const users = readUsers()
+  const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
+  if (!user || user.role === 'admin') return
+  user.status = 'active'
+  user.plan = user.plan === 'free' ? 'pro' : user.plan
+  writeUsers(users)
+}
+
+export function listPendingRequests(): UserProfile[] {
+  return listMembers()
+    .filter((m) => (m.status || 'pending') === 'pending' || m.status === 'lead')
+    .sort((a, b) => new Date(b.joinedAt || 0).getTime() - new Date(a.joinedAt || 0).getTime())
+}
+
+export function getJoinHistory(days = 14): { date: string; count: number }[] {
+  const members = listMembers()
+  const now = new Date()
+  const out: { date: string; count: number }[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now)
+    d.setUTCDate(d.getUTCDate() - i)
+    const key = d.toISOString().slice(0, 10)
+    const count = members.filter((m) => (m.joinedAt || '').slice(0, 10) === key).length
+    out.push({ date: key, count })
+  }
+  return out
+}
+
+export function getCountryBreakdown(): { country: string; count: number }[] {
+  const map = new Map<string, number>()
+  for (const m of listMembers()) {
+    const c = (m.country || 'Unknown').trim() || 'Unknown'
+    map.set(c, (map.get(c) || 0) + 1)
+  }
+  return [...map.entries()]
+    .map(([country, count]) => ({ country, count }))
+    .sort((a, b) => b.count - a.count)
 }
 
 export function countMembersByStatus(status: MemberStatus): number {
-  return listMembers().filter((m) => (m.status || 'lead') === status).length
+  return listMembers().filter((m) => (m.status || 'pending') === status).length
 }
 
 /** Remove all client accounts (keeps super admin only). */

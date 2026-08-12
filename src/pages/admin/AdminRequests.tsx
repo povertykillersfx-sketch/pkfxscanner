@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { RefreshCw, Send } from 'lucide-react'
-import { getRequests, getTelegramSettings, saveTelegramSettings } from '../../adminStore'
+import { Check, RefreshCw, Send } from 'lucide-react'
+import { approveMember, listPendingRequests } from '../../auth'
+import { getTelegramSettings, saveTelegramSettings } from '../../adminStore'
 import './admin.css'
 
 export function AdminRequests() {
-  const requests = getRequests().filter((r) => r.status === 'pending')
+  const [tick, setTick] = useState(0)
+  const requests = listPendingRequests()
+  void tick
   const [settings, setSettings] = useState(() => getTelegramSettings())
   const [message, setMessage] = useState('')
 
@@ -24,12 +27,18 @@ export function AdminRequests() {
     )
   }
 
+  function approve(email: string) {
+    approveMember(email)
+    setTick((n) => n + 1)
+  }
+
   return (
     <div className="admin-page">
       <div className="admin-two-col">
         <section className="admin-card">
           <div className="admin-card-head">
             <h2>Requests</h2>
+            <span className="admin-muted">{requests.length} waiting</span>
           </div>
           {requests.length === 0 ? (
             <div className="admin-empty">
@@ -37,16 +46,23 @@ export function AdminRequests() {
                 🚀
               </div>
               <p>You don&apos;t have any pending requests 🚀</p>
+              <p className="admin-muted">New client signups waiting for approval will show here.</p>
             </div>
           ) : (
             <div className="admin-list">
               {requests.map((r) => (
-                <div key={r.id} className="admin-list-row">
+                <div key={r.email} className="admin-list-row">
                   <div className="admin-list-main">
-                    <h4>{r.name}</h4>
+                    <h4>{r.fullName}</h4>
                     <p className="admin-muted">{r.email}</p>
-                    <p className="admin-muted">{r.note}</p>
+                    <p className="admin-muted">
+                      Status: {r.status || 'pending'}
+                      {r.joinedAt ? ` · Joined ${new Date(r.joinedAt).toLocaleString()}` : ''}
+                    </p>
                   </div>
+                  <button type="button" className="admin-btn" onClick={() => approve(r.email)}>
+                    <Check size={15} /> Approve
+                  </button>
                 </div>
               ))}
             </div>

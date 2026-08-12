@@ -21,7 +21,11 @@ export interface AdminEbook {
   coverUrl?: string
   description?: string
   category?: string
+  /** External or object URL for download */
   url?: string
+  /** Uploaded PDF as data URL (auto-published to client portal) */
+  fileData?: string
+  fileName?: string
 }
 
 export interface TelegramSettings {
@@ -65,6 +69,7 @@ export function getAdminCourses(): AdminCourse[] {
 
 export function saveAdminCourses(courses: AdminCourse[]) {
   writeJson(COURSES_KEY, courses)
+  window.dispatchEvent(new CustomEvent('pkfx-courses-change', { detail: courses }))
 }
 
 export function getAdminEbooks(): AdminEbook[] {
@@ -73,6 +78,7 @@ export function getAdminEbooks(): AdminEbook[] {
 
 export function saveAdminEbooks(books: AdminEbook[]) {
   writeJson(EBOOKS_KEY, books)
+  window.dispatchEvent(new CustomEvent('pkfx-ebooks-change', { detail: books }))
 }
 
 export function getTelegramSettings(): TelegramSettings {
