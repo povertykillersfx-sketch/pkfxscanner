@@ -14,6 +14,17 @@ export default defineConfig({
         secure: true,
         rewrite: (path) => path.replace(/^\/api\/yahoo/, ''),
       },
+      '/api/tv-calendar': {
+        target: 'https://economic-calendar.tradingview.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api\/tv-calendar/, '/events'),
+        headers: {
+          Origin: 'https://www.tradingview-widget.com',
+          Referer: 'https://www.tradingview-widget.com/',
+          Accept: 'application/json',
+        },
+      },
     },
   },
   preview: {
@@ -25,6 +36,17 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/api\/yahoo/, ''),
+      },
+      '/api/tv-calendar': {
+        target: 'https://economic-calendar.tradingview.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api\/tv-calendar/, '/events'),
+        headers: {
+          Origin: 'https://www.tradingview-widget.com',
+          Referer: 'https://www.tradingview-widget.com/',
+          Accept: 'application/json',
+        },
       },
     },
   },

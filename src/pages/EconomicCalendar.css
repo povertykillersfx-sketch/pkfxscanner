@@ -20,139 +20,195 @@
 
 .econ-calendar-frame {
   flex: 1;
-  min-height: 640px;
+  min-height: 520px;
   padding: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  overflow: auto;
 }
 
-/* Match TradingView embed value columns (right side of widget). */
-.econ-calendar-colheads {
-  position: relative;
-  display: block;
-  height: 2.35rem;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  font-size: 0.72rem;
-  font-weight: 750;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.econ-status {
+  margin: 1.25rem 1rem;
   color: var(--text-muted);
-  flex-shrink: 0;
+  font-size: 0.92rem;
 }
 
-.econ-calendar-colheads > span {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  display: inline-flex;
+.econ-error {
+  color: #f87171;
+}
+
+.econ-table {
+  --econ-cols: 4.25rem minmax(8.5rem, 11rem) 1.6rem minmax(10rem, 1fr) 6.5rem 6.5rem 6.5rem;
+  width: 100%;
+  min-width: 720px;
+}
+
+.econ-day + .econ-day {
+  border-top: 1px solid var(--border);
+}
+
+.econ-day-head,
+.econ-row {
+  display: grid;
+  grid-template-columns: var(--econ-cols);
   align-items: center;
-  justify-content: center;
-  width: 5.75rem;
-  text-align: center;
-  white-space: nowrap;
-  box-sizing: border-box;
+  column-gap: 0.65rem;
+  padding: 0.55rem 1.1rem;
 }
 
-.econ-calendar-colheads .econ-col-main {
-  left: 0.85rem;
-  right: auto;
-  width: auto;
-  justify-content: flex-start;
-  text-align: left;
+.econ-day-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: color-mix(in srgb, var(--panel, #120424) 92%, var(--accent) 8%);
+  border-bottom: 1px solid var(--border);
+  padding-top: 0.75rem;
+  padding-bottom: 0.65rem;
+}
+
+.econ-day-title {
+  grid-column: 1 / span 4;
+  font-weight: 750;
+  font-size: 0.95rem;
   color: var(--text);
 }
 
-/* Centers tuned to TradingView's Actual / Forecast / Prior value columns */
-.econ-calendar-colheads .econ-col-actual {
-  right: calc(22% - 2.875rem);
+.econ-h-actual,
+.econ-h-forecast,
+.econ-h-prior {
+  text-align: right;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
 }
 
-.econ-calendar-colheads .econ-col-forecast {
-  right: calc(12.7% - 2.875rem);
+.econ-row {
+  min-height: 2.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
 }
 
-.econ-calendar-colheads .econ-col-prior {
-  right: calc(3.4% - 2.875rem);
+.econ-row:nth-child(even) {
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
 }
 
-[data-theme='light'] .econ-calendar-colheads {
-  background: color-mix(in srgb, var(--accent) 6%, #fff);
-  color: #6b7280;
+.econ-row:last-child {
+  border-bottom: none;
 }
 
-[data-theme='light'] .econ-calendar-colheads .econ-col-main {
-  color: #374151;
+.econ-time {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
 }
 
-.econ-calendar-widget {
-  flex: 1;
-  width: 100%;
-  min-height: 560px;
-  height: 100%;
+.econ-country {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
-.econ-calendar-widget .tradingview-widget-container__widget,
-.econ-calendar-widget iframe {
-  width: 100% !important;
-  min-height: 560px;
-  height: 100% !important;
-  border: 0;
+.econ-flag {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.econ-country-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.econ-impact-cell {
+  display: flex;
+  justify-content: center;
+}
+
+.econ-impact {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.econ-impact i {
+  display: block;
+  width: 3px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--text-muted) 35%, transparent);
+}
+
+.econ-impact i:nth-child(1) {
+  height: 5px;
+}
+
+.econ-impact i:nth-child(2) {
+  height: 9px;
+}
+
+.econ-impact i:nth-child(3) {
+  height: 13px;
+}
+
+.econ-impact i[data-on='true'] {
+  background: #3b82f6;
+}
+
+.econ-impact.impact-high i[data-on='true'] {
+  background: #2563eb;
+}
+
+.econ-impact.impact-holiday i {
+  background: color-mix(in srgb, var(--text-muted) 25%, transparent);
+}
+
+.econ-event {
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.econ-actual,
+.econ-forecast,
+.econ-prior {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.econ-actual {
+  color: var(--text);
+  font-weight: 700;
+}
+
+[data-theme='light'] .econ-day-head {
+  background: #f8fafc;
+}
+
+[data-theme='light'] .econ-row:nth-child(even) {
+  background: #f8fafc;
+}
+
+[data-theme='light'] .econ-actual {
+  color: #0f172a;
 }
 
 @media (max-width: 900px) {
-  .econ-calendar-colheads .econ-col-actual {
-    right: calc(24.5% - 2.5rem);
+  .econ-table {
+    --econ-cols: 3.6rem minmax(7rem, 9rem) 1.4rem minmax(8rem, 1fr) 5.25rem 5.25rem 5.25rem;
+    min-width: 640px;
   }
 
-  .econ-calendar-colheads .econ-col-forecast {
-    right: calc(14.2% - 2.5rem);
-  }
-
-  .econ-calendar-colheads .econ-col-prior {
-    right: calc(3.8% - 2.5rem);
-  }
-
-  .econ-calendar-colheads > span {
-    width: 5rem;
-    font-size: 0.66rem;
-    letter-spacing: 0.06em;
-  }
-}
-
-@media (max-width: 720px) {
-  .econ-calendar-colheads {
-    height: 2.1rem;
-  }
-
-  .econ-calendar-colheads .econ-col-main {
-    left: 0.5rem;
-    font-size: 0.6rem;
-  }
-
-  .econ-calendar-colheads .econ-col-actual {
-    right: calc(28% - 2.15rem);
-  }
-
-  .econ-calendar-colheads .econ-col-forecast {
-    right: calc(16% - 2.15rem);
-  }
-
-  .econ-calendar-colheads .econ-col-prior {
-    right: calc(4% - 2.15rem);
-  }
-
-  .econ-calendar-colheads > span {
-    width: 4.3rem;
-    font-size: 0.58rem;
-    letter-spacing: 0.04em;
-  }
-
-  .econ-calendar-frame,
-  .econ-calendar-widget,
-  .econ-calendar-widget .tradingview-widget-container__widget,
-  .econ-calendar-widget iframe {
-    min-height: 480px;
+  .econ-day-head,
+  .econ-row {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    column-gap: 0.45rem;
   }
 }
