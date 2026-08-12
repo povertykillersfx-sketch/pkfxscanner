@@ -35,10 +35,10 @@
   height: 42px;
 }
 
-/* Cover logos inside ebook cards */
+/* Cover logos inside ebook cards — use the mark as-is */
 .cover-logo .logo-img {
   height: 28px;
-  filter: brightness(0) invert(1);
+  filter: none;
 }
 
 [data-theme='dark'] .cover-logo .logo-img {
