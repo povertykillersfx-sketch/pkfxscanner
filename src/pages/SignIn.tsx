@@ -36,6 +36,7 @@ export function SignIn() {
         </div>
 
         <h1 className="signin-title font-display">Sign In</h1>
+        <p className="signin-sub">One login for everyone — your account opens the matching dashboard.</p>
 
         <div className="signin-fields">
           <input
@@ -72,11 +73,11 @@ export function SignIn() {
         </button>
 
         <p className="signin-hint">
-          Client: povertykillersfx@gmail.com / pkfx-client
+          Same page for clients and Super Admin.
           <br />
-          Super Admin: povertykillersfx2@gmail.com / pkfx-admin
+          Client view: povertykillersfx@gmail.com / pkfx-client
           <br />
-          New clients: use Sign Up
+          Admin view: povertykillersfx2@gmail.com / pkfx-admin
         </p>
 
         <p className="signin-signup">

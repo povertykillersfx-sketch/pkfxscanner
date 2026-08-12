@@ -40,9 +40,18 @@
 .signin-title {
   font-size: 1.45rem;
   font-weight: 700;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.45rem;
   color: var(--text);
   text-shadow: var(--glow-text);
+}
+
+.signin-sub {
+  width: 100%;
+  margin: 0 0 1.25rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  text-align: center;
 }
 
 .signin-fields {
