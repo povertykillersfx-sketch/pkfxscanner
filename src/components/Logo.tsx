@@ -10,7 +10,7 @@ interface LogoProps {
 export function Logo({ size = 'md', variant = 'full' }: LogoProps) {
   const { theme } = useTheme()
   // Cache-bust so theme logo swaps pick up the latest brand assets
-  const src = theme === 'light' ? '/brand/logo-light.png?v=pkfx2' : '/brand/logo-dark.png?v=pkfx2'
+  const src = theme === 'light' ? '/brand/logo-light.png?v=pkfx3' : '/brand/logo-dark.png?v=pkfx3'
 
   return (
     <div className={`logo logo-${size} logo-${variant}`}>
