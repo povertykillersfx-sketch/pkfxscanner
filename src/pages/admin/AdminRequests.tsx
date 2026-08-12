@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Check, RefreshCw, Send } from 'lucide-react'
-import { approveMember, listPendingRequests } from '../../auth'
+import { Check, RefreshCw, Send, X } from 'lucide-react'
+import { approveMember, listPendingRequests, revokeMemberAccess } from '../../auth'
 import { getTelegramSettings, saveTelegramSettings } from '../../adminStore'
 import './admin.css'
 
@@ -44,6 +44,12 @@ export function AdminRequests() {
     setRequests(listPendingRequests())
   }
 
+  function reject(email: string) {
+    if (!window.confirm(`Reject / revoke access for ${email}?`)) return
+    revokeMemberAccess(email)
+    setRequests(listPendingRequests())
+  }
+
   return (
     <div className="admin-page">
       <div className="admin-two-col">
@@ -74,6 +80,9 @@ export function AdminRequests() {
                   </div>
                   <button type="button" className="admin-btn" onClick={() => approve(r.email)}>
                     <Check size={15} /> Approve
+                  </button>
+                  <button type="button" className="admin-btn admin-btn-danger" onClick={() => reject(r.email)}>
+                    <X size={15} /> Reject
                   </button>
                 </div>
               ))}

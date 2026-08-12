@@ -27,6 +27,9 @@ export function AdminMembers() {
   }, [])
 
   function revoke(member: UserProfile) {
+    if (!window.confirm(`Revoke access for ${member.fullName || member.email}? They will be locked out until you approve them again.`)) {
+      return
+    }
     revokeMemberAccess(member.email)
     setMembers(listMembers())
   }
@@ -53,7 +56,8 @@ export function AdminMembers() {
             </div>
             <p>No members yet</p>
             <p className="admin-muted">
-              When clients sign up they appear as pending requests. Approve them to make them active.
+              When clients sign up they appear as pending requests. Approve them to make them active. Use Revoke Access
+              to lock someone out.
             </p>
           </div>
         ) : (
@@ -72,6 +76,8 @@ export function AdminMembers() {
               <tbody>
                 {members.map((m) => {
                   const status = m.status || 'pending'
+                  const canApprove = status === 'pending' || status === 'lead' || status === 'revoked'
+                  const canRevoke = status === 'active'
                   return (
                     <tr key={m.email}>
                       <td>
@@ -85,12 +91,12 @@ export function AdminMembers() {
                       </td>
                       <td>{m.country || '—'}</td>
                       <td className="admin-member-actions">
-                        {(status === 'pending' || status === 'lead') && (
+                        {canApprove && (
                           <button type="button" className="admin-btn" onClick={() => approve(m)}>
                             <Check size={14} /> Approve
                           </button>
                         )}
-                        {status === 'active' && (
+                        {canRevoke && (
                           <button type="button" className="admin-btn admin-btn-danger" onClick={() => revoke(m)}>
                             <X size={14} /> Revoke Access
                           </button>
@@ -112,7 +118,11 @@ export function AdminMembers() {
             <strong>Pending / Lead:</strong> Registered and waiting for approval (counts under Requests).
           </p>
           <p>
-            <strong>Active:</strong> Approved / paid subscription (counts under Active Users).
+            <strong>Active:</strong> Approved / paid — can use the client portal. Use <strong>Revoke Access</strong> to
+            lock them out.
+          </p>
+          <p>
+            <strong>Revoked:</strong> Access cut. They cannot sign in until you Approve again.
           </p>
           <p>
             <strong>Delete:</strong> Removes the account so they can sign up again.

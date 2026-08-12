@@ -11,15 +11,15 @@ export function SignIn() {
   const existing = getCurrentUser()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState(
-    (location.state as { pendingApproval?: boolean } | null)?.pendingApproval
-      ? 'Your account is still waiting for Super Admin approval.'
-      : '',
-  )
+  const [error, setError] = useState(() => {
+    const state = location.state as { pendingApproval?: boolean; revoked?: boolean } | null
+    if (state?.revoked) return 'Your access was revoked by Super Admin.'
+    if (state?.pendingApproval) return 'Your account is still waiting for Super Admin approval.'
+    return ''
+  })
 
   if (existing) {
-    const status = existing.status || (existing.role === 'admin' ? 'active' : 'pending')
-    if (existing.role === 'admin' || status === 'active') {
+    if (existing.role === 'admin' || (existing.status || 'pending') === 'active') {
       return <Navigate to={existing.role === 'admin' ? '/admin' : '/dashboard'} replace />
     }
   }

@@ -277,6 +277,10 @@
   color: var(--admin-blue, #0052ff);
 }
 
+.admin-status.revoked {
+  color: #dc2626;
+}
+
 .admin-legend {
   margin-top: 1rem;
   border: 1px solid var(--admin-border, #e2e8f0);

@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { getCurrentUser, isAuthenticated, logout } from '../auth'
+import { getCurrentUser, hasPortalAccess, isAuthenticated, logout } from '../auth'
 
 export function RequireAuth() {
   if (!isAuthenticated()) {
@@ -8,7 +8,7 @@ export function RequireAuth() {
   return <Outlet />
 }
 
-/** Client app routes — admins go to Admin Portal; pending clients stay out until approved */
+/** Client app routes — admins go to Admin Portal; only approved clients stay in */
 export function RequireClient() {
   const user = getCurrentUser()
   const location = useLocation()
@@ -16,12 +16,19 @@ export function RequireClient() {
   if (user.role === 'admin' && !location.pathname.startsWith('/billing') && location.pathname !== '/logout') {
     return <Navigate to="/admin" replace />
   }
-  if (user.role !== 'admin') {
+  if (user.role !== 'admin' && !hasPortalAccess(user)) {
     const status = user.status || 'pending'
-    if (status === 'pending' || status === 'lead') {
-      logout()
-      return <Navigate to="/" replace state={{ pendingApproval: true }} />
-    }
+    logout()
+    return (
+      <Navigate
+        to="/"
+        replace
+        state={{
+          pendingApproval: status === 'pending' || status === 'lead',
+          revoked: status === 'revoked',
+        }}
+      />
+    )
   }
   return <Outlet />
 }

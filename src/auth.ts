@@ -17,7 +17,7 @@ export interface UserProfile {
   joinedAt?: string
 }
 
-export type MemberStatus = 'lead' | 'pending' | 'active'
+export type MemberStatus = 'lead' | 'pending' | 'active' | 'revoked'
 
 /** Live empty slate — only the super admin is seeded */
 const USERS_KEY = 'pkfx_users_live_v1'
@@ -298,11 +298,20 @@ export function login(
   // Clients must be approved by Super Admin before entering the portal
   if (user.role !== 'admin') {
     const status = user.status || 'pending'
+    if (status === 'revoked') {
+      return {
+        ok: false,
+        error: 'Your access was revoked by Super Admin. Contact support if you need access again.',
+      }
+    }
     if (status === 'pending' || status === 'lead') {
       return {
         ok: false,
         error: 'Your account is waiting for Super Admin approval. Please try again after you are approved.',
       }
+    }
+    if (status !== 'active') {
+      return { ok: false, error: 'Your account does not have portal access yet.' }
     }
   }
 
@@ -388,9 +397,20 @@ export function setMemberStatus(email: string, status: MemberStatus) {
   writeUsers(users)
 }
 
+export function hasPortalAccess(user: Pick<UserProfile, 'role' | 'status'> | null | undefined): boolean {
+  if (!user) return false
+  if (user.role === 'admin') return true
+  return (user.status || 'pending') === 'active'
+}
+
 export function revokeMemberAccess(email: string) {
-  // Back to waiting / unpaid
-  setMemberStatus(email, 'pending')
+  // Cut paid/portal access — does not delete the account
+  const users = readUsers()
+  const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
+  if (!user || user.role === 'admin') return
+  user.status = 'revoked'
+  user.plan = 'free'
+  writeUsers(users)
 }
 
 /** Permanently delete a client account so they can sign up again. */
