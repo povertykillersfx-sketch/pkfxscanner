@@ -35,6 +35,23 @@
   margin-bottom: 0.85rem;
 }
 
+.admin-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.95rem;
+}
+
+.admin-search input[type='search'] {
+  flex: 1;
+  min-width: 180px;
+  border: 1px solid var(--admin-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  background: #fff;
+  color: var(--admin-text, #0f172a);
+}
+
 .admin-kpi-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

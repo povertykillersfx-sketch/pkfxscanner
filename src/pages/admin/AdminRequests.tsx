@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Check, RefreshCw, Send, X } from 'lucide-react'
+import { Check, RefreshCw, Search, Send, X } from 'lucide-react'
 import { approveMember, listPendingRequests, revokeMemberAccess } from '../../auth'
+import { filterClients } from '../../adminSearch'
 import { getTelegramSettings, saveTelegramSettings } from '../../adminStore'
 import './admin.css'
 
@@ -9,6 +10,8 @@ export function AdminRequests() {
   const [requests, setRequests] = useState(() => listPendingRequests())
   const [settings, setSettings] = useState(() => getTelegramSettings())
   const [message, setMessage] = useState('')
+  const [query, setQuery] = useState('')
+  const [appliedQuery, setAppliedQuery] = useState('')
 
   useEffect(() => {
     function refresh() {
@@ -23,6 +26,18 @@ export function AdminRequests() {
       window.clearInterval(id)
     }
   }, [])
+
+  const visible = useMemo(() => filterClients(requests, appliedQuery), [requests, appliedQuery])
+
+  function onSearch(e: FormEvent) {
+    e.preventDefault()
+    setAppliedQuery(query.trim())
+  }
+
+  function clearSearch() {
+    setQuery('')
+    setAppliedQuery('')
+  }
 
   function onSave(e: FormEvent) {
     e.preventDefault()
@@ -56,8 +71,29 @@ export function AdminRequests() {
         <section className="admin-card">
           <div className="admin-card-head">
             <h2>Requests</h2>
-            <span className="admin-muted">{requests.length} waiting</span>
+            <span className="admin-muted">
+              {appliedQuery ? `${visible.length} match` : `${requests.length} waiting`}
+            </span>
           </div>
+
+          <form className="admin-search" onSubmit={onSearch}>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name, surname, email, or phone"
+              aria-label="Search requests"
+            />
+            <button type="submit" className="admin-btn">
+              <Search size={15} /> Search
+            </button>
+            {appliedQuery && (
+              <button type="button" className="admin-btn ghost" onClick={clearSearch}>
+                Clear
+              </button>
+            )}
+          </form>
+
           {requests.length === 0 ? (
             <div className="admin-empty">
               <div className="admin-empty-art" aria-hidden>
@@ -66,9 +102,14 @@ export function AdminRequests() {
               <p>You don&apos;t have any pending requests 🚀</p>
               <p className="admin-muted">New client signups waiting for approval will show here.</p>
             </div>
+          ) : visible.length === 0 ? (
+            <div className="admin-empty">
+              <p>No requests match “{appliedQuery}”</p>
+              <p className="admin-muted">Try a different name, surname, email, or phone number.</p>
+            </div>
           ) : (
             <div className="admin-list">
-              {requests.map((r) => (
+              {visible.map((r) => (
                 <div key={r.email} className="admin-list-row">
                   <div className="admin-list-main">
                     <h4>{r.fullName}</h4>

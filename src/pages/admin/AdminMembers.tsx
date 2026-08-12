@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Check, Trash2, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
+import { Check, Search, Trash2, X } from 'lucide-react'
 import {
   approveMember,
   listMembers,
@@ -7,6 +8,7 @@ import {
   revokeMemberAccess,
   type UserProfile,
 } from '../../auth'
+import { filterClients } from '../../adminSearch'
 import './admin.css'
 
 function memberSurname(m: UserProfile): string {
@@ -17,6 +19,8 @@ function memberSurname(m: UserProfile): string {
 
 export function AdminMembers() {
   const [members, setMembers] = useState(() => listMembers())
+  const [query, setQuery] = useState('')
+  const [appliedQuery, setAppliedQuery] = useState('')
 
   useEffect(() => {
     function refresh() {
@@ -31,6 +35,18 @@ export function AdminMembers() {
       window.clearInterval(id)
     }
   }, [])
+
+  const visible = useMemo(() => filterClients(members, appliedQuery), [members, appliedQuery])
+
+  function onSearch(e: FormEvent) {
+    e.preventDefault()
+    setAppliedQuery(query.trim())
+  }
+
+  function clearSearch() {
+    setQuery('')
+    setAppliedQuery('')
+  }
 
   function revoke(member: UserProfile) {
     if (!window.confirm(`Revoke access for ${member.fullName || member.email}? They will be locked out until you approve them again.`)) {
@@ -57,8 +73,29 @@ export function AdminMembers() {
       <section className="admin-card">
         <div className="admin-card-head">
           <h2>Client members</h2>
-          <span className="admin-muted">{members.length} total</span>
+          <span className="admin-muted">
+            {appliedQuery ? `${visible.length} match` : `${members.length} total`}
+          </span>
         </div>
+
+        <form className="admin-search" onSubmit={onSearch}>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by name, surname, email, or phone"
+            aria-label="Search members"
+          />
+          <button type="submit" className="admin-btn">
+            <Search size={15} /> Search
+          </button>
+          {appliedQuery && (
+            <button type="button" className="admin-btn ghost" onClick={clearSearch}>
+              Clear
+            </button>
+          )}
+        </form>
+
         {members.length === 0 ? (
           <div className="admin-empty">
             <div className="admin-empty-art" aria-hidden>
@@ -69,6 +106,11 @@ export function AdminMembers() {
               When clients complete Sign Up, their details appear here automatically for you to approve, revoke, or
               delete.
             </p>
+          </div>
+        ) : visible.length === 0 ? (
+          <div className="admin-empty">
+            <p>No clients match “{appliedQuery}”</p>
+            <p className="admin-muted">Try a different name, surname, email, or phone number.</p>
           </div>
         ) : (
           <div className="admin-table-wrap">
@@ -86,7 +128,7 @@ export function AdminMembers() {
                 </tr>
               </thead>
               <tbody>
-                {members.map((m) => {
+                {visible.map((m) => {
                   const status = m.status || 'pending'
                   const canApprove = status === 'pending' || status === 'lead' || status === 'revoked'
                   const canRevoke = status === 'active'
