@@ -19,8 +19,8 @@ import {
   Favorites,
   ForgotPassword,
   Logout,
-  More,
 } from './pages/Placeholder'
+import { EconomicCalendar } from './pages/EconomicCalendar'
 
 export default function App() {
   return (
@@ -38,7 +38,8 @@ export default function App() {
             <Route path="/ebooks" element={<EBooks />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/community" element={<Community />} />
-            <Route path="/more" element={<More />} />
+            <Route path="/economic-calendar" element={<EconomicCalendar />} />
+            <Route path="/more" element={<Navigate to="/economic-calendar" replace />} />
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/profile" element={<Dashboard />} />

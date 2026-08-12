@@ -5,7 +5,7 @@ import {
   BookOpen,
   Video,
   Users,
-  CircleMinus,
+  CalendarDays,
   Heart,
   CreditCard,
   User,
@@ -20,7 +20,7 @@ const primaryNav = [
   { to: '/ebooks', label: 'E-Books', icon: BookOpen },
   { to: '/courses', label: 'Courses', icon: Video },
   { to: '/community', label: 'Community', icon: Users },
-  { to: '/more', label: 'More', icon: CircleMinus },
+  { to: '/economic-calendar', label: 'Economic Calendar', icon: CalendarDays },
 ]
 
 const secondaryNav = [

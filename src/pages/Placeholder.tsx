@@ -50,15 +50,6 @@ export function Billing() {
   )
 }
 
-export function More() {
-  return (
-    <Placeholder
-      title="More"
-      description="Additional tools, settings, and resources for the PKFX scanner."
-    />
-  )
-}
-
 export function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
