@@ -1,4 +1,4 @@
-import type { UserProfile } from '../auth'
+import type { UserProfile } from './auth'
 
 function surnameOf(m: UserProfile): string {
   if (m.surname?.trim()) return m.surname.trim()
