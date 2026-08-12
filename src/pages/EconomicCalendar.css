@@ -58,7 +58,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: color-mix(in srgb, var(--panel, #120424) 92%, var(--accent) 8%);
+  background: color-mix(in srgb, var(--bg-panel-solid, #120424) 92%, var(--accent) 8%);
   border-bottom: 1px solid var(--border);
   padding-top: 0.75rem;
   padding-bottom: 0.65rem;
