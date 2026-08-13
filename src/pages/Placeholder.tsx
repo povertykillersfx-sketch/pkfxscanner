@@ -43,10 +43,13 @@ export function Favorites() {
 
 export function Billing() {
   return (
-    <Placeholder
-      title="Billing"
-      description="Manage your plan and payment methods. Current plan: free."
-    />
+    <div className="placeholder-page panel panel-glow animate-fade-up">
+      <h2 className="font-display">Billing</h2>
+      <p>Manage your PKFX plan and payment.</p>
+      <Link to="/choose-plan" className="btn btn-primary">
+        View plan &amp; pay
+      </Link>
+    </div>
   )
 }
 

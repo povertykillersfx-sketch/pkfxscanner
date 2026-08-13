@@ -21,12 +21,14 @@ import {
   Logout,
 } from './pages/Placeholder'
 import { EconomicCalendar } from './pages/EconomicCalendar'
+import { ChoosePlan } from './pages/ChoosePlan'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<SignIn />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/choose-plan" element={<ChoosePlan />} />
       <Route path="/forgot" element={<ForgotPassword />} />
       <Route path="/logout" element={<Logout />} />
 

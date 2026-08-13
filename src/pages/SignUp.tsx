@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
 import { register } from '../auth'
 import { COUNTRY_DIAL_CODES, DEFAULT_COUNTRY, type CountryDialCode } from '../data/countryDialCodes'
 import './SignIn.css'
 
 export function SignUp() {
+  const navigate = useNavigate()
   const [firstName, setFirstName] = useState('')
   const [surname, setSurname] = useState('')
   const [email, setEmail] = useState('')
@@ -16,7 +17,6 @@ export function SignUp() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
-  const [submitted, setSubmitted] = useState(false)
   const [dialOpen, setDialOpen] = useState(false)
   const [dialQuery, setDialQuery] = useState('')
   const dialRef = useRef<HTMLDivElement>(null)
@@ -62,28 +62,7 @@ export function SignUp() {
       return
     }
     setError('')
-    setSubmitted(true)
-  }
-
-  if (submitted) {
-    return (
-      <div className="cyber-bg signin-page">
-        <div className="signin-scan" aria-hidden />
-        <div className="signin-card panel panel-glow animate-fade-up signup-card">
-          <div className="signin-logo">
-            <Logo size="lg" />
-          </div>
-          <h1 className="signin-title font-display">Request sent</h1>
-          <p className="signin-sub">
-            Thanks for signing up. Your account is pending Super Admin approval. You will be able to sign in once
-            approved.
-          </p>
-          <Link to="/" className="btn btn-primary signin-btn">
-            Back to Sign In
-          </Link>
-        </div>
-      </div>
-    )
+    navigate('/choose-plan', { replace: true, state: { firstName: firstName.trim() } })
   }
 
   return (
@@ -95,7 +74,7 @@ export function SignUp() {
         </div>
 
         <h1 className="signin-title font-display">Sign Up</h1>
-        <p className="signin-sub">Create an account — access opens after Super Admin approval.</p>
+        <p className="signin-sub">Create your account, then choose your plan to get started.</p>
 
         <div className="signin-fields">
           <input
