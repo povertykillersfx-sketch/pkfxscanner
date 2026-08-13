@@ -182,12 +182,7 @@ export const COURSE_SECTIONS: CourseSection[] = [
   },
 ]
 
-export function avatarUrl(seed: string): string {
-  const params = new URLSearchParams({
-    seed,
-    backgroundColor: 'c0aede,b6e3f4,ffd5dc,d1f4d9',
-    radius: '50',
-  })
-  // Friendly cartoon faces (DiceBear big-smile)
-  return `https://api.dicebear.com/9.x/big-smile/svg?${params.toString()}`
+/** Friendly Memoji-style cartoon used beside Welcome / profile. */
+export function avatarUrl(_seed?: string): string {
+  return '/avatars/welcome-avatar.png'
 }

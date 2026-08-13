@@ -18,13 +18,13 @@
 }
 
 .header-avatar {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: 1.5px solid var(--border-strong);
+  border: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
   box-shadow: var(--glow-sm);
   object-fit: cover;
-  background: var(--bg-stat-icon);
+  background: #e8ddf5;
   flex-shrink: 0;
 }
 
@@ -36,8 +36,8 @@
 }
 
 [data-theme='light'] .header-avatar {
-  border-color: color-mix(in srgb, var(--accent) 28%, #e5e7eb);
-  box-shadow: none;
+  border-color: color-mix(in srgb, var(--accent) 30%, #e5e7eb);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .header-welcome {
