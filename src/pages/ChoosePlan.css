@@ -145,10 +145,26 @@
   color: var(--text-muted);
 }
 
+.choose-plan-usd {
+  margin: 0.45rem 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--neon-soft);
+}
+
+.choose-plan-usd strong {
+  color: var(--text);
+  font-weight: 750;
+}
+
 .choose-plan-price-note {
-  margin: 0.55rem 0 0;
+  margin: 0.45rem 0 0;
   font-size: 0.84rem;
   color: var(--text-dim);
+}
+
+[data-theme='light'] .choose-plan-usd {
+  color: var(--accent);
 }
 
 .choose-plan-includes-title {

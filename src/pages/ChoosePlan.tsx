@@ -43,6 +43,9 @@ export function ChoosePlan() {
               <span className="choose-plan-amount">{PLAN.priceLabel}</span>
               <span className="choose-plan-period">/{PLAN.period}</span>
             </div>
+            <p className="choose-plan-usd">
+              approx. <strong>{PLAN.usdPriceLabel}</strong> USD /{PLAN.period}
+            </p>
             <p className="choose-plan-price-note">Billed once a year. Cancel anytime before renewal.</p>
           </div>
 

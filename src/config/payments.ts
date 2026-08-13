@@ -7,12 +7,20 @@ export const PAYMENT_URL =
     (import.meta.env.VITE_PAYMENT_URL as string | undefined)?.trim()) ||
   ''
 
+/** Approx. mid-market USDZAR used for display-only conversion (no cents). */
+const USD_ZAR_RATE = 16.15
+
+const ZAR_AMOUNT = 1499
+const USD_AMOUNT = Math.round(ZAR_AMOUNT / USD_ZAR_RATE)
+
 export const PLAN = {
   name: 'PKFX Annual Access',
   priceLabel: 'R1 499',
+  usdPriceLabel: `$${USD_AMOUNT}`,
   period: 'year',
   currency: 'ZAR',
-  amount: 1499,
+  amount: ZAR_AMOUNT,
+  usdAmount: USD_AMOUNT,
   benefits: [
     'AI Chart scanner',
     'Access to Inner circle Community',
