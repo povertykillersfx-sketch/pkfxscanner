@@ -130,7 +130,7 @@ export function AdminMembers() {
               <tbody>
                 {visible.map((m) => {
                   const status = m.status || 'pending'
-                  const canApprove = status === 'pending' || status === 'lead' || status === 'revoked'
+                  const canApprove = status === 'pending' || status === 'revoked'
                   const canRevoke = status === 'active'
                   return (
                     <tr key={m.email}>
