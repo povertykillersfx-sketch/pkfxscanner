@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Check, GraduationCap, Radio, ScanSearch, Users } from 'lucide-react'
 import { Logo } from '../components/Logo'
+import { getSignupFunnelEmail, markPaymentStarted, setSignupFunnelEmail } from '../auth'
 import { PAYMENT_URL, PLAN } from '../config/payments'
 import './ChoosePlan.css'
 
@@ -8,9 +10,17 @@ const BENEFIT_ICONS = [ScanSearch, Users, Radio, GraduationCap] as const
 
 export function ChoosePlan() {
   const location = useLocation()
-  const firstName = (location.state as { firstName?: string } | null)?.firstName?.trim()
+  const state = location.state as { firstName?: string; email?: string } | null
+  const firstName = state?.firstName?.trim()
+  const email = (state?.email || getSignupFunnelEmail()).trim()
+
+  useEffect(() => {
+    if (state?.email) setSignupFunnelEmail(state.email)
+  }, [state?.email])
 
   function goToPayment() {
+    markPaymentStarted(email || undefined)
+
     if (!PAYMENT_URL) {
       window.alert('Payment link will be connected shortly. Please check back soon.')
       return

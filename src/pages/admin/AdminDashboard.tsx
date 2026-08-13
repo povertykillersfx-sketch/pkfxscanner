@@ -57,7 +57,7 @@ export function AdminDashboard() {
           <div>
             <div className="admin-kpi-label">Requests</div>
             <div className="admin-kpi-value">{pending}</div>
-            <div className="admin-kpi-sub">Waiting for approval</div>
+            <div className="admin-kpi-sub">Reached payment · awaiting approval</div>
           </div>
         </article>
         <article className="admin-card admin-kpi">

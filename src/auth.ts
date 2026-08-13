@@ -236,11 +236,12 @@ export function register(input: {
     country,
     plan: 'free',
     role: 'client',
-    // New signups wait for admin approval (Requests KPI)
-    status: 'pending',
+    // Signup → lead in Members until they continue to payment
+    status: 'lead',
     joinedAt: new Date().toISOString(),
   })
   writeUsers(users)
+  setSignupFunnelEmail(email)
 
   // Do NOT start a session — Super Admin must approve first
   return { ok: true }
@@ -460,9 +461,52 @@ export function approveMember(email: string) {
   writeUsers(users)
 }
 
+const FUNNEL_KEY = 'pkfx_signup_funnel_v1'
+
+export function setSignupFunnelEmail(email: string) {
+  try {
+    sessionStorage.setItem(FUNNEL_KEY, normalizeEmail(email))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getSignupFunnelEmail(): string {
+  try {
+    return normalizeEmail(sessionStorage.getItem(FUNNEL_KEY) || '')
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Lead clicked through to payment → show under Requests + Members as pending.
+ */
+export function markPaymentStarted(emailInput?: string): boolean {
+  ensureAdminUser()
+  const email = normalizeEmail(emailInput || getSignupFunnelEmail())
+  if (!email || email === ADMIN_EMAIL) return false
+
+  const users = readUsers()
+  const user = users.find((u) => u.email.toLowerCase() === email)
+  if (!user || user.role === 'admin') return false
+
+  // Keep active / revoked as-is; upgrade leads (and bare statuses) to pending
+  if (user.status === 'active' || user.status === 'revoked') {
+    setSignupFunnelEmail(email)
+    return true
+  }
+
+  user.status = 'pending'
+  writeUsers(users)
+  setSignupFunnelEmail(email)
+  return true
+}
+
+/** Clients who reached payment and await Super Admin approval. */
 export function listPendingRequests(): UserProfile[] {
   return listMembers()
-    .filter((m) => (m.status || 'pending') === 'pending' || m.status === 'lead')
+    .filter((m) => (m.status || 'pending') === 'pending')
     .sort((a, b) => new Date(b.joinedAt || 0).getTime() - new Date(a.joinedAt || 0).getTime())
 }
 

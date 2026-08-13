@@ -100,7 +100,7 @@ export function AdminRequests() {
                 🚀
               </div>
               <p>You don&apos;t have any pending requests 🚀</p>
-              <p className="admin-muted">New client signups waiting for approval will show here.</p>
+              <p className="admin-muted">Clients who continue to payment appear here as pending for approval.</p>
             </div>
           ) : visible.length === 0 ? (
             <div className="admin-empty">

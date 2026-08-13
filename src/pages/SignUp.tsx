@@ -62,7 +62,10 @@ export function SignUp() {
       return
     }
     setError('')
-    navigate('/choose-plan', { replace: true, state: { firstName: firstName.trim() } })
+    navigate('/choose-plan', {
+      replace: true,
+      state: { firstName: firstName.trim(), email: email.trim() },
+    })
   }
 
   return (

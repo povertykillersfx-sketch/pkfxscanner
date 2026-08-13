@@ -174,7 +174,10 @@ export function AdminMembers() {
 
         <div className="admin-legend">
           <p>
-            <strong>Pending / Lead:</strong> Registered and waiting for approval (also listed under Requests).
+            <strong>Lead:</strong> Signed up but has not continued to payment yet (Members only).
+          </p>
+          <p>
+            <strong>Pending:</strong> Reached the payment page — also listed under Requests for approval.
           </p>
           <p>
             <strong>Active:</strong> Approved / paid — can use the client portal. Use <strong>Revoke Access</strong> to
