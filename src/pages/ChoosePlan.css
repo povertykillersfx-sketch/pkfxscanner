@@ -233,6 +233,35 @@
   color: var(--text-dim);
 }
 
+.choose-plan-paid-btn {
+  width: 100%;
+  min-height: 2.9rem;
+  margin-top: 0.7rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  background: transparent;
+  border: 1.5px solid var(--border-strong);
+}
+
+.choose-plan-paid-btn:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--accent-strong);
+}
+
+.choose-plan-paid-notice {
+  margin: 0.85rem 0 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--badge-bearish-border);
+  background: var(--badge-bearish-bg);
+  color: var(--badge-bearish-fg);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .choose-plan-foot {
   margin: 0;
   font-size: 0.9rem;

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Check, GraduationCap, Radio, ScanSearch, Users } from 'lucide-react'
 import { Logo } from '../components/Logo'
@@ -7,12 +7,20 @@ import { PAYMENT_URL, PLAN } from '../config/payments'
 import './ChoosePlan.css'
 
 const BENEFIT_ICONS = [ScanSearch, Users, Radio, GraduationCap] as const
+const WAITING_MESSAGE =
+  'Your account is waiting for Admin approval. Please try again after you are approved.'
 
 export function ChoosePlan() {
   const location = useLocation()
-  const state = location.state as { firstName?: string; email?: string } | null
+  const state = location.state as {
+    firstName?: string
+    email?: string
+    fromLoginPending?: boolean
+  } | null
   const firstName = state?.firstName?.trim()
   const email = (state?.email || getSignupFunnelEmail()).trim()
+  const fromLoginPending = Boolean(state?.fromLoginPending)
+  const [paidNotice, setPaidNotice] = useState('')
 
   useEffect(() => {
     if (state?.email) setSignupFunnelEmail(state.email)
@@ -26,6 +34,11 @@ export function ChoosePlan() {
       return
     }
     window.location.assign(PAYMENT_URL)
+  }
+
+  function onAlreadyPaid() {
+    markPaymentStarted(email || undefined)
+    setPaidNotice(WAITING_MESSAGE)
   }
 
   return (
@@ -77,11 +90,29 @@ export function ChoosePlan() {
           <button type="button" className="btn btn-primary choose-plan-cta" onClick={goToPayment}>
             Continue to Payment
           </button>
-          <p className="choose-plan-secure">Secure checkout · Instant confirmation after payment</p>
+
+          {fromLoginPending ? (
+            <>
+              <button type="button" className="btn choose-plan-paid-btn" onClick={onAlreadyPaid}>
+                I&apos;ve already paid
+              </button>
+              {paidNotice ? <p className="choose-plan-paid-notice">{paidNotice}</p> : null}
+            </>
+          ) : (
+            <p className="choose-plan-secure">Secure checkout · Instant confirmation after payment</p>
+          )}
         </section>
 
         <p className="choose-plan-foot">
-          Already paid? <Link to="/">Sign in</Link>
+          {fromLoginPending ? (
+            <>
+              Back to <Link to="/">Sign in</Link>
+            </>
+          ) : (
+            <>
+              Already paid? <Link to="/">Sign in</Link>
+            </>
+          )}
         </p>
       </main>
     </div>

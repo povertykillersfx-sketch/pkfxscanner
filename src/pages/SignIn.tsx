@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
-import { getCurrentUser, login } from '../auth'
+import { getCurrentUser, login, setSignupFunnelEmail } from '../auth'
 import './SignIn.css'
 
 export function SignIn() {
@@ -28,6 +28,18 @@ export function SignIn() {
     e.preventDefault()
     const result = login(email, password)
     if (!result.ok) {
+      if (result.reason === 'awaiting_approval') {
+        setSignupFunnelEmail(result.email || email)
+        navigate('/choose-plan', {
+          replace: true,
+          state: {
+            firstName: result.firstName || '',
+            email: result.email || email,
+            fromLoginPending: true,
+          },
+        })
+        return
+      }
       setError(result.error)
       return
     }

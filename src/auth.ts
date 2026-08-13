@@ -252,10 +252,17 @@ export function register(input: {
   return { ok: true }
 }
 
-export function login(
-  emailInput: string,
-  passwordInput: string,
-): { ok: true; role: UserRole } | { ok: false; error: string } {
+export type LoginResult =
+  | { ok: true; role: UserRole }
+  | {
+      ok: false
+      error: string
+      reason?: 'awaiting_approval' | 'revoked'
+      firstName?: string
+      email?: string
+    }
+
+export function login(emailInput: string, passwordInput: string): LoginResult {
   const email = normalizeEmail(emailInput)
   const password = passwordInput.trim()
 
@@ -322,13 +329,17 @@ export function login(
     if (status === 'revoked') {
       return {
         ok: false,
+        reason: 'revoked',
         error: 'Your access was revoked by Admin. Contact support if you need access again.',
       }
     }
     if (status === 'pending' || status === 'lead') {
       return {
         ok: false,
+        reason: 'awaiting_approval',
         error: 'Your account is waiting for Admin approval. Please try again after you are approved.',
+        firstName: user.firstName,
+        email: user.email,
       }
     }
     if (status !== 'active') {
