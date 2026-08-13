@@ -248,7 +248,7 @@ export function register(input: {
   writeUsers(users)
   setSignupFunnelEmail(email)
 
-  // Do NOT start a session — Super Admin must approve first
+  // Do NOT start a session — Admin must approve first
   return { ok: true }
 }
 
@@ -316,19 +316,19 @@ export function login(
 
   if (!user) return { ok: false, error: 'Invalid email or password.' }
 
-  // Clients must be approved by Super Admin before entering the portal
+  // Clients must be approved by Admin before entering the portal
   if (user.role !== 'admin') {
     const status = user.status || 'pending'
     if (status === 'revoked') {
       return {
         ok: false,
-        error: 'Your access was revoked by Super Admin. Contact support if you need access again.',
+        error: 'Your access was revoked by Admin. Contact support if you need access again.',
       }
     }
     if (status === 'pending' || status === 'lead') {
       return {
         ok: false,
-        error: 'Your account is waiting for Super Admin approval. Please try again after you are approved.',
+        error: 'Your account is waiting for Admin approval. Please try again after you are approved.',
       }
     }
     if (status !== 'active') {
@@ -508,7 +508,7 @@ export function markPaymentStarted(emailInput?: string): boolean {
   return true
 }
 
-/** Clients who reached payment and await Super Admin approval. */
+/** Clients who reached payment and await Admin approval. */
 export function listPendingRequests(): UserProfile[] {
   return listMembers()
     .filter((m) => (m.status || 'pending') === 'pending')

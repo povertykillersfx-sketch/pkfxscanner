@@ -37,7 +37,7 @@ export function Courses() {
           <div className="section-banner">
             <h2 className="font-display">COURSES</h2>
           </div>
-          <p className="courses-empty">No courses yet. Content added in Super Admin → Tutorials will appear here.</p>
+          <p className="courses-empty">No courses yet. Content added in Admin → Tutorials will appear here.</p>
         </section>
       </div>
     )

@@ -13,8 +13,8 @@ export function SignIn() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(() => {
     const state = location.state as { pendingApproval?: boolean; revoked?: boolean } | null
-    if (state?.revoked) return 'Your access was revoked by Super Admin.'
-    if (state?.pendingApproval) return 'Your account is still waiting for Super Admin approval.'
+    if (state?.revoked) return 'Your access was revoked by Admin.'
+    if (state?.pendingApproval) return 'Your account is still waiting for Admin approval.'
     return ''
   })
 
@@ -81,7 +81,7 @@ export function SignIn() {
         </button>
 
         <p className="signin-hint">
-          Same page for clients and Super Admin.
+          Same page for clients and Admin.
           <br />
           New signups wait for approval before access.
           <br />
