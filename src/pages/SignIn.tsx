@@ -44,7 +44,6 @@ export function SignIn() {
         </div>
 
         <h1 className="signin-title font-display">Sign In</h1>
-        <p className="signin-sub">One login for everyone — your account opens the matching dashboard.</p>
 
         <div className="signin-fields">
           <input
@@ -79,16 +78,6 @@ export function SignIn() {
         <button type="submit" className="btn btn-primary signin-btn">
           Login
         </button>
-
-        <p className="signin-hint">
-          Same page for clients and Admin.
-          <br />
-          New signups wait for approval before access.
-          <br />
-          Client view: povertykillersfx@gmail.com / pkfx-client
-          <br />
-          Admin view: povertykillersfx2@gmail.com / pkfx-admin
-        </p>
 
         <p className="signin-signup">
           Don&apos;t have an account? <Link to="/signup">Sign Up now</Link>
