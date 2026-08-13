@@ -40,7 +40,7 @@
 .signin-title {
   font-size: 1.45rem;
   font-weight: 700;
-  margin-bottom: 0.45rem;
+  margin-bottom: 1.25rem;
   color: var(--text);
   text-shadow: var(--glow-text);
 }
