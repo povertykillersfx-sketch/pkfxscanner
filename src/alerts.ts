@@ -13,9 +13,33 @@ import {
 
 /** Locked session signals — one alert per symbol/session/day (does not keep rewriting levels) */
 const ALERTS_KEY = 'pkfx_live_alerts_v4_sticky'
+/** Keep past alerts on My Alerts for this many UTC days (including today). */
+const ALERT_HISTORY_DAYS = 5
 
 function utcDateKey(d = new Date()): string {
   return d.toISOString().slice(0, 10)
+}
+
+/** Inclusive window of recent UTC date keys: today and the previous (days - 1) days. */
+function recentDateKeys(now = new Date(), days = ALERT_HISTORY_DAYS): Set<string> {
+  const keys = new Set<string>()
+  for (let i = 0; i < days; i++) {
+    const d = new Date(now)
+    d.setUTCDate(d.getUTCDate() - i)
+    keys.add(utcDateKey(d))
+  }
+  return keys
+}
+
+function isRecentAlert(alert: Alert, now = new Date(), days = ALERT_HISTORY_DAYS): boolean {
+  if (alert.date && recentDateKeys(now, days).has(alert.date)) return true
+  // Fallback for older records without a reliable date field
+  const t = new Date(alert.noticedAt).getTime()
+  if (!Number.isFinite(t)) return false
+  const cutoff = new Date(now)
+  cutoff.setUTCDate(cutoff.getUTCDate() - (days - 1))
+  cutoff.setUTCHours(0, 0, 0, 0)
+  return t >= cutoff.getTime()
 }
 
 function formatPrice(asset: string, value: number): string {
@@ -359,14 +383,16 @@ function writeStored(alerts: Alert[]) {
  * Sync AI alerts for scanner symbols using multi-timeframe live data.
  * Bias: 4H → 1H · Entry: 15m · Targets: HTF structure
  * One locked alert per symbol + session + UTC day (no mid-session rewrite).
+ * Keeps the last 5 days of alerts for My Alerts history.
  */
 export async function syncAlertsForSymbols(symbols: string[], now = new Date()): Promise<Alert[]> {
   const date = utcDateKey(now)
   const dueSessions = sessionsDueToday(now)
   const latestSession = dueSessions.at(-1)
-  const stored = readStored()
+  const historyDates = recentDateKeys(now, ALERT_HISTORY_DAYS)
+  const stored = readStored().filter((a) => isRecentAlert(a, now, ALERT_HISTORY_DAYS))
 
-  // Keep all stored alerts (other symbols / prior sessions) so refresh does not wipe history
+  // Keep recent stored alerts (other symbols / prior days) so refresh does not wipe history
   const byId = new Map<string, Alert>()
   for (const alert of stored) {
     byId.set(alert.id, alert)
@@ -422,28 +448,36 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
   for (const [key, alert] of bySessionKey) {
     const next = {
       ...alert,
-      trending: alert.session === latestSession,
+      trending: alert.date === date && alert.session === latestSession,
     }
     bySessionKey.set(key, next)
     byId.set(next.id, next)
   }
 
-  const merged = [...byId.values()]
-  const next = organizeAlertsForScanner(
-    merged.filter((a) => symbols.includes(a.asset) && a.date === date),
-    symbols,
-  )
+  // Clear stale "current" flags on older days so only today's latest session is trending
+  for (const [id, alert] of byId) {
+    if (alert.date === date) continue
+    if (!alert.trending) continue
+    byId.set(id, { ...alert, trending: false })
+  }
 
-  // Persist: today's organized scanner alerts + any other stored alerts not in that set
+  const merged = [...byId.values()].filter((a) => isRecentAlert(a, now, ALERT_HISTORY_DAYS))
+  const forScanner = merged.filter(
+    (a) => symbols.includes(a.asset) && (a.date ? historyDates.has(a.date) : isRecentAlert(a, now)),
+  )
+  const next = organizeAlertsForScanner(forScanner, symbols, now)
+
+  // Persist recent history for scanner symbols + any other recent stored alerts
   const organizedIds = new Set(next.map((a) => a.id))
   const preserved = merged.filter((a) => !organizedIds.has(a.id))
   writeStored([...preserved, ...next])
   return next
 }
 
-export function organizeAlertsForScanner(alerts: Alert[], symbols: string[]): Alert[] {
+export function organizeAlertsForScanner(alerts: Alert[], symbols: string[], now = new Date()): Alert[] {
   const out: Alert[] = []
-  const latestSession = sessionsDueToday().at(-1)
+  const today = utcDateKey(now)
+  const latestSession = sessionsDueToday(now).at(-1)
 
   for (const asset of symbols) {
     const forSymbol = alerts
@@ -454,12 +488,16 @@ export function organizeAlertsForScanner(alerts: Alert[], symbols: string[]): Al
 
     const marked = forSymbol.map((a) => ({
       ...a,
-      trending: Boolean(latestSession && a.session === latestSession),
+      trending: Boolean(latestSession && a.date === today && a.session === latestSession),
     }))
 
-    // If latest session alert is missing, keep the most recent one marked current
-    if (latestSession && !marked.some((a) => a.trending) && marked[0]) {
-      marked[0] = { ...marked[0], trending: true }
+    // If latest session alert is missing today, keep the most recent today alert marked current
+    if (latestSession && !marked.some((a) => a.trending)) {
+      const todayFirst = marked.find((a) => a.date === today)
+      if (todayFirst) {
+        const idx = marked.findIndex((a) => a.id === todayFirst.id)
+        if (idx >= 0) marked[idx] = { ...marked[idx]!, trending: true }
+      }
     }
 
     marked.sort((a, b) => {

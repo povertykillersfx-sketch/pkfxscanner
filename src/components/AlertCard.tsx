@@ -173,10 +173,10 @@ export function AlertsPanel({
             {currentOnly
               ? 'Current 15m entries · bias from 4H→1H'
               : liveFeed
-                ? 'Live MTF scan (4H→1H→15m)'
+                ? 'Live MTF scan (4H→1H→15m) · last 5 days'
                 : loading
                   ? 'Scanning markets…'
-                  : 'MTF market scan'}{' '}
+                  : 'MTF market scan · last 5 days'}{' '}
             · {symbols.length ? symbols.join(' · ') : 'no symbols selected'}
           </p>
         </div>

@@ -16,7 +16,7 @@ export function AlertsPage() {
           alerts={alerts}
           symbols={symbols}
           onEditScanner={() => setScannerOpen(true)}
-          limit={12}
+          limit={24}
           loading={loading}
           liveFeed={liveFeed}
         />
