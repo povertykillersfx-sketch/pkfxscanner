@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
-import { register } from '../auth'
+import { capitalizeName, register } from '../auth'
 import { COUNTRY_DIAL_CODES, DEFAULT_COUNTRY, type CountryDialCode } from '../data/countryDialCodes'
 import './SignIn.css'
 
@@ -64,7 +64,7 @@ export function SignUp() {
     setError('')
     navigate('/choose-plan', {
       replace: true,
-      state: { firstName: firstName.trim(), email: email.trim() },
+      state: { firstName: capitalizeName(firstName.trim()), email: email.trim() },
     })
   }
 
@@ -86,7 +86,7 @@ export function SignUp() {
             placeholder="First Name"
             value={firstName}
             onChange={(e) => {
-              setFirstName(e.target.value)
+              setFirstName(capitalizeName(e.target.value))
               setError('')
             }}
             autoComplete="given-name"
@@ -98,7 +98,7 @@ export function SignUp() {
             placeholder="Surname"
             value={surname}
             onChange={(e) => {
-              setSurname(e.target.value)
+              setSurname(capitalizeName(e.target.value))
               setError('')
             }}
             autoComplete="family-name"

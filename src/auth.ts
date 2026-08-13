@@ -42,6 +42,11 @@ const LEGACY_KEYS = [
   'pkfx_admin_telegram',
 ]
 
+/** Ensure a name always starts with a capital letter (also after spaces/hyphens). */
+export function capitalizeName(raw: string): string {
+  return raw.replace(/(^|[\s-])(\p{L})/gu, (_, sep: string, ch: string) => `${sep}${ch.toUpperCase()}`)
+}
+
 /** Fix common typos like "namegmail.com" → "name@gmail.com" */
 export function normalizeEmail(raw: string): string {
   let email = raw.trim().toLowerCase()
@@ -201,8 +206,8 @@ export function register(input: {
   country: string
   dialCode: string
 }): { ok: true } | { ok: false; error: string } {
-  const firstName = input.firstName.trim()
-  const surname = input.surname.trim()
+  const firstName = capitalizeName(input.firstName.trim())
+  const surname = capitalizeName(input.surname.trim())
   const email = normalizeEmail(input.email)
   const password = input.password.trim()
   const phoneLocal = input.phone.replace(/\s+/g, '').trim()
