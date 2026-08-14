@@ -1,8 +1,4 @@
-import {
-  Bell,
-  Clock3,
-  Trophy,
-} from 'lucide-react'
+import { Bell, Clock3 } from 'lucide-react'
 import { STATS } from '../data/mockData'
 import './StatsRow.css'
 
@@ -14,7 +10,6 @@ export function StatsRow({ savedAlerts }: StatsRowProps) {
   const items = [
     { label: 'Saved Alerts', value: String(savedAlerts ?? STATS.savedAlerts), icon: Bell },
     { label: 'Win Rate', value: STATS.winRate, icon: Clock3 },
-    { label: 'Strategy Score', value: STATS.strategyScore, icon: Trophy },
   ]
 
   return (

@@ -105,7 +105,6 @@ export const DEMO_USER = {
 export const STATS = {
   savedAlerts: 2,
   winRate: '94%',
-  strategyScore: '0.0',
 }
 
 export const EBOOKS: Ebook[] = [
