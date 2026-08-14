@@ -127,6 +127,12 @@
   font-weight: 750;
 }
 
+.journal-pnl-input.is-loss .journal-pnl-prefix {
+  color: var(--bearish);
+  background: var(--badge-bearish-bg);
+  border-color: var(--badge-bearish-border);
+}
+
 .journal-pnl-input .field {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }

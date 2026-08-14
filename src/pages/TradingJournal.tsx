@@ -44,6 +44,16 @@ function emptyForm() {
   }
 }
 
+/** Keep Loss P/L amounts negative; strip forced minus for Win/Breakeven. */
+function applyResultToPnl(result: TradeResult, pnl: string): string {
+  const raw = pnl.trim()
+  if (!raw) return result === 'Loss' ? '-' : ''
+  const unsigned = raw.replace(/^[+-]+/, '').trim()
+  if (!unsigned) return result === 'Loss' ? '-' : ''
+  if (result === 'Loss') return `-${unsigned}`
+  return unsigned
+}
+
 export function TradingJournal() {
   const [entries, setEntries] = useState<JournalEntry[]>(() => listJournalEntries())
   const [form, setForm] = useState(emptyForm)
@@ -64,6 +74,21 @@ export function TradingJournal() {
 
   const stats = useMemo(() => journalStats(entries), [entries])
 
+  function setResult(result: TradeResult) {
+    setForm((f) => ({
+      ...f,
+      result,
+      pnl: applyResultToPnl(result, f.pnl),
+    }))
+  }
+
+  function setPnl(value: string) {
+    setForm((f) => ({
+      ...f,
+      pnl: applyResultToPnl(f.result, value),
+    }))
+  }
+
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!form.symbol.trim()) {
@@ -74,7 +99,8 @@ export function TradingJournal() {
       setError('Enter your entry price.')
       return
     }
-    if (!form.pnl.trim()) {
+    const pnl = applyResultToPnl(form.result, form.pnl)
+    if (!pnl || pnl === '-' || pnl === '+') {
       setError('Enter your P/L amount.')
       return
     }
@@ -88,7 +114,7 @@ export function TradingJournal() {
       takeProfit: form.takeProfit.trim(),
       result: form.result,
       currency: form.currency,
-      pnl: form.pnl.trim(),
+      pnl,
       notes: form.notes.trim(),
     })
     setForm(emptyForm())
@@ -196,7 +222,7 @@ export function TradingJournal() {
               <select
                 className="field"
                 value={form.result}
-                onChange={(e) => setForm((f) => ({ ...f, result: e.target.value as TradeResult }))}
+                onChange={(e) => setResult(e.target.value as TradeResult)}
               >
                 {RESULTS.map((result) => (
                   <option key={result} value={result}>
@@ -266,17 +292,17 @@ export function TradingJournal() {
             </label>
             <label>
               <span>P/L amount</span>
-              <div className="journal-pnl-input">
+              <div className={`journal-pnl-input ${form.result === 'Loss' ? 'is-loss' : ''}`}>
                 <span className="journal-pnl-prefix" aria-hidden>
-                  {currencyPrefix(form.currency)}
+                  {form.result === 'Loss' ? `-${currencyPrefix(form.currency)}` : currencyPrefix(form.currency)}
                 </span>
                 <input
                   className="field"
                   type="text"
                   inputMode="decimal"
-                  placeholder="e.g. 120 or -45"
-                  value={form.pnl}
-                  onChange={(e) => setForm((f) => ({ ...f, pnl: e.target.value }))}
+                  placeholder={form.result === 'Loss' ? 'e.g. 45' : 'e.g. 120'}
+                  value={form.result === 'Loss' ? form.pnl.replace(/^-/, '') : form.pnl}
+                  onChange={(e) => setPnl(e.target.value)}
                   required
                 />
               </div>
