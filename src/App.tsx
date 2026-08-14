@@ -21,6 +21,7 @@ import {
   Logout,
 } from './pages/Placeholder'
 import { EconomicCalendar } from './pages/EconomicCalendar'
+import { TradingJournal } from './pages/TradingJournal'
 import { ChoosePlan } from './pages/ChoosePlan'
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/courses" element={<Courses />} />
             <Route path="/community" element={<Community />} />
             <Route path="/economic-calendar" element={<EconomicCalendar />} />
+            <Route path="/trading-journal" element={<TradingJournal />} />
             <Route path="/more" element={<Navigate to="/economic-calendar" replace />} />
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/billing" element={<Billing />} />

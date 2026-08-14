@@ -6,6 +6,7 @@ import {
   Video,
   Users,
   CalendarDays,
+  NotebookPen,
   Heart,
   CreditCard,
   User,
@@ -21,6 +22,7 @@ const primaryNav = [
   { to: '/courses', label: 'Courses', icon: Video },
   { to: '/community', label: 'Community', icon: Users },
   { to: '/economic-calendar', label: 'Economic Calendar', icon: CalendarDays },
+  { to: '/trading-journal', label: 'Trading Journal', icon: NotebookPen },
 ]
 
 const secondaryNav = [
