@@ -108,6 +108,29 @@
   min-height: 5rem;
 }
 
+.journal-pnl-input {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.journal-pnl-prefix {
+  display: grid;
+  place-items: center;
+  min-width: 2.4rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text);
+  font-weight: 750;
+}
+
+.journal-pnl-input .field {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
 .journal-notes-field {
   grid-column: 1 / -1;
 }

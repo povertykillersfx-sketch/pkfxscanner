@@ -3,17 +3,21 @@ import type { FormEvent } from 'react'
 import { NotebookPen, Plus, Trash2 } from 'lucide-react'
 import { INSTRUMENTS } from '../data/mockData'
 import {
+  ACCOUNT_CURRENCIES,
   addJournalEntry,
+  currencyPrefix,
   deleteJournalEntry,
+  formatPnl,
   journalStats,
   listJournalEntries,
+  type AccountCurrency,
   type JournalEntry,
   type TradeResult,
   type TradeSide,
 } from '../tradingJournal'
 import './TradingJournal.css'
 
-const RESULTS: TradeResult[] = ['Open', 'Win', 'Loss', 'Breakeven']
+const RESULTS: TradeResult[] = ['Win', 'Loss', 'Breakeven']
 const SIDES: TradeSide[] = ['Buy', 'Sell']
 
 function todayInputValue(): string {
@@ -33,7 +37,8 @@ function emptyForm() {
     exit: '',
     stopLoss: '',
     takeProfit: '',
-    result: 'Open' as TradeResult,
+    result: 'Win' as TradeResult,
+    currency: 'USD' as AccountCurrency,
     pnl: '',
     notes: '',
   }
@@ -69,6 +74,10 @@ export function TradingJournal() {
       setError('Enter your entry price.')
       return
     }
+    if (!form.pnl.trim()) {
+      setError('Enter your P/L amount.')
+      return
+    }
     addJournalEntry({
       date: form.date || todayInputValue(),
       symbol: form.symbol.trim().toUpperCase(),
@@ -78,6 +87,7 @@ export function TradingJournal() {
       stopLoss: form.stopLoss.trim(),
       takeProfit: form.takeProfit.trim(),
       result: form.result,
+      currency: form.currency,
       pnl: form.pnl.trim(),
       notes: form.notes.trim(),
     })
@@ -130,8 +140,8 @@ export function TradingJournal() {
           <strong className="is-loss">{stats.losses}</strong>
         </article>
         <article className="journal-stat panel">
-          <span className="journal-stat-label">Open</span>
-          <strong>{stats.open}</strong>
+          <span className="journal-stat-label">Breakeven</span>
+          <strong>{stats.be}</strong>
         </article>
       </div>
 
@@ -241,14 +251,35 @@ export function TradingJournal() {
               />
             </label>
             <label>
-              <span>P/L</span>
-              <input
+              <span>Account currency</span>
+              <select
                 className="field"
-                type="text"
-                placeholder="e.g. +120 or -45"
-                value={form.pnl}
-                onChange={(e) => setForm((f) => ({ ...f, pnl: e.target.value }))}
-              />
+                value={form.currency}
+                onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value as AccountCurrency }))}
+              >
+                {ACCOUNT_CURRENCIES.map((currency) => (
+                  <option key={currency} value={currency}>
+                    {currency} ({currencyPrefix(currency)})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>P/L amount</span>
+              <div className="journal-pnl-input">
+                <span className="journal-pnl-prefix" aria-hidden>
+                  {currencyPrefix(form.currency)}
+                </span>
+                <input
+                  className="field"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="e.g. 120 or -45"
+                  value={form.pnl}
+                  onChange={(e) => setForm((f) => ({ ...f, pnl: e.target.value }))}
+                  required
+                />
+              </div>
             </label>
             <label className="journal-notes-field">
               <span>Notes / lessons</span>
@@ -320,7 +351,9 @@ export function TradingJournal() {
                   {entry.exit ? <span>Exit {entry.exit}</span> : null}
                   {entry.stopLoss ? <span>SL {entry.stopLoss}</span> : null}
                   {entry.takeProfit ? <span>TP {entry.takeProfit}</span> : null}
-                  {entry.pnl ? <span className="journal-pnl">P/L {entry.pnl}</span> : null}
+                  {entry.pnl ? (
+                    <span className="journal-pnl">P/L {formatPnl(entry.pnl, entry.currency)}</span>
+                  ) : null}
                 </div>
                 {entry.notes ? <p className="journal-entry-notes">{entry.notes}</p> : null}
               </article>
