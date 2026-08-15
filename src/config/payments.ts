@@ -10,12 +10,12 @@ export const PAYMENT_URL =
 /** Approx. mid-market USDZAR used for display-only conversion (no cents). */
 const USD_ZAR_RATE = 16.15
 
-const ZAR_AMOUNT = 1499
+const ZAR_AMOUNT = 2499
 const USD_AMOUNT = Math.round(ZAR_AMOUNT / USD_ZAR_RATE)
 
 export const PLAN = {
   name: 'PKFX Annual Access',
-  priceLabel: 'R1 499',
+  priceLabel: 'R2 499',
   usdPriceLabel: `$${USD_AMOUNT}`,
   period: 'year',
   currency: 'ZAR',
