@@ -5,6 +5,23 @@ interface ProfileModalProps {
   onClose: () => void
 }
 
+function formatJoinedDate(iso?: string): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+function displayPlan(plan: string, role: string): string {
+  if (role === 'admin') return 'Admin'
+  if (plan === 'admin') return 'Admin'
+  return 'Inner Circle'
+}
+
 export function ProfileModal({ onClose }: ProfileModalProps) {
   const user = getCurrentUser()
   if (!user) return null
@@ -39,7 +56,11 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
           </div>
           <div className="profile-field">
             <label>Current Plan</label>
-            <p>{user.plan}</p>
+            <p>{displayPlan(user.plan, user.role)}</p>
+          </div>
+          <div className="profile-field">
+            <label>Joined</label>
+            <p>{formatJoinedDate(user.joinedAt)}</p>
           </div>
         </div>
       </div>

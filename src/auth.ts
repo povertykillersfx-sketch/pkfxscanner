@@ -166,7 +166,7 @@ function ensureAdminUser() {
       fullName: 'Kamogelo Dube',
       email: OWNER_CLIENT_EMAIL,
       password: OWNER_CLIENT_PASSWORD,
-      plan: 'pro',
+      plan: 'Inner Circle',
       role: 'client',
       status: 'active',
       country: 'South Africa',
@@ -175,18 +175,24 @@ function ensureAdminUser() {
     changed = true
   } else {
     const cur = users[clientIdx]!
+    const nextPlan =
+      cur.plan === 'admin' || cur.plan === 'free' || cur.plan === 'pro' ? 'Inner Circle' : cur.plan
     if (
       cur.role !== 'client' ||
       cur.password !== OWNER_CLIENT_PASSWORD ||
       cur.status !== 'active' ||
-      cur.plan === 'admin'
+      cur.plan === 'admin' ||
+      cur.plan === 'pro' ||
+      cur.plan === 'free' ||
+      !cur.joinedAt
     ) {
       users[clientIdx] = {
         ...cur,
         role: 'client',
         password: OWNER_CLIENT_PASSWORD,
         status: 'active',
-        plan: cur.plan === 'admin' || cur.plan === 'free' ? 'pro' : cur.plan,
+        plan: nextPlan,
+        joinedAt: cur.joinedAt || new Date().toISOString(),
       }
       changed = true
     }
@@ -301,7 +307,7 @@ export function login(emailInput: string, passwordInput: string): LoginResult {
         fullName: 'Kamogelo Dube',
         email: OWNER_CLIENT_EMAIL,
         password: OWNER_CLIENT_PASSWORD,
-        plan: 'pro',
+        plan: 'Inner Circle',
         role: 'client',
         status: 'active',
         country: 'South Africa',
@@ -313,6 +319,8 @@ export function login(emailInput: string, passwordInput: string): LoginResult {
       user.password = OWNER_CLIENT_PASSWORD
       user.role = 'client'
       user.status = 'active'
+      if (user.plan === 'pro' || user.plan === 'free' || !user.plan) user.plan = 'Inner Circle'
+      if (!user.joinedAt) user.joinedAt = new Date().toISOString()
       writeUsers(users)
     }
   } else if (!user) {
@@ -473,7 +481,8 @@ export function approveMember(email: string) {
   const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
   if (!user || user.role === 'admin') return
   user.status = 'active'
-  user.plan = user.plan === 'free' ? 'pro' : user.plan
+  user.plan = 'Inner Circle'
+  if (!user.joinedAt) user.joinedAt = new Date().toISOString()
   writeUsers(users)
 }
 
