@@ -1,6 +1,6 @@
 import type { Instrument } from './data/mockData'
 
-/** Yahoo Finance chart symbols for scanner instruments */
+/** Yahoo Finance chart symbols — aligned to what traders see on the in-app chart */
 const YAHOO_SYMBOLS: Record<string, string> = {
   EURUSD: 'EURUSD=X',
   GBPUSD: 'GBPUSD=X',
@@ -9,11 +9,11 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   USDZAR: 'ZAR=X',
   GOLD: 'GC=F',
   US30: '^DJI',
-  NASDAQ: '^IXIC',
+  NASDAQ: '^NDX',
   AUDUSD: 'AUDUSD=X',
 }
 
-/** TradingView quote symbols (CORS-friendly scanner) */
+/** TradingView quote symbols — must match chart embeds in mockData TRADINGVIEW_SYMBOLS */
 const TV_SYMBOLS: Record<string, string> = {
   EURUSD: 'FX:EURUSD',
   GBPUSD: 'FX:GBPUSD',
@@ -21,8 +21,8 @@ const TV_SYMBOLS: Record<string, string> = {
   NZDUSD: 'FX:NZDUSD',
   USDZAR: 'FX:USDZAR',
   GOLD: 'OANDA:XAUUSD',
-  US30: 'TVC:DJI',
-  NASDAQ: 'NASDAQ:IXIC',
+  US30: 'FOREXCOM:US30',
+  NASDAQ: 'NASDAQ:NDX',
   AUDUSD: 'FX:AUDUSD',
 }
 
@@ -370,42 +370,31 @@ export async function fetchCandlesResult(
     }
     if (!parsed) throw new Error(`yahoo failed: ${errors.join(' | ')}`)
 
-    let pinned = parsed.candles
-    let finalSpot = parsed.spot
-    try {
-      const tv = await fetchTradingViewQuote(asset)
-      finalSpot = tv.price
-      pinned = pinSpot(parsed.candles, tv.price)
-    } catch {
-      /* keep yahoo spot */
-    }
-    result = { candles: pinned, live: true, source: 'yahoo', spot: finalSpot }
+    // Keep Yahoo OHLC intact — do NOT pin a different venue's spot onto futures/index bars
+    // (e.g. XAUUSD spot onto GC=F), which invents prices the series never traded.
+    const finalSpot = parsed.spot ?? parsed.candles[parsed.candles.length - 1]?.close
+    result = { candles: parsed.candles, live: true, source: 'yahoo', spot: finalSpot }
     candleCache.set(cacheKey, { at: Date.now(), value: result })
     return result
   } catch {
     /* continue */
   }
 
-  // 3) Real daily FX history (Frankfurter) — better HTF than synthetic
-  try {
-    const { candles, spot } = await fetchFrankfurterDaily(asset)
-    let finalSpot = spot
+  // 3) Frankfurter daily FX — only valid for daily HTF, never as fake 15m/1h bars
+  if (interval === '1d') {
     try {
-      const tv = await fetchTradingViewQuote(asset)
-      finalSpot = tv.price
+      const { candles, spot } = await fetchFrankfurterDaily(asset)
+      result = {
+        candles,
+        live: true,
+        source: 'frankfurter',
+        spot,
+      }
+      candleCache.set(cacheKey, { at: Date.now(), value: result })
+      return result
     } catch {
-      /* keep */
+      /* continue */
     }
-    result = {
-      candles: finalSpot != null ? pinSpot(candles, finalSpot) : candles,
-      live: true,
-      source: 'frankfurter',
-      spot: finalSpot,
-    }
-    candleCache.set(cacheKey, { at: Date.now(), value: result })
-    return result
-  } catch {
-    /* continue */
   }
 
   // 4) TradingView spot only — price is real, structure is estimated (NOT live OHLC)
@@ -469,12 +458,24 @@ export async function fetchMultiTimeframe(asset: string): Promise<MultiTimeframe
   }
   const h1 = h1raw
 
-  let spot = m15.spot ?? h1.spot ?? h4.spot
+  // Spot for alerts = last traded close on the 15m series (a price that bar actually printed)
+  const candleSpot = m15.candles[m15.candles.length - 1]?.close ?? h1.spot ?? h4.spot
+  let spot = candleSpot
+
+  // Optional TV cross-check: only adopt if it sits inside recent OHLC range (same market)
   try {
     const tv = await fetchTradingViewQuote(asset)
-    spot = tv.price
+    const recent = m15.candles.slice(-96)
+    if (recent.length >= 4) {
+      const hi = Math.max(...recent.map((c) => c.high))
+      const lo = Math.min(...recent.map((c) => c.low))
+      const pad = Math.max((hi - lo) * 0.02, Math.abs(tv.price) * 0.0004)
+      if (tv.price >= lo - pad && tv.price <= hi + pad) {
+        spot = tv.price
+      }
+    }
   } catch {
-    /* keep */
+    /* keep candle spot */
   }
 
   const live = h4.live && h1.live && m15.live
@@ -484,10 +485,11 @@ export async function fetchMultiTimeframe(asset: string): Promise<MultiTimeframe
       ? 'synthetic'
       : m15.source
 
+  // Do not pinSpot — preserves real highs/lows so entries stay on traded prices
   return {
-    h4: spot != null && h4.live ? { ...h4, candles: pinSpot(h4.candles, spot), spot } : h4,
-    h1: spot != null && h1.live ? { ...h1, candles: pinSpot(h1.candles, spot), spot } : h1,
-    m15: spot != null ? { ...m15, candles: pinSpot(m15.candles, spot), spot } : m15,
+    h4: { ...h4, spot },
+    h1: { ...h1, spot },
+    m15: { ...m15, spot },
     live,
     spot,
     source,

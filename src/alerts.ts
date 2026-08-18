@@ -12,7 +12,7 @@ import {
 } from './marketData'
 
 /** Locked session signals — one alert per symbol/session/day (does not keep rewriting levels) */
-const ALERTS_KEY = 'pkfx_live_alerts_v8_tight_levels'
+const ALERTS_KEY = 'pkfx_live_alerts_v9_traded_prices'
 /** Keep past alerts on My Alerts for this many UTC days (including today). */
 const ALERT_HISTORY_DAYS = 5
 /** Minutes into a session used for the opening scan snapshot. */
@@ -258,8 +258,8 @@ function readTimeframe(candles: Candle[], lookbackBars: number): TfRead {
 }
 
 /**
- * Entry at alert release = market price (spot / last close).
- * No distant limit orders — levels must be actionable at release time.
+ * Entry at alert release = last traded 15m close (a price the market printed).
+ * Optional spot is only used when it sits inside the recent OHLC range.
  */
 function entryFrom15m(
   m15: Candle[],
@@ -282,13 +282,23 @@ function entryFrom15m(
   const recent = window.slice(-8)
   const microSwingHigh = Math.max(...recent.map((c) => c.high))
   const microSwingLow = Math.min(...recent.map((c) => c.low))
-  const market =
-    marketPrice != null && Number.isFinite(marketPrice) ? marketPrice : last.close
+
+  // Traded range over ~24h of 15m bars (or available history)
+  const dayBars = m15.slice(-96)
+  const dayHigh = Math.max(...dayBars.map((c) => c.high))
+  const dayLow = Math.min(...dayBars.map((c) => c.low))
+
+  let market = last.close
+  if (marketPrice != null && Number.isFinite(marketPrice)) {
+    const pad = Math.max((dayHigh - dayLow) * 0.01, Math.abs(last.close) * 0.0003)
+    if (marketPrice >= dayLow - pad && marketPrice <= dayHigh + pad) {
+      market = marketPrice
+    }
+  }
 
   const stretch = Math.abs(market - ema21)
   const awaitingPullback = stretch > rawAtr * 0.9
 
-  // Entry is always the release market — never a far pullback print
   return {
     entry: market,
     microSwingHigh,
@@ -535,23 +545,26 @@ function truncateCandles(candles: Candle[], asOfMs: number): Candle[] {
 }
 
 /**
- * Snapshot the MTF feed as it looked at a session's scan time
- * so London / NY / Asian / Sydney each get their own market read.
+ * Snapshot the MTF feed as it looked at a session's scan time.
+ * Spot/entry always come from the last 15m close at asOf — never a later live quote
+ * (that invents prices the market had not printed at session open).
  */
-function feedAsOfSession(feed: MultiTimeframeFeed, asOfMs: number, nowMs: number): MultiTimeframeFeed {
+function feedAsOfSession(feed: MultiTimeframeFeed, asOfMs: number, _nowMs: number): MultiTimeframeFeed {
   const m15Candles = truncateCandles(feed.m15.candles, asOfMs)
   const h1Candles = truncateCandles(feed.h1.candles, asOfMs)
   const h4Candles = truncateCandles(feed.h4.candles, asOfMs)
-  const lastClose = m15Candles[m15Candles.length - 1]?.close ?? h1Candles[h1Candles.length - 1]?.close
-  const fresh = nowMs - asOfMs <= 45 * 60 * 1000
+  const lastClose =
+    m15Candles[m15Candles.length - 1]?.close ??
+    h1Candles[h1Candles.length - 1]?.close ??
+    feed.spot
 
   return {
-    m15: { ...feed.m15, candles: m15Candles, spot: fresh ? feed.m15.spot : lastClose },
-    h1: { ...feed.h1, candles: h1Candles, spot: fresh ? feed.h1.spot : lastClose },
-    h4: { ...feed.h4, candles: h4Candles, spot: fresh ? feed.h4.spot : lastClose },
+    m15: { ...feed.m15, candles: m15Candles, spot: lastClose },
+    h1: { ...feed.h1, candles: h1Candles, spot: lastClose },
+    h4: { ...feed.h4, candles: h4Candles, spot: lastClose },
     live: feed.live,
     source: feed.source,
-    spot: fresh && feed.spot != null ? feed.spot : lastClose,
+    spot: lastClose,
   }
 }
 
@@ -663,6 +676,10 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
     for (const asset of missingAssets) {
       const feed = byAsset.get(asset)
       if (!feed) continue
+      // Never lock alerts from synthetic / demo OHLC — those prices were never traded
+      if (!feed.live || feed.source === 'synthetic' || feed.source === 'tradingview-spot') {
+        continue
+      }
 
       for (const session of dueSessions) {
         const sessionDate = alertDateForSession(session, now)
@@ -672,6 +689,8 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
         // Independent market scan as-of this session's open (not "now" for every session)
         const asOfMs = sessionScanAsOfMs(session, now)
         const sessionFeed = feedAsOfSession(feed, asOfMs, nowMs)
+        if (sessionFeed.m15.candles.length < 20 || sessionFeed.spot == null) continue
+
         const analysis = analyzeMultiTimeframe(asset, session, sessionFeed)
         const openLabel = sessionOpenUtc(session, now).toISOString().slice(11, 16)
         analysis.aiNote = `${analysis.aiNote} Scanned at ${session} open (~${openLabel} UTC).`
