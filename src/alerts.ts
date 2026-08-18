@@ -12,7 +12,7 @@ import {
 } from './marketData'
 
 /** Locked session signals — one alert per symbol/session/day (does not keep rewriting levels) */
-const ALERTS_KEY = 'pkfx_live_alerts_v6_per_session'
+const ALERTS_KEY = 'pkfx_live_alerts_v7_near_market_entry'
 /** Keep past alerts on My Alerts for this many UTC days (including today). */
 const ALERT_HISTORY_DAYS = 5
 /** Minutes into a session used for the opening scan snapshot. */
@@ -217,18 +217,21 @@ function readTimeframe(candles: Candle[], lookbackBars: number): TfRead {
 }
 
 /**
- * Structural 15m entry in HTF bias:
- * pullback toward EMA21 / micro-swing — do not blindly chase stretched price.
+ * Entry at alert release must stay near market.
+ * Prefer a small pullback only if it sits within a tight ATR band of price;
+ * otherwise use market (spot / last close) so the printed entry is tradeable.
  */
 function entryFrom15m(
   m15: Candle[],
   sentiment: Sentiment,
+  marketPrice?: number,
 ): {
   entry: number
   microSwingHigh: number
   microSwingLow: number
   atr15: number
   awaitingPullback: boolean
+  market: number
 } {
   const window = m15.slice(-40)
   const closes = window.map((c) => c.close)
@@ -239,28 +242,36 @@ function entryFrom15m(
   const recent = window.slice(-10)
   const microSwingHigh = Math.max(...recent.map((c) => c.high))
   const microSwingLow = Math.min(...recent.map((c) => c.low))
+  const market =
+    marketPrice != null && Number.isFinite(marketPrice) ? marketPrice : last.close
+
+  // Max distance from market for a limit-style tweak (tight — entry must stay tradeable)
+  const maxOffset = Math.min(
+    Math.max(atr15 * 0.15, Math.abs(market) * 0.00008),
+    Math.abs(market) * 0.0012, // hard cap ~0.12% from market
+  )
 
   if (sentiment === 'Bullish') {
-    const stretch = last.close - ema21
-    const awaitingPullback = stretch > atr15 * 0.85
-    const pullback = Math.min(Math.max(microSwingLow, ema21 - atr15 * 0.1), last.close)
-    const entry = awaitingPullback
-      ? pullback
-      : last.close >= ema21
-        ? Math.min(last.close, ema21 + atr15 * 0.25)
-        : pullback
-    return { entry, microSwingHigh, microSwingLow, atr15, awaitingPullback }
+    const ideal = Math.min(Math.max(microSwingLow, ema21 - atr15 * 0.05), market)
+    const stretch = market - ema21
+    const awaitingPullback = stretch > atr15 * 0.9
+    // Never print an entry far below market — clamp ideal toward market
+    let entry = ideal
+    if (market - entry > maxOffset) entry = market - maxOffset
+    if (entry > market) entry = market
+    // If already extended, release at market (actionable now) and flag wait for better
+    if (awaitingPullback) entry = market
+    return { entry, microSwingHigh, microSwingLow, atr15, awaitingPullback, market }
   }
 
-  const stretch = ema21 - last.close
-  const awaitingPullback = stretch > atr15 * 0.85
-  const pullback = Math.max(Math.min(microSwingHigh, ema21 + atr15 * 0.1), last.close)
-  const entry = awaitingPullback
-    ? pullback
-    : last.close <= ema21
-      ? Math.max(last.close, ema21 - atr15 * 0.25)
-      : pullback
-  return { entry, microSwingHigh, microSwingLow, atr15, awaitingPullback }
+  const ideal = Math.max(Math.min(microSwingHigh, ema21 + atr15 * 0.05), market)
+  const stretch = ema21 - market
+  const awaitingPullback = stretch > atr15 * 0.9
+  let entry = ideal
+  if (entry - market > maxOffset) entry = market + maxOffset
+  if (entry < market) entry = market
+  if (awaitingPullback) entry = market
+  return { entry, microSwingHigh, microSwingLow, atr15, awaitingPullback, market }
 }
 
 /** Invalidation + targets with minimum R:R from pivots / ATR. */
@@ -343,7 +354,7 @@ export interface MarketSignal {
 /**
  * Multi-timeframe signal:
  * - Direction: 4H ∧ 1H preferred; stronger TF only when mixed
- * - Entry: structural 15m pullback (spot only if close to setup)
+ * - Entry: near market at release (tight pullback band only)
  * - Targets: next pivots with ≥1.15R / ≥2.1R floors vs invalidation
  */
 export function analyzeMultiTimeframe(
@@ -385,23 +396,18 @@ export function analyzeMultiTimeframe(
   const m15Agrees =
     (sentiment === 'Bullish' && m15Read.score >= 0) || (sentiment === 'Bearish' && m15Read.score <= 0)
 
+  const lastM15 = feed.m15.candles[feed.m15.candles.length - 1]?.close
+  const spot = feed.spot != null && Number.isFinite(feed.spot) ? feed.spot : undefined
+  const marketAtRelease = spot ?? lastM15
+
   const {
-    entry: structuralEntry,
+    entry,
     microSwingHigh,
     microSwingLow,
     atr15,
     awaitingPullback,
-  } = entryFrom15m(feed.m15.candles, sentiment)
-
-  // Use live spot as entry only when it sits near the structural setup (no chase)
-  let entry = structuralEntry
-  const spot = feed.spot != null && Number.isFinite(feed.spot) ? feed.spot : undefined
-  if (spot != null) {
-    const maxChase = Math.max(atr15 * 0.35, Math.abs(structuralEntry) * 0.00025)
-    if (Math.abs(spot - structuralEntry) <= maxChase) {
-      entry = spot
-    }
-  }
+    market,
+  } = entryFrom15m(feed.m15.candles, sentiment, marketAtRelease)
 
   if (awaitingPullback || !m15Agrees) {
     strategy = `${strategy} (wait pullback)`
@@ -429,9 +435,9 @@ export function analyzeMultiTimeframe(
         : 'DEMO / synthetic — not live market'
 
   const entryHint = awaitingPullback
-    ? `wait for pullback toward ${formatPrice(asset, structuralEntry)}`
+    ? `market entry ${formatPrice(asset, entry)} (extended — wait pullback for better fill)`
     : `entry ${formatPrice(asset, entry)}`
-  const aiNote = `PKFX MTF on ${asset} (${session}): 4H ${h4.sentiment.toLowerCase()} (score ${h4.score > 0 ? '+' : ''}${h4.score}, ${h4.changePct >= 0 ? '+' : ''}${h4.changePct.toFixed(2)}%, RSI ${h4.rsi.toFixed(0)}) → 1H ${h1.sentiment.toLowerCase()} (score ${h1.score > 0 ? '+' : ''}${h1.score}) → ${entryHint}${spot != null ? ` · market ${formatPrice(asset, spot)}` : ''}. ${bias} · conviction ${conviction}; TP1/TP2 from pivots with R:R floors vs invalidation. Feed: ${src}.`
+  const aiNote = `PKFX MTF on ${asset} (${session}): 4H ${h4.sentiment.toLowerCase()} (score ${h4.score > 0 ? '+' : ''}${h4.score}, ${h4.changePct >= 0 ? '+' : ''}${h4.changePct.toFixed(2)}%, RSI ${h4.rsi.toFixed(0)}) → 1H ${h1.sentiment.toLowerCase()} (score ${h1.score > 0 ? '+' : ''}${h1.score}) → ${entryHint} · market ${formatPrice(asset, market)}. ${bias} · conviction ${conviction}; TP1/TP2 from pivots with R:R floors vs invalidation. Feed: ${src}.`
 
   return {
     sentiment,
@@ -442,7 +448,7 @@ export function analyzeMultiTimeframe(
     aiNote,
     live: feed.live,
     changePct: m15Read.changePct,
-    spot: spot != null ? formatPrice(asset, spot) : undefined,
+    spot: formatPrice(asset, market),
     dataSource: feed.source,
   }
 }
