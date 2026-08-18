@@ -81,7 +81,7 @@ export function AlertCard({ alert }: AlertCardProps) {
 
             {alert.entry && (
               <p className="alert-entry">
-                15m entry: <strong>{alert.entry}</strong>
+                Entry: <strong>{alert.entry}</strong>
                 {alert.spot && alert.spot !== alert.entry && (
                   <>
                     {' '}
@@ -94,17 +94,17 @@ export function AlertCard({ alert }: AlertCardProps) {
             <div className="levels-grid">
               <div className="levels-col">
                 <h4>Possible Targets</h4>
-                {alert.targets.map((t) => (
-                  <div key={`t-${t}`} className="level-bar target">
-                    {t}
+                {alert.targets.map((t, i) => (
+                  <div key={`t-${t}-${i}`} className="level-bar target">
+                    TP{i + 1} · {t}
                   </div>
                 ))}
               </div>
               <div className="levels-col">
-                <h4>Possible Reversals</h4>
-                {alert.reversals.map((r) => (
-                  <div key={`r-${r}`} className="level-bar reversal">
-                    {r}
+                <h4>Invalidation</h4>
+                {alert.reversals.map((r, i) => (
+                  <div key={`r-${r}-${i}`} className="level-bar reversal">
+                    {i === 0 ? 'SL' : 'Ext'} · {r}
                   </div>
                 ))}
               </div>

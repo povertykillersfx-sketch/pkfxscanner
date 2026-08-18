@@ -12,7 +12,7 @@ import {
 } from './marketData'
 
 /** Locked session signals — one alert per symbol/session/day (does not keep rewriting levels) */
-const ALERTS_KEY = 'pkfx_live_alerts_v4_sticky'
+const ALERTS_KEY = 'pkfx_live_alerts_v5_accurate'
 /** Keep past alerts on My Alerts for this many UTC days (including today). */
 const ALERT_HISTORY_DAYS = 5
 
@@ -72,6 +72,41 @@ function atr(candles: Candle[], period = 14): number {
   return slice.reduce((a, b) => a + b, 0) / Math.max(slice.length, 1)
 }
 
+/** Local swing pivots (N bars either side) — more accurate than window max/min. */
+function pivotLevels(candles: Candle[], left = 2, right = 2): { highs: number[]; lows: number[] } {
+  const highs: number[] = []
+  const lows: number[] = []
+  if (candles.length < left + right + 1) {
+    return {
+      highs: candles.length ? [Math.max(...candles.map((c) => c.high))] : [],
+      lows: candles.length ? [Math.min(...candles.map((c) => c.low))] : [],
+    }
+  }
+  for (let i = left; i < candles.length - right; i++) {
+    const c = candles[i]!
+    let isHigh = true
+    let isLow = true
+    for (let j = i - left; j <= i + right; j++) {
+      if (j === i) continue
+      if (candles[j]!.high > c.high) isHigh = false
+      if (candles[j]!.low < c.low) isLow = false
+    }
+    if (isHigh) highs.push(c.high)
+    if (isLow) lows.push(c.low)
+  }
+  if (!highs.length) highs.push(Math.max(...candles.map((c) => c.high)))
+  if (!lows.length) lows.push(Math.min(...candles.map((c) => c.low)))
+  return { highs, lows }
+}
+
+function nearestPivotBeyond(levels: number[], entry: number, dir: 1 | -1): number | null {
+  const candidates =
+    dir === 1
+      ? levels.filter((l) => l > entry).sort((a, b) => a - b)
+      : levels.filter((l) => l < entry).sort((a, b) => b - a)
+  return candidates[0] ?? null
+}
+
 function sessionLookbackHours(session: MarketSession): number {
   switch (session) {
     case 'Sydney':
@@ -93,75 +128,140 @@ interface TfRead {
   changePct: number
   swingHigh: number
   swingLow: number
+  pivotHighs: number[]
+  pivotLows: number[]
   atr: number
   lastClose: number
   emaBull: boolean
+  emaSeparationPct: number
+  rsi: number
 }
 
-/** Bias / structure read on one timeframe */
+function rsi(closes: number[], period = 14): number {
+  if (closes.length < period + 1) return 50
+  let gains = 0
+  let losses = 0
+  for (let i = closes.length - period; i < closes.length; i++) {
+    const diff = closes[i]! - closes[i - 1]!
+    if (diff >= 0) gains += diff
+    else losses -= diff
+  }
+  if (losses === 0) return 100
+  const rs = gains / losses
+  return 100 - 100 / (1 + rs)
+}
+
+/** Bias / structure read — ATR-aware score, EMA slope, RSI, true pivots. */
 function readTimeframe(candles: Candle[], lookbackBars: number): TfRead {
-  const window = candles.slice(-Math.max(lookbackBars + 5, 24))
+  const window = candles.slice(-Math.max(lookbackBars + 8, 30))
   const closes = window.map((c) => c.close)
   const last = window[window.length - 1]!
   const first = window[Math.max(0, window.length - lookbackBars)]!
-  const changePct = ((last.close - first.open) / first.open) * 100
-  const range = atr(window, 14)
+  const changePct = ((last.close - first.open) / Math.max(Math.abs(first.open), 1e-9)) * 100
+  const range = Math.max(atr(window, 14), Math.abs(last.close) * 0.00015)
   const fast = ema(closes, 9)
   const slow = ema(closes, 21)
   const fastNow = fast[fast.length - 1]!
   const slowNow = slow[slow.length - 1]!
+  const fastPrev = fast[Math.max(0, fast.length - 4)]!
+  const slowPrev = slow[Math.max(0, slow.length - 4)]!
   const emaBull = fastNow > slowNow
-  const swingHigh = Math.max(...window.slice(-lookbackBars).map((c) => c.high))
-  const swingLow = Math.min(...window.slice(-lookbackBars).map((c) => c.low))
+  const emaRising = fastNow > fastPrev && slowNow >= slowPrev
+  const emaFalling = fastNow < fastPrev && slowNow <= slowPrev
+  const emaSeparationPct = ((fastNow - slowNow) / Math.max(Math.abs(slowNow), 1e-9)) * 100
+  const look = window.slice(-lookbackBars)
+  const pivots = pivotLevels(look, 2, 2)
+  const swingHigh = Math.max(...look.map((c) => c.high))
+  const swingLow = Math.min(...look.map((c) => c.low))
+  const mid = (swingHigh + swingLow) / 2
+  const rsiNow = rsi(closes, 14)
+  const momentumAtr = (last.close - first.open) / range
 
   let score = 0
-  if (emaBull) score += 1
+  if (emaBull) score += 2
+  else score -= 2
+  if (emaRising) score += 1
+  else if (emaFalling) score -= 1
+  if (emaSeparationPct > 0.04) score += 1
+  else if (emaSeparationPct < -0.04) score -= 1
+  if (momentumAtr > 0.35) score += 2
+  else if (momentumAtr < -0.35) score -= 2
+  else if (changePct > 0.08) score += 1
+  else if (changePct < -0.08) score -= 1
+  if (last.close > mid) score += 1
+  else if (last.close < mid) score -= 1
+  if (last.close > slowNow) score += 1
   else score -= 1
-  if (changePct > 0.05) score += 1
-  else if (changePct < -0.05) score -= 1
-  if (last.close > (swingHigh + swingLow) / 2) score += 1
-  else score -= 1
+  if (rsiNow >= 55 && rsiNow <= 75) score += 1
+  else if (rsiNow <= 45 && rsiNow >= 25) score -= 1
+  else if (rsiNow > 78) score -= 1
+  else if (rsiNow < 22) score += 1
 
-  const sentiment: Sentiment = score >= 0 ? 'Bullish' : 'Bearish'
+  const sentiment: Sentiment = score > 0 ? 'Bullish' : score < 0 ? 'Bearish' : emaBull ? 'Bullish' : 'Bearish'
   return {
     sentiment,
     score,
     changePct,
     swingHigh,
     swingLow,
+    pivotHighs: pivots.highs,
+    pivotLows: pivots.lows,
     atr: range,
     lastClose: last.close,
     emaBull,
+    emaSeparationPct,
+    rsi: rsiNow,
   }
 }
 
 /**
- * 15m entry in the direction of HTF bias:
- * - Bullish: pullback low / reclaim of 15m EMA — use actionable 15m price
- * - Bearish: pullback high / reject of 15m EMA
+ * Structural 15m entry in HTF bias:
+ * pullback toward EMA21 / micro-swing — do not blindly chase stretched price.
  */
-function entryFrom15m(m15: Candle[], sentiment: Sentiment): { entry: number; microSwingHigh: number; microSwingLow: number } {
-  const window = m15.slice(-32)
+function entryFrom15m(
+  m15: Candle[],
+  sentiment: Sentiment,
+): {
+  entry: number
+  microSwingHigh: number
+  microSwingLow: number
+  atr15: number
+  awaitingPullback: boolean
+} {
+  const window = m15.slice(-40)
   const closes = window.map((c) => c.close)
   const last = window[window.length - 1]!
   const slow = ema(closes, 21)
   const ema21 = slow[slow.length - 1]!
-  const recent = window.slice(-8)
+  const atr15 = Math.max(atr(window, 14), Math.abs(last.close) * 0.0002)
+  const recent = window.slice(-10)
   const microSwingHigh = Math.max(...recent.map((c) => c.high))
   const microSwingLow = Math.min(...recent.map((c) => c.low))
 
   if (sentiment === 'Bullish') {
-    const pullback = Math.min(Math.max(microSwingLow, ema21 * 0.9995), last.close)
-    const entry = last.close >= ema21 ? last.close : pullback
-    return { entry, microSwingHigh, microSwingLow }
+    const stretch = last.close - ema21
+    const awaitingPullback = stretch > atr15 * 0.85
+    const pullback = Math.min(Math.max(microSwingLow, ema21 - atr15 * 0.1), last.close)
+    const entry = awaitingPullback
+      ? pullback
+      : last.close >= ema21
+        ? Math.min(last.close, ema21 + atr15 * 0.25)
+        : pullback
+    return { entry, microSwingHigh, microSwingLow, atr15, awaitingPullback }
   }
 
-  const pullback = Math.max(Math.min(microSwingHigh, ema21 * 1.0005), last.close)
-  const entry = last.close <= ema21 ? last.close : pullback
-  return { entry, microSwingHigh, microSwingLow }
+  const stretch = ema21 - last.close
+  const awaitingPullback = stretch > atr15 * 0.85
+  const pullback = Math.max(Math.min(microSwingHigh, ema21 + atr15 * 0.1), last.close)
+  const entry = awaitingPullback
+    ? pullback
+    : last.close <= ema21
+      ? Math.max(last.close, ema21 - atr15 * 0.25)
+      : pullback
+  return { entry, microSwingHigh, microSwingLow, atr15, awaitingPullback }
 }
 
-/** Targets from higher-timeframe structure; stops/reversals from 15m */
+/** Invalidation + targets with minimum R:R from pivots / ATR. */
 function levelsFromHtf(
   asset: string,
   sentiment: Sentiment,
@@ -170,42 +270,59 @@ function levelsFromHtf(
   h1: TfRead,
   m15SwingHigh: number,
   m15SwingLow: number,
+  atr15: number,
 ): { targets: string[]; reversals: string[] } {
-  const dir = sentiment === 'Bullish' ? 1 : -1
-  const h1Step = Math.max(h1.atr, Math.abs(entry) * 0.0006)
-  const h4Step = Math.max(h4.atr, Math.abs(entry) * 0.001)
+  const dir: 1 | -1 = sentiment === 'Bullish' ? 1 : -1
+  const h1Step = Math.max(h1.atr, atr15, Math.abs(entry) * 0.0005)
+  const h4Step = Math.max(h4.atr, h1Step * 1.4, Math.abs(entry) * 0.0009)
 
-  const swingTp1 =
+  let rev1 =
     sentiment === 'Bullish'
-      ? h1.swingHigh > entry
-        ? h1.swingHigh
-        : entry + dir * h1Step * 1.15
-      : h1.swingLow < entry
-        ? h1.swingLow
-        : entry + dir * h1Step * 1.15
+      ? Math.min(m15SwingLow, entry) - atr15 * 0.35
+      : Math.max(m15SwingHigh, entry) + atr15 * 0.35
+  const minRisk = h1Step * 0.45
+  if (Math.abs(entry - rev1) < minRisk) {
+    rev1 = entry - dir * minRisk
+  }
 
-  const swingTp2 =
+  const h1Invalid =
     sentiment === 'Bullish'
-      ? h4.swingHigh > swingTp1
-        ? h4.swingHigh
-        : swingTp1 + dir * h4Step * 0.85
-      : h4.swingLow < swingTp1
-        ? h4.swingLow
-        : swingTp1 + dir * h4Step * 0.85
+      ? (nearestPivotBeyond(h1.pivotLows, entry, -1) ?? h1.swingLow)
+      : (nearestPivotBeyond(h1.pivotHighs, entry, 1) ?? h1.swingHigh)
+  let rev2 =
+    sentiment === 'Bullish' ? Math.min(h1Invalid, rev1 - h1Step * 0.55) : Math.max(h1Invalid, rev1 + h1Step * 0.55)
+  if (dir * (rev1 - rev2) <= 0) {
+    rev2 = rev1 - dir * h1Step * 0.7
+  }
 
-  const targets = [formatPrice(asset, swingTp1), formatPrice(asset, swingTp2)]
+  const risk = Math.max(Math.abs(entry - rev1), h1Step * 0.4)
+  const minTp1 = entry + dir * risk * 1.15
+  const minTp2 = entry + dir * risk * 2.1
 
-  const rev1 =
+  const pivotTp1 =
     sentiment === 'Bullish'
-      ? Math.min(m15SwingLow, entry - h1Step * 0.55)
-      : Math.max(m15SwingHigh, entry + h1Step * 0.55)
-  const rev2 =
+      ? nearestPivotBeyond(h1.pivotHighs, entry, 1)
+      : nearestPivotBeyond(h1.pivotLows, entry, -1)
+  const pivotTp2 =
     sentiment === 'Bullish'
-      ? Math.min(h1.swingLow, rev1 - h1Step * 0.7)
-      : Math.max(h1.swingHigh, rev1 + h1Step * 0.7)
+      ? nearestPivotBeyond([...h4.pivotHighs, h4.swingHigh], Math.max(entry, pivotTp1 ?? entry), 1)
+      : nearestPivotBeyond([...h4.pivotLows, h4.swingLow], Math.min(entry, pivotTp1 ?? entry), -1)
 
-  const reversals = [formatPrice(asset, rev1), formatPrice(asset, rev2)]
-  return { targets, reversals }
+  let tp1 = pivotTp1 != null && dir * (pivotTp1 - minTp1) >= 0 ? pivotTp1 : minTp1
+  const tp1Cap = entry + dir * h1Step * 2.4
+  if (dir * (tp1 - tp1Cap) > 0) tp1 = tp1Cap
+  if (dir * (tp1 - entry) <= 0) tp1 = minTp1
+
+  let tp2 =
+    pivotTp2 != null && dir * (pivotTp2 - tp1) > 0 && dir * (pivotTp2 - minTp2) >= 0 ? pivotTp2 : minTp2
+  if (dir * (tp2 - tp1) <= 0) tp2 = tp1 + dir * Math.max(h4Step * 0.75, risk * 0.95)
+  const tp2Cap = entry + dir * h4Step * 3.2
+  if (dir * (tp2 - tp2Cap) > 0) tp2 = tp2Cap
+
+  return {
+    targets: [formatPrice(asset, tp1), formatPrice(asset, tp2)],
+    reversals: [formatPrice(asset, rev1), formatPrice(asset, rev2)],
+  }
 }
 
 export interface MarketSignal {
@@ -223,9 +340,9 @@ export interface MarketSignal {
 
 /**
  * Multi-timeframe signal:
- * - Bias from 4H → 1H (big picture down to execution bias)
- * - Entry from 15m
- * - Targets from HTF swings/ATR; reversals from 15m + 1H invalidation
+ * - Direction: 4H ∧ 1H preferred; stronger TF only when mixed
+ * - Entry: structural 15m pullback (spot only if close to setup)
+ * - Targets: next pivots with ≥1.15R / ≥2.1R floors vs invalidation
  */
 export function analyzeMultiTimeframe(
   asset: string,
@@ -238,27 +355,56 @@ export function analyzeMultiTimeframe(
   const m15Read = readTimeframe(feed.m15.candles, hours * 4 + 8)
 
   const aligned = h4.sentiment === h1.sentiment
-  const sentiment: Sentiment = aligned
-    ? h4.sentiment
-    : Math.abs(h4.score) >= Math.abs(h1.score)
-      ? h4.sentiment
-      : h1.sentiment
+  const h4Strong = Math.abs(h4.score) >= 3
+  const h1Strong = Math.abs(h1.score) >= 3
+
+  // Prefer aligned HTF. If mixed, require the winner to be clearly stronger.
+  let sentiment: Sentiment
+  if (aligned) {
+    sentiment = h4.sentiment
+  } else if (Math.abs(h4.score) >= Math.abs(h1.score) + 2) {
+    sentiment = h4.sentiment
+  } else if (Math.abs(h1.score) >= Math.abs(h4.score) + 2) {
+    sentiment = h1.sentiment
+  } else {
+    // Coin-flip risk — lean 4H (slower bias) but mark low conviction in strategy
+    sentiment = h4.sentiment
+  }
+
+  const conviction =
+    aligned && h4Strong && h1Strong ? 'high' : aligned && (h4Strong || h1Strong) ? 'medium' : aligned ? 'fair' : 'low'
 
   let strategy = 'MTF Momentum'
-  if (aligned && h4.sentiment === 'Bullish' && h1.emaBull) strategy = '4H→1H Bull / 15m Entry'
-  else if (aligned && h4.sentiment === 'Bearish' && !h1.emaBull) strategy = '4H→1H Bear / 15m Entry'
-  else if (!aligned) strategy = 'MTF Mixed · 15m Entry'
+  if (aligned && sentiment === 'Bullish' && h1.emaBull) strategy = '4H→1H Bull / 15m Entry'
+  else if (aligned && sentiment === 'Bearish' && !h1.emaBull) strategy = '4H→1H Bear / 15m Entry'
+  else if (!aligned) strategy = 'MTF Mixed · reduced conviction'
   else strategy = 'HTF Bias · 15m Entry'
 
   const m15Agrees =
-    (sentiment === 'Bullish' && m15Read.score >= -1) || (sentiment === 'Bearish' && m15Read.score <= 1)
-  if (!m15Agrees) {
-    strategy = `${strategy} (wait 15m)`
+    (sentiment === 'Bullish' && m15Read.score >= 0) || (sentiment === 'Bearish' && m15Read.score <= 0)
+
+  const {
+    entry: structuralEntry,
+    microSwingHigh,
+    microSwingLow,
+    atr15,
+    awaitingPullback,
+  } = entryFrom15m(feed.m15.candles, sentiment)
+
+  // Use live spot as entry only when it sits near the structural setup (no chase)
+  let entry = structuralEntry
+  const spot = feed.spot != null && Number.isFinite(feed.spot) ? feed.spot : undefined
+  if (spot != null) {
+    const maxChase = Math.max(atr15 * 0.35, Math.abs(structuralEntry) * 0.00025)
+    if (Math.abs(spot - structuralEntry) <= maxChase) {
+      entry = spot
+    }
   }
 
-  const { entry: rawEntry, microSwingHigh, microSwingLow } = entryFrom15m(feed.m15.candles, sentiment)
-  // Prefer verified live spot for the 15m entry so it matches TradingView / market
-  const entry = feed.spot != null && Number.isFinite(feed.spot) ? feed.spot : rawEntry
+  if (awaitingPullback || !m15Agrees) {
+    strategy = `${strategy} (wait pullback)`
+  }
+
   const { targets, reversals } = levelsFromHtf(
     asset,
     sentiment,
@@ -267,15 +413,23 @@ export function analyzeMultiTimeframe(
     h1,
     microSwingHigh,
     microSwingLow,
+    atr15,
   )
 
   const bias = sentiment === 'Bullish' ? 'buy-side' : 'sell-side'
-  const src = feed.live
+  const preciseOhlc = feed.live && feed.source !== 'frankfurter'
+  const src = preciseOhlc
     ? `live OHLC (${feed.source})`
-    : feed.source === 'tradingview-spot'
-      ? 'TradingView spot (OHLC fallback)'
-      : 'DEMO / synthetic — not live market'
-  const aiNote = `PKFX MTF on ${asset} (${session}): 4H ${h4.sentiment.toLowerCase()} (${h4.changePct >= 0 ? '+' : ''}${h4.changePct.toFixed(2)}%) → 1H ${h1.sentiment.toLowerCase()} → 15m entry ${formatPrice(asset, entry)}${feed.spot != null ? ` · market ${formatPrice(asset, feed.spot)}` : ''}. ${bias} bias from HTF; targets from 1H/4H structure. Feed: ${src}.`
+    : feed.live
+      ? `coarse live feed (${feed.source})`
+      : feed.source === 'tradingview-spot'
+        ? 'TradingView spot (OHLC fallback)'
+        : 'DEMO / synthetic — not live market'
+
+  const entryHint = awaitingPullback
+    ? `wait for pullback toward ${formatPrice(asset, structuralEntry)}`
+    : `entry ${formatPrice(asset, entry)}`
+  const aiNote = `PKFX MTF on ${asset} (${session}): 4H ${h4.sentiment.toLowerCase()} (score ${h4.score > 0 ? '+' : ''}${h4.score}, ${h4.changePct >= 0 ? '+' : ''}${h4.changePct.toFixed(2)}%, RSI ${h4.rsi.toFixed(0)}) → 1H ${h1.sentiment.toLowerCase()} (score ${h1.score > 0 ? '+' : ''}${h1.score}) → ${entryHint}${spot != null ? ` · market ${formatPrice(asset, spot)}` : ''}. ${bias} · conviction ${conviction}; TP1/TP2 from pivots with R:R floors vs invalidation. Feed: ${src}.`
 
   return {
     sentiment,
@@ -286,7 +440,7 @@ export function analyzeMultiTimeframe(
     aiNote,
     live: feed.live,
     changePct: m15Read.changePct,
-    spot: feed.spot != null ? formatPrice(asset, feed.spot) : undefined,
+    spot: spot != null ? formatPrice(asset, spot) : undefined,
     dataSource: feed.source,
   }
 }

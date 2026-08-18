@@ -315,7 +315,7 @@ function FloatingAlertPanel({
         {alert.entry && (
           <p className="floating-entry level-bar-copyable">
             <span>
-              15m entry: <strong>{alert.entry}</strong>
+              Entry: <strong>{alert.entry}</strong>
             </span>
             <CopyLevelButton value={alert.entry} />
           </p>
@@ -324,18 +324,22 @@ function FloatingAlertPanel({
         <div className="levels-grid">
           <div className="levels-col">
             <h4>Possible Targets</h4>
-            {alert.targets.map((t) => (
-              <div key={`t-${t}`} className="level-bar target level-bar-copyable">
-                <span>{t}</span>
+            {alert.targets.map((t, i) => (
+              <div key={`t-${t}-${i}`} className="level-bar target level-bar-copyable">
+                <span>
+                  TP{i + 1} · {t}
+                </span>
                 <CopyLevelButton value={t} />
               </div>
             ))}
           </div>
           <div className="levels-col">
-            <h4>Possible Reversals</h4>
-            {alert.reversals.map((r) => (
-              <div key={`r-${r}`} className="level-bar reversal level-bar-copyable">
-                <span>{r}</span>
+            <h4>Invalidation</h4>
+            {alert.reversals.map((r, i) => (
+              <div key={`r-${r}-${i}`} className="level-bar reversal level-bar-copyable">
+                <span>
+                  {i === 0 ? 'SL' : 'Ext'} · {r}
+                </span>
                 <CopyLevelButton value={r} />
               </div>
             ))}
