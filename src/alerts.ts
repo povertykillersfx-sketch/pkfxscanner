@@ -12,9 +12,11 @@ import {
 } from './marketData'
 
 /** Locked session signals — one alert per symbol/session/day (does not keep rewriting levels) */
-const ALERTS_KEY = 'pkfx_live_alerts_v5_accurate'
+const ALERTS_KEY = 'pkfx_live_alerts_v6_per_session'
 /** Keep past alerts on My Alerts for this many UTC days (including today). */
 const ALERT_HISTORY_DAYS = 5
+/** Minutes into a session used for the opening scan snapshot. */
+const SESSION_SCAN_GRACE_MIN = 10
 
 function utcDateKey(d = new Date()): string {
   return d.toISOString().slice(0, 10)
@@ -461,19 +463,88 @@ export function analyzeMarket(
   })
 }
 
+/**
+ * Sessions that have already opened in the current forex day
+ * (from the most recent Sydney 22:00 UTC open through now).
+ */
 export function sessionsDueToday(now = new Date()): MarketSession[] {
-  const hour = now.getUTCHours()
+  const cycleStart = sessionOpenUtc('Sydney', now).getTime()
   const due: MarketSession[] = []
 
   for (const session of MARKET_SESSIONS) {
-    if (session.id === 'Sydney') {
-      if (hour >= session.signalHourUtc || hour < 6) due.push(session.id)
-      continue
+    const openMs = sessionOpenUtc(session.id, now).getTime()
+    if (openMs <= now.getTime() && openMs >= cycleStart - 1000) {
+      due.push(session.id)
     }
-    if (hour >= session.signalHourUtc) due.push(session.id)
   }
 
+  due.sort((a, b) => sessionOpenUtc(a, now).getTime() - sessionOpenUtc(b, now).getTime())
   return due.slice(0, MAX_SIGNALS_PER_DAY)
+}
+
+/** UTC timestamp when this session most recently opened (already started). */
+export function sessionOpenUtc(session: MarketSession, now = new Date()): Date {
+  const meta = MARKET_SESSIONS.find((s) => s.id === session)!
+  const open = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), meta.signalHourUtc, 0, 0, 0),
+  )
+  if (session === 'Sydney') {
+    if (now.getUTCHours() < 22) open.setUTCDate(open.getUTCDate() - 1)
+  } else if (now.getTime() < open.getTime()) {
+    open.setUTCDate(open.getUTCDate() - 1)
+  }
+  return open
+}
+
+/** Calendar date key for the alert bucket of a session open. */
+export function alertDateForSession(session: MarketSession, now = new Date()): string {
+  return utcDateKey(sessionOpenUtc(session, now))
+}
+
+/** Moment used for the session scan: open + grace, capped at now. */
+function sessionScanAsOfMs(session: MarketSession, now = new Date()): number {
+  const openMs = sessionOpenUtc(session, now).getTime()
+  const graceMs = openMs + SESSION_SCAN_GRACE_MIN * 60 * 1000
+  return Math.min(now.getTime(), graceMs)
+}
+
+function truncateCandles(candles: Candle[], asOfMs: number): Candle[] {
+  if (!candles.length) return candles
+  const cut = candles.filter((c) => Number.isFinite(c.timestamp) && c.timestamp <= asOfMs)
+  if (cut.length >= 24) return cut
+  if (cut.length >= 12) return cut
+
+  // Synthetic / broken timestamps: drop newest bars proportional to how far asOf is
+  const firstTs = candles[0]!.timestamp
+  const lastTs = candles[candles.length - 1]!.timestamp
+  if (!Number.isFinite(firstTs) || !Number.isFinite(lastTs) || lastTs <= firstTs) {
+    return candles
+  }
+  if (asOfMs >= lastTs) return candles
+  const ratio = Math.min(1, Math.max(0.3, (asOfMs - firstTs) / (lastTs - firstTs)))
+  const keep = Math.max(24, Math.floor(candles.length * ratio))
+  return candles.slice(0, Math.min(candles.length, keep))
+}
+
+/**
+ * Snapshot the MTF feed as it looked at a session's scan time
+ * so London / NY / Asian / Sydney each get their own market read.
+ */
+function feedAsOfSession(feed: MultiTimeframeFeed, asOfMs: number, nowMs: number): MultiTimeframeFeed {
+  const m15Candles = truncateCandles(feed.m15.candles, asOfMs)
+  const h1Candles = truncateCandles(feed.h1.candles, asOfMs)
+  const h4Candles = truncateCandles(feed.h4.candles, asOfMs)
+  const lastClose = m15Candles[m15Candles.length - 1]?.close ?? h1Candles[h1Candles.length - 1]?.close
+  const fresh = nowMs - asOfMs <= 45 * 60 * 1000
+
+  return {
+    m15: { ...feed.m15, candles: m15Candles, spot: fresh ? feed.m15.spot : lastClose },
+    h1: { ...feed.h1, candles: h1Candles, spot: fresh ? feed.h1.spot : lastClose },
+    h4: { ...feed.h4, candles: h4Candles, spot: fresh ? feed.h4.spot : lastClose },
+    live: feed.live,
+    source: feed.source,
+    spot: fresh && feed.spot != null ? feed.spot : lastClose,
+  }
 }
 
 function createSignal(
@@ -483,20 +554,14 @@ function createSignal(
   now: Date,
   analysis: MarketSignal,
 ): Alert {
-  const sessionMeta = MARKET_SESSIONS.find((s) => s.id === session)!
-  const noticed = new Date(
-    Date.UTC(
-      Number(date.slice(0, 4)),
-      Number(date.slice(5, 7)) - 1,
-      Number(date.slice(8, 10)),
-      sessionMeta.signalHourUtc,
-      0,
-      0,
-    ),
-  )
+  const openAt = sessionOpenUtc(session, now)
+  const noticed = new Date(openAt)
   if (noticed.getTime() > now.getTime()) {
     noticed.setTime(now.getTime())
   }
+
+  const latestSession = sessionsDueToday(now).at(-1)
+  const latestDate = latestSession ? alertDateForSession(latestSession, now) : ''
 
   return {
     id: `${asset}-${date}-${session}`,
@@ -506,7 +571,7 @@ function createSignal(
     date,
     noticedAt: noticed.toISOString(),
     session,
-    trending: session === sessionsDueToday(now).at(-1),
+    trending: session === latestSession && date === latestDate,
     targets: analysis.targets,
     reversals: analysis.reversals,
     entry: analysis.entry,
@@ -535,18 +600,21 @@ function writeStored(alerts: Alert[]) {
 
 /**
  * Sync AI alerts for scanner symbols using multi-timeframe live data.
- * Bias: 4H → 1H · Entry: 15m · Targets: HTF structure
- * One locked alert per symbol + session + UTC day (no mid-session rewrite).
- * Keeps the last 5 days of alerts for My Alerts history.
+ * Each due session is scanned independently at that session's open time
+ * (candles truncated as-of the open), so Sydney / Asian / London / NY differ.
+ * One locked alert per symbol + session + session-date (no mid-session rewrite).
  */
 export async function syncAlertsForSymbols(symbols: string[], now = new Date()): Promise<Alert[]> {
-  const date = utcDateKey(now)
   const dueSessions = sessionsDueToday(now)
   const latestSession = dueSessions.at(-1)
+  const latestDate = latestSession ? alertDateForSession(latestSession, now) : ''
   const historyDates = recentDateKeys(now, ALERT_HISTORY_DAYS)
+  // Also keep Sydney's previous-UTC-day bucket when it is the overnight session
+  for (const session of dueSessions) {
+    historyDates.add(alertDateForSession(session, now))
+  }
   const stored = readStored().filter((a) => isRecentAlert(a, now, ALERT_HISTORY_DAYS))
 
-  // Keep recent stored alerts (other symbols / prior days) so refresh does not wipe history
   const byId = new Map<string, Alert>()
   for (const alert of stored) {
     byId.set(alert.id, alert)
@@ -555,16 +623,23 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
   const bySessionKey = new Map<string, Alert>()
   for (const alert of stored) {
     if (!symbols.includes(alert.asset)) continue
-    if (alert.date !== date) continue
     const key = `${alert.asset}|${alert.session}|${alert.date}`
-    const existing = bySessionKey.get(key)
-    if (!existing || new Date(alert.noticedAt) >= new Date(existing.noticedAt)) {
-      bySessionKey.set(key, alert)
+    const expectedDate = dueSessions.includes(alert.session)
+      ? alertDateForSession(alert.session, now)
+      : null
+    if (expectedDate && alert.date === expectedDate) {
+      const existing = bySessionKey.get(key)
+      if (!existing || new Date(alert.noticedAt) >= new Date(existing.noticedAt)) {
+        bySessionKey.set(key, alert)
+      }
     }
   }
 
   const missingAssets = symbols.filter((asset) =>
-    dueSessions.some((session) => !bySessionKey.has(`${asset}|${session}|${date}`)),
+    dueSessions.some((session) => {
+      const d = alertDateForSession(session, now)
+      return !bySessionKey.has(`${asset}|${session}|${d}`)
+    }),
   )
 
   if (missingAssets.length > 0) {
@@ -575,44 +650,49 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
       }),
     )
     const byAsset = new Map(market)
+    const nowMs = now.getTime()
 
     for (const asset of missingAssets) {
       const feed = byAsset.get(asset)
       if (!feed) continue
-      const analysisCache = new Map<MarketSession, MarketSignal>()
 
       for (const session of dueSessions) {
-        const key = `${asset}|${session}|${date}`
+        const sessionDate = alertDateForSession(session, now)
+        const key = `${asset}|${session}|${sessionDate}`
         if (bySessionKey.has(key)) continue
 
-        let analysis = analysisCache.get(session)
-        if (!analysis) {
-          analysis = analyzeMultiTimeframe(asset, session, feed)
-          analysisCache.set(session, analysis)
-        }
+        // Independent market scan as-of this session's open (not "now" for every session)
+        const asOfMs = sessionScanAsOfMs(session, now)
+        const sessionFeed = feedAsOfSession(feed, asOfMs, nowMs)
+        const analysis = analyzeMultiTimeframe(asset, session, sessionFeed)
+        const openLabel = sessionOpenUtc(session, now).toISOString().slice(11, 16)
+        analysis.aiNote = `${analysis.aiNote} Scanned at ${session} open (~${openLabel} UTC).`
 
-        const signal = createSignal(asset, session, date, now, analysis)
+        const signal = createSignal(asset, session, sessionDate, now, analysis)
         bySessionKey.set(key, signal)
         byId.set(signal.id, signal)
       }
     }
   }
 
-  // Only update trending flags on today's scanner alerts — never rewrite levels
+  // Only update trending flags — never rewrite locked levels
   for (const [key, alert] of bySessionKey) {
     const next = {
       ...alert,
-      trending: alert.date === date && alert.session === latestSession,
+      trending: Boolean(
+        latestSession && alert.session === latestSession && alert.date === latestDate,
+      ),
     }
     bySessionKey.set(key, next)
     byId.set(next.id, next)
   }
 
-  // Clear stale "current" flags on older days so only today's latest session is trending
   for (const [id, alert] of byId) {
-    if (alert.date === date) continue
-    if (!alert.trending) continue
-    byId.set(id, { ...alert, trending: false })
+    const isLatest =
+      Boolean(latestSession) && alert.session === latestSession && alert.date === latestDate
+    if (alert.trending && !isLatest) {
+      byId.set(id, { ...alert, trending: false })
+    }
   }
 
   const merged = [...byId.values()].filter((a) => isRecentAlert(a, now, ALERT_HISTORY_DAYS))
@@ -621,7 +701,6 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
   )
   const next = organizeAlertsForScanner(forScanner, symbols, now)
 
-  // Persist recent history for scanner symbols + any other recent stored alerts
   const organizedIds = new Set(next.map((a) => a.id))
   const preserved = merged.filter((a) => !organizedIds.has(a.id))
   writeStored([...preserved, ...next])
@@ -630,8 +709,8 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
 
 export function organizeAlertsForScanner(alerts: Alert[], symbols: string[], now = new Date()): Alert[] {
   const out: Alert[] = []
-  const today = utcDateKey(now)
   const latestSession = sessionsDueToday(now).at(-1)
+  const latestDate = latestSession ? alertDateForSession(latestSession, now) : ''
 
   for (const asset of symbols) {
     const forSymbol = alerts
@@ -642,14 +721,13 @@ export function organizeAlertsForScanner(alerts: Alert[], symbols: string[], now
 
     const marked = forSymbol.map((a) => ({
       ...a,
-      trending: Boolean(latestSession && a.date === today && a.session === latestSession),
+      trending: Boolean(latestSession && a.session === latestSession && a.date === latestDate),
     }))
 
-    // If latest session alert is missing today, keep the most recent today alert marked current
     if (latestSession && !marked.some((a) => a.trending)) {
-      const todayFirst = marked.find((a) => a.date === today)
-      if (todayFirst) {
-        const idx = marked.findIndex((a) => a.id === todayFirst.id)
+      const fallback = marked.find((a) => a.session === latestSession) ?? marked[0]
+      if (fallback) {
+        const idx = marked.findIndex((a) => a.id === fallback.id)
         if (idx >= 0) marked[idx] = { ...marked[idx]!, trending: true }
       }
     }
