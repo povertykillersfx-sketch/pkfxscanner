@@ -151,6 +151,14 @@ export function AdminEvents() {
         <div className="admin-card-head">
           <h2>Channels (CTA buttons)</h2>
         </div>
+        {settings.channels.length === 0 ? (
+          <div className="admin-empty">
+            <p>No channels yet.</p>
+            <p className="admin-muted">
+              Add a channel with an invite URL below — only those appear on the client Community page.
+            </p>
+          </div>
+        ) : null}
         <div className="admin-list">
           {settings.channels.map((c) => (
             <div key={c.id} className="admin-list-row" style={{ alignItems: 'stretch' }}>

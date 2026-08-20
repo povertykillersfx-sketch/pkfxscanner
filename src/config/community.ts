@@ -41,55 +41,9 @@ export interface CommunitySettings {
   resources: CommunityResource[]
 }
 
-function envUrl(key: string): string {
-  try {
-    return (
-      (typeof import.meta !== 'undefined' &&
-        (import.meta.env[key] as string | undefined)?.trim()) ||
-      ''
-    )
-  } catch {
-    return ''
-  }
-}
-
 export const DEFAULT_COMMUNITY: CommunitySettings = {
-  channels: [
-    {
-      id: 'telegram-inner',
-      name: 'Inner Circle Telegram',
-      description: 'Private member chat — setups, support, and daily discussion.',
-      url: envUrl('VITE_TELEGRAM_INNER_URL'),
-      kind: 'telegram',
-      cta: 'Open Telegram',
-      featured: true,
-    },
-    {
-      id: 'discord',
-      name: 'PKFX Discord',
-      description: 'Voice rooms, live session alerts, and trade sharing.',
-      url: envUrl('VITE_DISCORD_URL'),
-      kind: 'discord',
-      cta: 'Join Discord',
-      featured: true,
-    },
-    {
-      id: 'telegram-free',
-      name: 'Free Telegram Group',
-      description: 'Public market notes and community updates.',
-      url: envUrl('VITE_TELEGRAM_FREE_URL'),
-      kind: 'telegram',
-      cta: 'Join Free Group',
-    },
-    {
-      id: 'youtube',
-      name: 'YouTube Live',
-      description: 'Watch live trading streams and recorded sessions.',
-      url: envUrl('VITE_YOUTUBE_URL'),
-      kind: 'youtube',
-      cta: 'Watch on YouTube',
-    },
-  ],
+  /** Empty until admin adds channels — do not seed Discord/Telegram placeholders. */
+  channels: [],
   /** Empty until admin adds sessions — never invent upcoming times for clients. */
   sessions: [],
   resources: [

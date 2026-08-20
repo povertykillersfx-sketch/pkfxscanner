@@ -63,8 +63,13 @@ export function Community() {
     [settings.sessions, now],
   )
 
-  const featured = settings.channels.filter((c) => c.featured)
-  const otherChannels = settings.channels.filter((c) => !c.featured)
+  // Client only shows channels the admin kept (and that have a real link)
+  const visibleChannels = useMemo(
+    () => settings.channels.filter((c) => Boolean(c.url?.trim())),
+    [settings.channels],
+  )
+  const featured = visibleChannels.filter((c) => c.featured)
+  const otherChannels = visibleChannels.filter((c) => !c.featured)
   const brokers = settings.resources.filter((r) => r.category === 'broker')
   const props = settings.resources.filter((r) => r.category === 'prop')
   const otherResources = settings.resources.filter((r) => r.category === 'other')
@@ -82,21 +87,29 @@ export function Community() {
       <section className="community-section animate-fade-up" style={{ animationDelay: '60ms' }}>
         <div className="community-section-head">
           <h2 className="font-display">Join the channels</h2>
-          <p>One tap into Telegram, Discord, and live stream rooms.</p>
+          <p>One tap into the rooms your community uses.</p>
         </div>
 
-        <div className="community-cta-grid">
-          {featured.map((channel) => (
-            <ChannelCta key={channel.id} channel={channel} prominent />
-          ))}
-        </div>
+        {visibleChannels.length === 0 ? (
+          <p className="community-empty">Channel links will appear here once admin adds them.</p>
+        ) : (
+          <>
+            {featured.length > 0 && (
+              <div className="community-cta-grid">
+                {featured.map((channel) => (
+                  <ChannelCta key={channel.id} channel={channel} prominent />
+                ))}
+              </div>
+            )}
 
-        {otherChannels.length > 0 && (
-          <div className="community-channel-row">
-            {otherChannels.map((channel) => (
-              <ChannelCta key={channel.id} channel={channel} />
-            ))}
-          </div>
+            {otherChannels.length > 0 && (
+              <div className="community-channel-row">
+                {otherChannels.map((channel) => (
+                  <ChannelCta key={channel.id} channel={channel} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
 

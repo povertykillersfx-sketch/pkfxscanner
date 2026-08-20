@@ -50,16 +50,11 @@
   font-size: 0.9rem;
 }
 
-.community-cta-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
-}
-
+.community-cta-grid,
 .community-channel-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 0.85rem;
 }
 
 .community-cta {
@@ -338,8 +333,6 @@
 }
 
 @media (max-width: 820px) {
-  .community-cta-grid,
-  .community-channel-row,
   .community-resource-list {
     grid-template-columns: 1fr;
   }
