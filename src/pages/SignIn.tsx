@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
 import { getCurrentUser, login, setSignupFunnelEmail } from '../auth'
+import { playLoginSuccessSound } from '../sounds'
 import './SignIn.css'
 
 export function SignIn() {
@@ -55,6 +56,7 @@ export function SignIn() {
       return
     }
     setError('')
+    playLoginSuccessSound()
     navigate(result.role === 'admin' ? '/admin' : '/dashboard')
   }
 
