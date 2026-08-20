@@ -36,10 +36,18 @@ export interface TelegramSettings {
   chatId: string
 }
 
+/** Client dashboard “How it works?” video (shown under How it works) */
+export interface HowItWorksVideo {
+  url: string
+  title: string
+  subtitle: string
+}
+
 const REQUESTS_KEY = 'pkfx_admin_requests_live_v1'
 const COURSES_KEY = 'pkfx_admin_courses_live_v1'
 const EBOOKS_KEY = 'pkfx_admin_ebooks_live_v1'
 const TELEGRAM_KEY = 'pkfx_admin_telegram_live_v1'
+const HOW_IT_WORKS_KEY = 'pkfx_how_it_works_video_v1'
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -115,10 +123,36 @@ export function saveTelegramSettings(settings: TelegramSettings) {
   writeJson(TELEGRAM_KEY, settings)
 }
 
+const DEFAULT_HOW_IT_WORKS: HowItWorksVideo = {
+  url: '',
+  title: 'How To Use PKFX',
+  subtitle: '(Live market + AI alerts)',
+}
+
+export function getHowItWorksVideo(): HowItWorksVideo {
+  const stored = readJson<Partial<HowItWorksVideo>>(HOW_IT_WORKS_KEY, {})
+  return {
+    url: (stored.url || '').trim(),
+    title: (stored.title || '').trim() || DEFAULT_HOW_IT_WORKS.title,
+    subtitle: (stored.subtitle || '').trim() || DEFAULT_HOW_IT_WORKS.subtitle,
+  }
+}
+
+export function saveHowItWorksVideo(settings: HowItWorksVideo) {
+  const next: HowItWorksVideo = {
+    url: settings.url.trim(),
+    title: settings.title.trim() || DEFAULT_HOW_IT_WORKS.title,
+    subtitle: settings.subtitle.trim() || DEFAULT_HOW_IT_WORKS.subtitle,
+  }
+  writeJson(HOW_IT_WORKS_KEY, next)
+  window.dispatchEvent(new CustomEvent('pkfx-how-it-works-change', { detail: next }))
+}
+
 /** Wipe admin content stores for a clean live start. */
 export function resetAdminContent() {
   writeJson(REQUESTS_KEY, [])
   writeJson(COURSES_KEY, [])
   writeJson(EBOOKS_KEY, [])
   writeJson(TELEGRAM_KEY, { sample: '', botToken: '', chatId: '' })
+  writeJson(HOW_IT_WORKS_KEY, { ...DEFAULT_HOW_IT_WORKS })
 }

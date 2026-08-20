@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AlertsPanel } from '../components/AlertCard'
+import { HowItWorksPanel } from '../components/HowItWorksPanel'
 import { ScannerModal } from '../components/ScannerModal'
 import { StatsRow } from '../components/StatsRow'
 import { useScannerAlerts } from '../hooks/useScannerAlerts'
@@ -22,21 +23,7 @@ export function Dashboard() {
           liveFeed={liveFeed}
         />
 
-        <aside className="how-it-works panel animate-fade-up stagger-2">
-          <h2 className="font-display">How it works?</h2>
-          <div className="video-frame">
-            <div className="video-thumb">
-              <div className="video-thumb-content">
-                <p className="video-eyebrow">PKFX PROTOCOL</p>
-                <p className="video-title">How To Use PKFX</p>
-                <p className="video-sub">(Live market + AI alerts)</p>
-              </div>
-              <button type="button" className="play-btn" aria-label="Play video">
-                ▶
-              </button>
-            </div>
-          </div>
-        </aside>
+        <HowItWorksPanel />
       </div>
 
       <StatsRow savedAlerts={alerts.length} />
