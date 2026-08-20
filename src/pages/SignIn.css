@@ -5,8 +5,10 @@
   overflow: hidden;
 }
 
-/* Sign-in only: lock to viewport so the page never scrolls */
+/* Sign-in only: lock to viewport — no vertical or horizontal page movement */
 .signin-page-fixed {
+  width: 100%;
+  max-width: 100%;
   height: 100vh;
   height: 100dvh;
   height: 100svh;
@@ -16,36 +18,111 @@
   max-height: 100vh;
   max-height: 100dvh;
   max-height: 100svh;
-  padding: clamp(0.75rem, 2.5vh, 2rem) 1rem;
+  padding:
+    max(0.75rem, env(safe-area-inset-top, 0px))
+    max(1rem, env(safe-area-inset-right, 0px))
+    max(0.75rem, env(safe-area-inset-bottom, 0px))
+    max(1rem, env(safe-area-inset-left, 0px));
   overflow: hidden;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
   box-sizing: border-box;
+  position: relative;
 }
 
 .signin-page-fixed .signin-card {
+  width: min(380px, 100%);
+  max-width: 100%;
   max-height: 100%;
   overflow: hidden;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
-@media (max-height: 700px) {
-  .signin-page-fixed .signin-logo {
-    margin-bottom: 0.85rem;
-  }
+.signin-page-fixed .logo-lg .logo-img {
+  height: clamp(48px, 7vh, 64px);
+}
 
-  .signin-page-fixed .signin-title {
-    margin-bottom: 0.85rem;
-  }
+.signin-page-fixed .signin-title {
+  font-size: clamp(1.2rem, 2.4vh + 0.6rem, 1.45rem);
+}
 
-  .signin-page-fixed .signin-fields {
-    gap: 0.65rem;
-    margin-bottom: 0.85rem;
-  }
+.signin-page-fixed .field,
+.signin-page-fixed .signin-btn {
+  min-height: 44px;
+  box-sizing: border-box;
+}
 
-  .signin-page-fixed .signin-btn {
-    margin-bottom: 0.85rem;
+/* Phones */
+@media (max-width: 480px) {
+  .signin-page-fixed {
+    padding-left: max(0.85rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.85rem, env(safe-area-inset-right, 0px));
   }
 
   .signin-page-fixed .signin-card {
-    padding: 1.5rem 1.35rem 1.25rem;
+    padding: 1.65rem 1.25rem 1.35rem;
+  }
+
+  .signin-page-fixed .signin-signup,
+  .signin-page-fixed .signin-forgot {
+    font-size: 0.88rem;
+  }
+}
+
+/* Tablets */
+@media (min-width: 481px) and (max-width: 1024px) {
+  .signin-page-fixed .signin-card {
+    width: min(420px, 100%);
+    padding: 2.1rem 1.85rem 1.75rem;
+  }
+}
+
+/* Laptops / desktops */
+@media (min-width: 1025px) {
+  .signin-page-fixed .signin-card {
+    width: min(400px, 100%);
+  }
+}
+
+/* Short viewports (small phones / landscape) */
+@media (max-height: 700px) {
+  .signin-page-fixed .signin-logo {
+    margin-bottom: 0.75rem;
+  }
+
+  .signin-page-fixed .signin-title {
+    margin-bottom: 0.75rem;
+  }
+
+  .signin-page-fixed .signin-fields {
+    gap: 0.55rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .signin-page-fixed .signin-btn {
+    margin-bottom: 0.75rem;
+  }
+
+  .signin-page-fixed .signin-card {
+    padding: 1.25rem 1.15rem 1.1rem;
+  }
+}
+
+@media (max-height: 480px) {
+  .signin-page-fixed .signin-card {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .signin-page-fixed .signin-logo {
+    margin-bottom: 0.5rem;
+  }
+
+  .signin-page-fixed .logo-lg .logo-img {
+    height: 40px;
   }
 }
 
