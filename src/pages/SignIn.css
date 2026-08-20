@@ -5,6 +5,50 @@
   overflow: hidden;
 }
 
+/* Sign-in only: lock to viewport so the page never scrolls */
+.signin-page-fixed {
+  height: 100vh;
+  height: 100dvh;
+  height: 100svh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: 100svh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  max-height: 100svh;
+  padding: clamp(0.75rem, 2.5vh, 2rem) 1rem;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.signin-page-fixed .signin-card {
+  max-height: 100%;
+  overflow: hidden;
+}
+
+@media (max-height: 700px) {
+  .signin-page-fixed .signin-logo {
+    margin-bottom: 0.85rem;
+  }
+
+  .signin-page-fixed .signin-title {
+    margin-bottom: 0.85rem;
+  }
+
+  .signin-page-fixed .signin-fields {
+    gap: 0.65rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .signin-page-fixed .signin-btn {
+    margin-bottom: 0.85rem;
+  }
+
+  .signin-page-fixed .signin-card {
+    padding: 1.5rem 1.35rem 1.25rem;
+  }
+}
+
 .signin-scan {
   position: fixed;
   left: 0;

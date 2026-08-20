@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
@@ -17,6 +17,19 @@ export function SignIn() {
     if (state?.pendingApproval) return 'Your account is still waiting for Admin approval.'
     return ''
   })
+
+  useEffect(() => {
+    const html = document.documentElement
+    const body = document.body
+    const prevHtmlOverflow = html.style.overflow
+    const prevBodyOverflow = body.style.overflow
+    html.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    return () => {
+      html.style.overflow = prevHtmlOverflow
+      body.style.overflow = prevBodyOverflow
+    }
+  }, [])
 
   if (existing) {
     if (existing.role === 'admin' || (existing.status || 'pending') === 'active') {
@@ -48,7 +61,7 @@ export function SignIn() {
   }
 
   return (
-    <div className="cyber-bg signin-page">
+    <div className="cyber-bg signin-page signin-page-fixed">
       <div className="signin-scan" aria-hidden />
       <form className="signin-card panel panel-glow animate-fade-up animate-pulse-neon" onSubmit={handleSubmit}>
         <div className="signin-logo">
