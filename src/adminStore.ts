@@ -5,6 +5,11 @@ import {
   type CommunityResource,
   type LiveSession,
 } from './config/community'
+import {
+  noteSharedUpdatedAt,
+  pushSharedSnapshot,
+  type SharedSnapshot,
+} from './cloudSync'
 
 export type { CommunitySettings, CommunityChannel, CommunityResource, LiveSession }
 
@@ -129,6 +134,7 @@ export function getAdminCourses(): AdminCourse[] {
 export function saveAdminCourses(courses: AdminCourse[]) {
   writeJson(COURSES_KEY, courses)
   window.dispatchEvent(new CustomEvent('pkfx-courses-change', { detail: courses }))
+  void publishSharedContent()
 }
 
 export function getAdminEbooks(): AdminEbook[] {
@@ -139,6 +145,7 @@ export function saveAdminEbooks(books: AdminEbook[]) {
   const slim = books.map(serializeEbookForStorage)
   writeJson(EBOOKS_KEY, slim)
   window.dispatchEvent(new CustomEvent('pkfx-ebooks-change', { detail: slim }))
+  void publishSharedContent()
 }
 
 export function getTelegramSettings(): TelegramSettings {
@@ -176,6 +183,7 @@ export function saveHowItWorksVideo(settings: HowItWorksVideo) {
   }
   writeJson(HOW_IT_WORKS_KEY, next)
   window.dispatchEvent(new CustomEvent('pkfx-how-it-works-change', { detail: next }))
+  void publishSharedContent()
 }
 
 function mergeCommunity(stored: Partial<CommunitySettings> | null): CommunitySettings {
@@ -252,6 +260,81 @@ export function saveCommunitySettings(settings: CommunitySettings) {
   }
   writeJson(COMMUNITY_KEY, next)
   window.dispatchEvent(new CustomEvent('pkfx-community-change', { detail: next }))
+  void publishSharedContent()
+}
+
+/** Apply a shared snapshot from the server onto this device. */
+export function applySharedSnapshot(snapshot: SharedSnapshot, opts?: { silent?: boolean }) {
+  if (snapshot.community) {
+    const community = mergeCommunity(snapshot.community as Partial<CommunitySettings>)
+    writeJson(COMMUNITY_KEY, community)
+    if (!opts?.silent) {
+      window.dispatchEvent(new CustomEvent('pkfx-community-change', { detail: community }))
+    }
+  }
+
+  if (Array.isArray(snapshot.courses)) {
+    const courses = snapshot.courses as AdminCourse[]
+    writeJson(COURSES_KEY, courses)
+    if (!opts?.silent) {
+      window.dispatchEvent(new CustomEvent('pkfx-courses-change', { detail: courses }))
+    }
+  }
+
+  if (Array.isArray(snapshot.ebooks)) {
+    const slim = (snapshot.ebooks as AdminEbook[]).map(serializeEbookForStorage)
+    writeJson(EBOOKS_KEY, slim)
+    if (!opts?.silent) {
+      window.dispatchEvent(new CustomEvent('pkfx-ebooks-change', { detail: slim }))
+    }
+  }
+
+  if (snapshot.howItWorks) {
+    const how: HowItWorksVideo = {
+      url: (snapshot.howItWorks.url || '').trim(),
+      title: (snapshot.howItWorks.title || '').trim() || DEFAULT_HOW_IT_WORKS.title,
+      subtitle: (snapshot.howItWorks.subtitle || '').trim() || DEFAULT_HOW_IT_WORKS.subtitle,
+    }
+    writeJson(HOW_IT_WORKS_KEY, how)
+    if (!opts?.silent) {
+      window.dispatchEvent(new CustomEvent('pkfx-how-it-works-change', { detail: how }))
+    }
+  }
+
+  if (snapshot.updatedAt) noteSharedUpdatedAt(snapshot.updatedAt)
+}
+
+function buildSharedSnapshot(): Omit<SharedSnapshot, 'updatedAt'> & { updatedAt?: string } {
+  return {
+    community: getCommunitySettings(),
+    courses: getAdminCourses(),
+    ebooks: getAdminEbooks(),
+    howItWorks: getHowItWorksVideo(),
+  }
+}
+
+/** Push local admin content so every device can pull the same data. */
+export async function publishSharedContent() {
+  try {
+    const saved = await pushSharedSnapshot(buildSharedSnapshot())
+    if (saved?.updatedAt) noteSharedUpdatedAt(saved.updatedAt)
+    window.dispatchEvent(
+      new CustomEvent('pkfx-sync-status', {
+        detail: { ok: true, at: saved?.updatedAt || new Date().toISOString() },
+      }),
+    )
+    return saved
+  } catch (err) {
+    window.dispatchEvent(
+      new CustomEvent('pkfx-sync-status', {
+        detail: {
+          ok: false,
+          error: err instanceof Error ? err.message : 'Sync failed',
+        },
+      }),
+    )
+    return null
+  }
 }
 
 /** Wipe admin content stores for a clean live start. */
@@ -269,4 +352,5 @@ export function resetAdminContent() {
       /* ignore */
     }
   }
+  void publishSharedContent()
 }

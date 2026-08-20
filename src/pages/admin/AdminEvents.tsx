@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Plus, Save, Trash2 } from 'lucide-react'
 import {
@@ -19,6 +19,34 @@ function newId(prefix: string) {
 export function AdminEvents() {
   const [settings, setSettings] = useState<CommunitySettings>(() => getCommunitySettings())
   const [message, setMessage] = useState('')
+  const [syncNote, setSyncNote] = useState('Syncing across devices via this app host…')
+
+  useEffect(() => {
+    function onCommunity(e: Event) {
+      const detail = (e as CustomEvent<CommunitySettings>).detail
+      if (detail) setSettings(detail)
+      else setSettings(getCommunitySettings())
+    }
+    function onSync(e: Event) {
+      const detail = (e as CustomEvent<{ ok: boolean; at?: string; error?: string }>).detail
+      if (!detail) return
+      if (detail.ok) {
+        setSyncNote(
+          detail.at
+            ? `Synced to all devices · ${new Date(detail.at).toLocaleString()}`
+            : 'Synced to all devices',
+        )
+      } else {
+        setSyncNote(detail.error || 'Sync failed — changes are saved on this device only')
+      }
+    }
+    window.addEventListener('pkfx-community-change', onCommunity)
+    window.addEventListener('pkfx-sync-status', onSync)
+    return () => {
+      window.removeEventListener('pkfx-community-change', onCommunity)
+      window.removeEventListener('pkfx-sync-status', onSync)
+    }
+  }, [])
 
   function persist(next: CommunitySettings, note = 'Community page updated.') {
     setSettings(next)
@@ -136,7 +164,9 @@ export function AdminEvents() {
       <h1 className="admin-title">Events &amp; Community</h1>
       <p className="admin-muted" style={{ marginTop: '-0.35rem' }}>
         Manage channel CTAs, live session times, and broker / prop firm links shown on the client Community page.
+        Changes sync to every device using this same app link.
       </p>
+      <p className="admin-muted">{syncNote}</p>
       <div className="admin-actions" style={{ marginBottom: '0.25rem' }}>
         <button type="button" className="admin-btn" onClick={saveAll}>
           <Save size={15} /> Save all changes
