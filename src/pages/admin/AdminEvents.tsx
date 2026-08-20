@@ -238,6 +238,14 @@ export function AdminEvents() {
         <div className="admin-card-head">
           <h2>Live sessions</h2>
         </div>
+        {settings.sessions.length === 0 ? (
+          <div className="admin-empty">
+            <p>No live sessions yet.</p>
+            <p className="admin-muted">
+              Add a session below — only then will upcoming times appear on the client Community page.
+            </p>
+          </div>
+        ) : null}
         <div className="admin-list">
           {settings.sessions.map((s) => (
             <div key={s.id} className="admin-list-row" style={{ alignItems: 'stretch' }}>

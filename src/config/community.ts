@@ -90,44 +90,8 @@ export const DEFAULT_COMMUNITY: CommunitySettings = {
       cta: 'Watch on YouTube',
     },
   ],
-  sessions: [
-    {
-      id: 'daily-live',
-      title: 'Daily Live Trading',
-      weekdaysOnly: true,
-      time: '09:00',
-      timezone: 'Africa/Johannesburg',
-      durationMinutes: 90,
-      description: 'Markets, levels, and live execution with the team.',
-    },
-    {
-      id: 'london-open',
-      title: 'London Open Session',
-      weekdaysOnly: true,
-      time: '10:00',
-      timezone: 'Africa/Johannesburg',
-      durationMinutes: 60,
-      description: 'London liquidity and morning pair focus.',
-    },
-    {
-      id: 'ny-open',
-      title: 'New York Open Live',
-      weekdaysOnly: true,
-      time: '15:30',
-      timezone: 'Africa/Johannesburg',
-      durationMinutes: 75,
-      description: 'US session momentum and afternoon setups.',
-    },
-    {
-      id: 'weekly-qa',
-      title: 'Weekly Community Q&A',
-      weekday: 0,
-      time: '18:00',
-      timezone: 'Africa/Johannesburg',
-      durationMinutes: 60,
-      description: 'Ask questions, review the week, plan ahead.',
-    },
-  ],
+  /** Empty until admin adds sessions — never invent upcoming times for clients. */
+  sessions: [],
   resources: [
     {
       id: 'broker-exness',

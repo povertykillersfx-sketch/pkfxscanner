@@ -58,7 +58,8 @@ const COURSES_KEY = 'pkfx_admin_courses_live_v1'
 const EBOOKS_KEY = 'pkfx_admin_ebooks_live_v1'
 const TELEGRAM_KEY = 'pkfx_admin_telegram_live_v1'
 const HOW_IT_WORKS_KEY = 'pkfx_how_it_works_video_v1'
-const COMMUNITY_KEY = 'pkfx_community_live_v1'
+const COMMUNITY_KEY = 'pkfx_community_live_v2'
+const COMMUNITY_LEGACY_KEY = 'pkfx_community_live_v1'
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -163,14 +164,48 @@ function mergeCommunity(stored: Partial<CommunitySettings> | null): CommunitySet
   const base = DEFAULT_COMMUNITY
   if (!stored) return structuredClone(base)
   return {
-    channels: Array.isArray(stored.channels) && stored.channels.length ? stored.channels : structuredClone(base.channels),
-    sessions: Array.isArray(stored.sessions) && stored.sessions.length ? stored.sessions : structuredClone(base.sessions),
-    resources: Array.isArray(stored.resources) && stored.resources.length ? stored.resources : structuredClone(base.resources),
+    channels: Array.isArray(stored.channels) && stored.channels.length
+      ? stored.channels
+      : structuredClone(base.channels),
+    // Respect an explicit empty list — only fall back when sessions were never saved
+    sessions: Array.isArray(stored.sessions) ? stored.sessions : structuredClone(base.sessions),
+    resources: Array.isArray(stored.resources) && stored.resources.length
+      ? stored.resources
+      : structuredClone(base.resources),
   }
 }
 
 export function getCommunitySettings(): CommunitySettings {
-  return mergeCommunity(readJson<Partial<CommunitySettings> | null>(COMMUNITY_KEY, null))
+  const stored = readJson<Partial<CommunitySettings> | null>(COMMUNITY_KEY, null)
+  if (stored) return mergeCommunity(stored)
+
+  // One-time migrate from v1: keep channels/resources, drop seeded demo sessions
+  const legacy = readJson<Partial<CommunitySettings> | null>(COMMUNITY_LEGACY_KEY, null)
+  if (legacy) {
+    const seededIds = new Set(['daily-live', 'london-open', 'ny-open', 'weekly-qa'])
+    const migrated: CommunitySettings = {
+      channels:
+        Array.isArray(legacy.channels) && legacy.channels.length
+          ? legacy.channels
+          : structuredClone(DEFAULT_COMMUNITY.channels),
+      sessions: Array.isArray(legacy.sessions)
+        ? legacy.sessions.filter((s) => !seededIds.has(s.id))
+        : [],
+      resources:
+        Array.isArray(legacy.resources) && legacy.resources.length
+          ? legacy.resources
+          : structuredClone(DEFAULT_COMMUNITY.resources),
+    }
+    writeJson(COMMUNITY_KEY, migrated)
+    try {
+      localStorage.removeItem(COMMUNITY_LEGACY_KEY)
+    } catch {
+      /* ignore */
+    }
+    return migrated
+  }
+
+  return mergeCommunity(null)
 }
 
 export function saveCommunitySettings(settings: CommunitySettings) {
@@ -209,4 +244,9 @@ export function resetAdminContent() {
   writeJson(TELEGRAM_KEY, { sample: '', botToken: '', chatId: '' })
   writeJson(HOW_IT_WORKS_KEY, { ...DEFAULT_HOW_IT_WORKS })
   writeJson(COMMUNITY_KEY, structuredClone(DEFAULT_COMMUNITY))
+  try {
+    localStorage.removeItem(COMMUNITY_LEGACY_KEY)
+  } catch {
+    /* ignore */
+  }
 }
