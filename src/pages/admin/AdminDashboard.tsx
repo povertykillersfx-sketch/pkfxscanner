@@ -92,51 +92,6 @@ export function AdminDashboard() {
         </article>
       </div>
 
-      <section className="admin-card">
-        <div className="admin-card-head">
-          <h2>How it works video</h2>
-          <span className="admin-muted">Shown on the client Dashboard under “How it works?”</span>
-        </div>
-        <form className="admin-form" onSubmit={saveHowVideo}>
-          <div className="admin-field">
-            <label htmlFor="how-video-url">Video link (YouTube, Vimeo, or direct URL)</label>
-            <input
-              id="how-video-url"
-              type="url"
-              placeholder="https://www.youtube.com/watch?v=… or https://vimeo.com/…"
-              value={howItWorks.url}
-              onChange={(e) => setHowItWorks({ ...howItWorks, url: e.target.value })}
-            />
-          </div>
-          <div className="admin-field">
-            <label htmlFor="how-video-title">Title</label>
-            <input
-              id="how-video-title"
-              value={howItWorks.title}
-              onChange={(e) => setHowItWorks({ ...howItWorks, title: e.target.value })}
-              placeholder="How To Use PKFX"
-            />
-          </div>
-          <div className="admin-field">
-            <label htmlFor="how-video-sub">Subtitle</label>
-            <input
-              id="how-video-sub"
-              value={howItWorks.subtitle}
-              onChange={(e) => setHowItWorks({ ...howItWorks, subtitle: e.target.value })}
-              placeholder="(Live market + AI alerts)"
-            />
-          </div>
-          <button type="submit" className="admin-btn">
-            <Link2 size={16} /> Save video link
-          </button>
-          {howMsg && (
-            <p className="admin-muted" style={{ marginTop: '0.5rem' }}>
-              {howMsg}
-            </p>
-          )}
-        </form>
-      </section>
-
       <div className="admin-dash-grid">
         <section className="admin-card">
           <div className="admin-card-head">
@@ -189,6 +144,51 @@ export function AdminDashboard() {
           )}
         </section>
       </div>
+
+      <section className="admin-card">
+        <div className="admin-card-head">
+          <h2>How it works video</h2>
+          <span className="admin-muted">Shown on the client Dashboard under “How it works?”</span>
+        </div>
+        <form className="admin-form" onSubmit={saveHowVideo}>
+          <div className="admin-field">
+            <label htmlFor="how-video-url">Video link (YouTube, Vimeo, or direct URL)</label>
+            <input
+              id="how-video-url"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=… or https://vimeo.com/…"
+              value={howItWorks.url}
+              onChange={(e) => setHowItWorks({ ...howItWorks, url: e.target.value })}
+            />
+          </div>
+          <div className="admin-field">
+            <label htmlFor="how-video-title">Title</label>
+            <input
+              id="how-video-title"
+              value={howItWorks.title}
+              onChange={(e) => setHowItWorks({ ...howItWorks, title: e.target.value })}
+              placeholder="How To Use PKFX"
+            />
+          </div>
+          <div className="admin-field">
+            <label htmlFor="how-video-sub">Subtitle</label>
+            <input
+              id="how-video-sub"
+              value={howItWorks.subtitle}
+              onChange={(e) => setHowItWorks({ ...howItWorks, subtitle: e.target.value })}
+              placeholder="(Live market + AI alerts)"
+            />
+          </div>
+          <button type="submit" className="admin-btn">
+            <Link2 size={16} /> Save video link
+          </button>
+          {howMsg && (
+            <p className="admin-muted" style={{ marginTop: '0.5rem' }}>
+              {howMsg}
+            </p>
+          )}
+        </form>
+      </section>
     </div>
   )
 }
