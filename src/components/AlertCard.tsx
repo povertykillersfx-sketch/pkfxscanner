@@ -150,7 +150,7 @@ export function AlertsPanel({
   title = 'My Alerts',
   onEditScanner,
   limit,
-  emptyHint = 'No symbols in your scanner yet. Click Edit Scanner to add instruments.',
+  emptyHint = 'No symbols in your scanner yet. Click Add Symbols to add instruments.',
   loading = false,
   liveFeed = false,
   currentOnly = false,
@@ -182,7 +182,7 @@ export function AlertsPanel({
         </div>
         {onEditScanner && (
           <button type="button" className="btn btn-outline edit-scanner" onClick={onEditScanner}>
-            <span className="gear">⚙</span> Edit Scanner
+            <span className="gear">⚙</span> Add Symbols
           </button>
         )}
       </div>
@@ -196,7 +196,7 @@ export function AlertsPanel({
           <p>{emptyHint}</p>
           {onEditScanner && (
             <button type="button" className="btn btn-primary" onClick={onEditScanner}>
-              Edit Scanner
+              Add Symbols
             </button>
           )}
         </div>
