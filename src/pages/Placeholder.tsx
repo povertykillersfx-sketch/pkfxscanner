@@ -23,15 +23,6 @@ export function Placeholder({ title, description }: PlaceholderProps) {
   )
 }
 
-export function Community() {
-  return (
-    <Placeholder
-      title="Community"
-      description="Connect with PKFX traders. Forums and live rooms coming online soon."
-    />
-  )
-}
-
 export function Favorites() {
   return (
     <Placeholder

@@ -1,3 +1,13 @@
+import {
+  DEFAULT_COMMUNITY,
+  type CommunitySettings,
+  type CommunityChannel,
+  type CommunityResource,
+  type LiveSession,
+} from './config/community'
+
+export type { CommunitySettings, CommunityChannel, CommunityResource, LiveSession }
+
 export interface AccessRequest {
   id: string
   name: string
@@ -48,6 +58,7 @@ const COURSES_KEY = 'pkfx_admin_courses_live_v1'
 const EBOOKS_KEY = 'pkfx_admin_ebooks_live_v1'
 const TELEGRAM_KEY = 'pkfx_admin_telegram_live_v1'
 const HOW_IT_WORKS_KEY = 'pkfx_how_it_works_video_v1'
+const COMMUNITY_KEY = 'pkfx_community_live_v1'
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -148,6 +159,48 @@ export function saveHowItWorksVideo(settings: HowItWorksVideo) {
   window.dispatchEvent(new CustomEvent('pkfx-how-it-works-change', { detail: next }))
 }
 
+function mergeCommunity(stored: Partial<CommunitySettings> | null): CommunitySettings {
+  const base = DEFAULT_COMMUNITY
+  if (!stored) return structuredClone(base)
+  return {
+    channels: Array.isArray(stored.channels) && stored.channels.length ? stored.channels : structuredClone(base.channels),
+    sessions: Array.isArray(stored.sessions) && stored.sessions.length ? stored.sessions : structuredClone(base.sessions),
+    resources: Array.isArray(stored.resources) && stored.resources.length ? stored.resources : structuredClone(base.resources),
+  }
+}
+
+export function getCommunitySettings(): CommunitySettings {
+  return mergeCommunity(readJson<Partial<CommunitySettings> | null>(COMMUNITY_KEY, null))
+}
+
+export function saveCommunitySettings(settings: CommunitySettings) {
+  const next: CommunitySettings = {
+    channels: settings.channels.map((c) => ({
+      ...c,
+      name: c.name.trim(),
+      description: c.description.trim(),
+      url: c.url.trim(),
+      cta: c.cta.trim() || 'Open',
+    })),
+    sessions: settings.sessions.map((s) => ({
+      ...s,
+      title: s.title.trim(),
+      time: s.time.trim(),
+      timezone: s.timezone.trim() || 'Africa/Johannesburg',
+      description: (s.description || '').trim(),
+      joinUrl: (s.joinUrl || '').trim() || undefined,
+    })),
+    resources: settings.resources.map((r) => ({
+      ...r,
+      title: r.title.trim(),
+      description: r.description.trim(),
+      url: r.url.trim(),
+    })),
+  }
+  writeJson(COMMUNITY_KEY, next)
+  window.dispatchEvent(new CustomEvent('pkfx-community-change', { detail: next }))
+}
+
 /** Wipe admin content stores for a clean live start. */
 export function resetAdminContent() {
   writeJson(REQUESTS_KEY, [])
@@ -155,4 +208,5 @@ export function resetAdminContent() {
   writeJson(EBOOKS_KEY, [])
   writeJson(TELEGRAM_KEY, { sample: '', botToken: '', chatId: '' })
   writeJson(HOW_IT_WORKS_KEY, { ...DEFAULT_HOW_IT_WORKS })
+  writeJson(COMMUNITY_KEY, structuredClone(DEFAULT_COMMUNITY))
 }

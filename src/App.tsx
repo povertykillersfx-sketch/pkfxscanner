@@ -15,11 +15,11 @@ import { AdminMembers } from './pages/admin/AdminMembers'
 import { AdminEvents } from './pages/admin/AdminEvents'
 import {
   Billing,
-  Community,
   Favorites,
   ForgotPassword,
   Logout,
 } from './pages/Placeholder'
+import { Community } from './pages/Community'
 import { EconomicCalendar } from './pages/EconomicCalendar'
 import { TradingJournal } from './pages/TradingJournal'
 import { ChoosePlan } from './pages/ChoosePlan'
