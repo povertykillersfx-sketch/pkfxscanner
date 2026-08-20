@@ -1,4 +1,3 @@
-import { useTheme } from '../theme'
 import './Logo.css'
 
 interface LogoProps {
@@ -7,14 +6,12 @@ interface LogoProps {
 }
 
 export function Logo({ size = 'md', variant = 'full' }: LogoProps) {
-  const { theme } = useTheme()
-  // Dark: PK is white · Light: PK is black — only that differs for the wordmark
-  const src =
-    theme === 'light' ? '/brand/logo-light.png?v=pkfx6' : '/brand/logo-dark.png?v=pkfx6'
+  // Exact brand lockup provided by user (bull + FX) — do not swap artwork
+  const src = '/brand/IMG_6021.PNG?v=pkfx7'
 
   return (
     <div className={`logo logo-${size} logo-${variant}`}>
-      <img className="logo-img" src={src} alt="PKFX — Poverty Killers" draggable={false} />
+      <img className="logo-img" src={src} alt="PKFX" draggable={false} />
     </div>
   )
 }
