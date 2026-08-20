@@ -99,7 +99,7 @@ export function EBooks() {
                   <pre className="cover-title font-display">{book.title.toUpperCase()}</pre>
                 )}
                 <div className="cover-logo">
-                  <img src="/brand/logo-mark.png?v=pkfx4" alt="" width={36} height={36} />
+                  <img src="/brand/logo-mark.png?v=pkfx5" alt="" width={36} height={36} />
                 </div>
               </div>
               <div className="ebook-body">

@@ -1,25 +1,17 @@
-import { useTheme } from '../theme'
 import './Logo.css'
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg'
-  /** Compact = icon + PKFX only feel via CSS crop; full shows poverty killers tagline */
   variant?: 'full' | 'compact'
 }
 
 export function Logo({ size = 'md', variant = 'full' }: LogoProps) {
-  const { theme } = useTheme()
-  // Cache-bust so theme logo swaps pick up the latest brand assets
-  const src = theme === 'light' ? '/brand/logo-light.png?v=pkfx4' : '/brand/logo-dark.png?v=pkfx4'
+  // Official brand lockup — used exactly as provided (bull + FX)
+  const src = '/brand/IMG_6021.PNG?v=pkfx5'
 
   return (
     <div className={`logo logo-${size} logo-${variant}`}>
-      <img
-        className="logo-img"
-        src={src}
-        alt="PKFX — Poverty Killers"
-        draggable={false}
-      />
+      <img className="logo-img" src={src} alt="PKFX" draggable={false} />
     </div>
   )
 }
