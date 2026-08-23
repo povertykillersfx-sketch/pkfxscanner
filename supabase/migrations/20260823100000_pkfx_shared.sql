@@ -24,6 +24,11 @@ create policy "pkfx_shared_select_anon"
   to anon, authenticated
   using (true);
 
--- Writes go through the Edge Function (service role bypasses RLS)
-drop policy if exists "pkfx_shared_no_direct_write" on public.pkfx_shared;
--- No insert/update/delete policies for anon → blocked; service role still works
+-- SPA admin publish (anon key) — single shared row only
+drop policy if exists "pkfx_shared_write_anon" on public.pkfx_shared;
+create policy "pkfx_shared_write_anon"
+  on public.pkfx_shared
+  for all
+  to anon, authenticated
+  using (id = 'default')
+  with check (id = 'default');

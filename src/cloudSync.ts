@@ -1,4 +1,4 @@
-/** Shared admin content that syncs across every device on this app host. */
+/** Shared admin content sync — Supabase PostgREST, Edge Function, or local /api/sync. */
 
 export interface SharedSnapshot {
   updatedAt: string
@@ -30,35 +30,68 @@ function env(name: string): string {
   }
 }
 
-/** Prefer Supabase Edge Function, then VITE_SYNC_URL, then local Vite /api/sync. */
-function syncUrl(): string {
-  const supabaseUrl = env('VITE_SUPABASE_URL').replace(/\/$/, '')
-  if (supabaseUrl) return `${supabaseUrl}/functions/v1/sync`
-
-  const custom = env('VITE_SYNC_URL')
-  return custom || '/api/sync'
+function supabaseBase(): string {
+  return env('VITE_SUPABASE_URL').replace(/\/$/, '')
 }
 
-function syncHeaders(method: 'GET' | 'PUT'): HeadersInit {
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-  }
-  if (method === 'PUT') headers['Content-Type'] = 'application/json'
-
+function supabaseHeaders(jsonBody: boolean): HeadersInit {
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (jsonBody) headers['Content-Type'] = 'application/json'
   const anon = env('VITE_SUPABASE_ANON_KEY')
-  if (anon && env('VITE_SUPABASE_URL')) {
+  if (anon) {
     headers.apikey = anon
     headers.Authorization = `Bearer ${anon}`
   }
   return headers
 }
 
-export async function pullSharedSnapshot(): Promise<SharedSnapshot | null> {
+function localSyncUrl(): string {
+  return env('VITE_SYNC_URL') || '/api/sync'
+}
+
+function edgeSyncUrl(): string | null {
+  const base = supabaseBase()
+  return base ? `${base}/functions/v1/sync` : null
+}
+
+function restSyncUrl(): string | null {
+  const base = supabaseBase()
+  return base ? `${base}/rest/v1/pkfx_shared?id=eq.default&select=*` : null
+}
+
+function rowToSnapshot(row: {
+  community?: unknown
+  courses?: unknown
+  ebooks?: unknown
+  how_it_works?: unknown
+  updated_at?: string
+} | null): SharedSnapshot {
+  return {
+    updatedAt: row?.updated_at || new Date().toISOString(),
+    community: (row?.community as SharedSnapshot['community']) ?? null,
+    courses: Array.isArray(row?.courses) ? row!.courses : [],
+    ebooks: Array.isArray(row?.ebooks) ? row!.ebooks : [],
+    howItWorks: (row?.how_it_works as SharedSnapshot['howItWorks']) ?? null,
+  }
+}
+
+function snapshotToRow(snapshot: Omit<SharedSnapshot, 'updatedAt'> & { updatedAt?: string }) {
+  return {
+    id: 'default',
+    community: snapshot.community ?? null,
+    courses: snapshot.courses ?? [],
+    ebooks: snapshot.ebooks ?? [],
+    how_it_works: snapshot.howItWorks ?? null,
+    updated_at: snapshot.updatedAt || new Date().toISOString(),
+  }
+}
+
+async function pullLocal(): Promise<SharedSnapshot | null> {
   try {
-    const res = await fetch(syncUrl(), {
+    const res = await fetch(localSyncUrl(), {
       method: 'GET',
       cache: 'no-store',
-      headers: syncHeaders('GET'),
+      headers: { Accept: 'application/json' },
     })
     if (!res.ok) return null
     return (await res.json()) as SharedSnapshot
@@ -67,12 +100,12 @@ export async function pullSharedSnapshot(): Promise<SharedSnapshot | null> {
   }
 }
 
-export async function pushSharedSnapshot(
+async function pushLocal(
   snapshot: Omit<SharedSnapshot, 'updatedAt'> & { updatedAt?: string },
-) {
-  const res = await fetch(syncUrl(), {
+): Promise<SharedSnapshot> {
+  const res = await fetch(localSyncUrl(), {
     method: 'PUT',
-    headers: syncHeaders('PUT'),
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({
       ...snapshot,
       updatedAt: snapshot.updatedAt || new Date().toISOString(),
@@ -80,9 +113,115 @@ export async function pushSharedSnapshot(
   })
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(text || `Sync push failed (${res.status})`)
+    throw new Error(text || `Local sync push failed (${res.status})`)
   }
   return (await res.json()) as SharedSnapshot
+}
+
+async function pullEdge(): Promise<SharedSnapshot | null> {
+  const url = edgeSyncUrl()
+  if (!url) return null
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: supabaseHeaders(false),
+    })
+    if (!res.ok) return null
+    return (await res.json()) as SharedSnapshot
+  } catch {
+    return null
+  }
+}
+
+async function pushEdge(
+  snapshot: Omit<SharedSnapshot, 'updatedAt'> & { updatedAt?: string },
+): Promise<SharedSnapshot | null> {
+  const url = edgeSyncUrl()
+  if (!url) return null
+  try {
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: supabaseHeaders(true),
+      body: JSON.stringify({
+        ...snapshot,
+        updatedAt: snapshot.updatedAt || new Date().toISOString(),
+      }),
+    })
+    if (!res.ok) return null
+    return (await res.json()) as SharedSnapshot
+  } catch {
+    return null
+  }
+}
+
+async function pullRest(): Promise<SharedSnapshot | null> {
+  const url = restSyncUrl()
+  if (!url) return null
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: supabaseHeaders(false),
+    })
+    if (!res.ok) return null
+    const rows = (await res.json()) as unknown
+    const row = Array.isArray(rows) ? rows[0] : rows
+    if (!row) {
+      return {
+        updatedAt: new Date().toISOString(),
+        community: null,
+        courses: [],
+        ebooks: [],
+        howItWorks: null,
+      }
+    }
+    return rowToSnapshot(row as Parameters<typeof rowToSnapshot>[0])
+  } catch {
+    return null
+  }
+}
+
+async function pushRest(
+  snapshot: Omit<SharedSnapshot, 'updatedAt'> & { updatedAt?: string },
+): Promise<SharedSnapshot | null> {
+  const base = supabaseBase()
+  if (!base) return null
+  const row = snapshotToRow(snapshot)
+  try {
+    const res = await fetch(`${base}/rest/v1/pkfx_shared?on_conflict=id`, {
+      method: 'POST',
+      headers: {
+        ...supabaseHeaders(true),
+        Prefer: 'resolution=merge-duplicates,return=representation',
+      },
+      body: JSON.stringify(row),
+    })
+    if (!res.ok) return null
+    const rows = (await res.json()) as unknown
+    const saved = Array.isArray(rows) ? rows[0] : rows
+    if (!saved) return null
+    return rowToSnapshot(saved as Parameters<typeof rowToSnapshot>[0])
+  } catch {
+    return null
+  }
+}
+
+export async function pullSharedSnapshot(): Promise<SharedSnapshot | null> {
+  return (await pullEdge()) || (await pullRest()) || (await pullLocal())
+}
+
+export async function pushSharedSnapshot(
+  snapshot: Omit<SharedSnapshot, 'updatedAt'> & { updatedAt?: string },
+) {
+  const viaEdge = await pushEdge(snapshot)
+  if (viaEdge) return viaEdge
+
+  const viaRest = await pushRest(snapshot)
+  if (viaRest) return viaRest
+
+  // Edge Functions not deployed / RLS blocks writes → keep host sync working
+  return pushLocal(snapshot)
 }
 
 type SyncListener = (snapshot: SharedSnapshot) => void
