@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Alert } from '../data/mockData'
 import {
   getAlerts,
-  getCurrentTrades,
-  organizeAlertsForScanner,
+  getHistoryAlerts,
+  getTodaysAlerts,
   syncAlertsForSymbols,
 } from '../alerts'
 import { getScannerSymbols } from '../scanner'
@@ -12,7 +12,7 @@ import { getScannerSymbols } from '../scanner'
 export function useScannerAlerts() {
   const [symbols, setSymbols] = useState<string[]>(() => getScannerSymbols())
   const [alerts, setAlerts] = useState<Alert[]>(() =>
-    organizeAlertsForScanner(
+    getHistoryAlerts(
       getAlerts().filter((a) => getScannerSymbols().includes(a.asset)),
       getScannerSymbols(),
     ),
@@ -32,12 +32,12 @@ export function useScannerAlerts() {
       try {
         const next = await syncAlertsForSymbols(syms)
         if (cancelled) return
-        setAlerts(organizeAlertsForScanner(next, syms))
+        setAlerts(getHistoryAlerts(next, syms))
         setLiveFeed(next.some((a) => a.live))
       } catch {
         if (!cancelled) {
           setAlerts(
-            organizeAlertsForScanner(
+            getHistoryAlerts(
               getAlerts().filter((a) => syms.includes(a.asset)),
               syms,
             ),
@@ -57,7 +57,7 @@ export function useScannerAlerts() {
       const detail = (e as CustomEvent<Alert[]>).detail
       if (Array.isArray(detail) && !cancelled) {
         const syms = getScannerSymbols()
-        setAlerts(organizeAlertsForScanner(detail.filter((a) => syms.includes(a.asset)), syms))
+        setAlerts(getHistoryAlerts(detail.filter((a) => syms.includes(a.asset)), syms))
         setLiveFeed(detail.some((a) => a.live))
         setLoading(false)
       }
@@ -80,18 +80,23 @@ export function useScannerAlerts() {
     setSymbols(next)
     setLoading(true)
     const alertsNext = await syncAlertsForSymbols(next)
-    setAlerts(organizeAlertsForScanner(alertsNext, next))
+    setAlerts(getHistoryAlerts(alertsNext, next))
     setLiveFeed(alertsNext.some((a) => a.live))
     setLoading(false)
   }
 
-  const currentTrades = useMemo(() => getCurrentTrades(alerts, symbols), [alerts, symbols])
+  /** Full history for selected symbols (last 5 trading days) — My Alerts */
+  const historyAlerts = alerts
+
+  /** Current trading day only — Dashboard */
+  const todaysAlerts = useMemo(() => getTodaysAlerts(alerts, symbols), [alerts, symbols])
 
   return {
     symbols,
     setSymbols,
-    alerts,
-    currentTrades,
+    alerts: historyAlerts,
+    todaysAlerts,
+    currentTrades: todaysAlerts,
     setAlerts,
     loading,
     liveFeed,

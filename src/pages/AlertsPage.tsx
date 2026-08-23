@@ -16,10 +16,12 @@ export function AlertsPage() {
         <AlertsPanel
           alerts={alerts}
           symbols={symbols}
+          title="My Alerts"
           onEditScanner={() => setScannerOpen(true)}
-          limit={24}
+          limit={40}
           loading={loading}
           liveFeed={liveFeed}
+          emptyHint="No saved alerts for your symbols in the last 5 trading days. Add symbols to start scanning."
         />
         <HowItWorksPanel />
       </div>

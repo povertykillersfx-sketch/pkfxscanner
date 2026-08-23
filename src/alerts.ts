@@ -12,9 +12,9 @@ import {
 } from './marketData'
 
 /** Locked session signals — one alert per symbol/session/day (does not keep rewriting levels) */
-const ALERTS_KEY = 'pkfx_live_alerts_v9_traded_prices'
-/** Keep past alerts on My Alerts for this many UTC days (including today). */
-const ALERT_HISTORY_DAYS = 5
+const ALERTS_KEY = 'pkfx_live_alerts_v10_trading_days'
+/** Keep past alerts on My Alerts for this many FX trading days (including today). */
+const ALERT_HISTORY_TRADING_DAYS = 5
 /** Minutes into a session used for the opening scan snapshot. */
 const SESSION_SCAN_GRACE_MIN = 10
 
@@ -22,24 +22,72 @@ function utcDateKey(d = new Date()): string {
   return d.toISOString().slice(0, 10)
 }
 
-/** Inclusive window of recent UTC date keys: today and the previous (days - 1) days. */
-function recentDateKeys(now = new Date(), days = ALERT_HISTORY_DAYS): Set<string> {
+function shiftUtcDays(d: Date, delta: number): Date {
+  const next = new Date(d)
+  next.setUTCDate(next.getUTCDate() + delta)
+  return next
+}
+
+/**
+ * Last N FX trading days as UTC date keys (Mon–Fri).
+ * Also keeps the Sunday key used by Sydney week-open alerts.
+ */
+export function recentTradingDateKeys(
+  now = new Date(),
+  tradingDays = ALERT_HISTORY_TRADING_DAYS,
+): Set<string> {
   const keys = new Set<string>()
-  for (let i = 0; i < days; i++) {
-    const d = new Date(now)
-    d.setUTCDate(d.getUTCDate() - i)
-    keys.add(utcDateKey(d))
+  let counted = 0
+  // Noon UTC cursor avoids DST edge cases when walking calendar days
+  let cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12))
+
+  for (let guard = 0; guard < 21 && counted < tradingDays; guard++) {
+    const dow = cursor.getUTCDay()
+    if (dow >= 1 && dow <= 5) {
+      keys.add(utcDateKey(cursor))
+      counted += 1
+      // Monday’s Sydney open is stamped on Sunday UTC
+      if (dow === 1) {
+        keys.add(utcDateKey(shiftUtcDays(cursor, -1)))
+      }
+    }
+    cursor = shiftUtcDays(cursor, -1)
+  }
+
+  // Sunday after Sydney open counts as the start of the trading week
+  if (now.getUTCDay() === 0 && now.getUTCHours() >= 22) {
+    keys.add(utcDateKey(now))
+  }
+
+  return keys
+}
+
+/** Date keys that belong to the current trading day (all sessions due so far). */
+export function currentTradingDateKeys(now = new Date()): Set<string> {
+  const keys = new Set<string>()
+  const due = sessionsDueToday(now)
+  if (due.length > 0) {
+    for (const session of due) keys.add(alertDateForSession(session, now))
+    return keys
+  }
+  if (!isAlertWeekday(now)) return keys
+
+  keys.add(utcDateKey(now))
+  const dow = now.getUTCDay()
+  if (dow === 1 || (dow === 0 && now.getUTCHours() >= 22)) {
+    const sydneyDay = dow === 1 ? shiftUtcDays(now, -1) : now
+    keys.add(utcDateKey(sydneyDay))
   }
   return keys
 }
 
-function isRecentAlert(alert: Alert, now = new Date(), days = ALERT_HISTORY_DAYS): boolean {
-  if (alert.date && recentDateKeys(now, days).has(alert.date)) return true
-  // Fallback for older records without a reliable date field
+function isRecentAlert(alert: Alert, now = new Date(), tradingDays = ALERT_HISTORY_TRADING_DAYS): boolean {
+  const window = recentTradingDateKeys(now, tradingDays)
+  if (alert.date && window.has(alert.date)) return true
   const t = new Date(alert.noticedAt).getTime()
   if (!Number.isFinite(t)) return false
-  const cutoff = new Date(now)
-  cutoff.setUTCDate(cutoff.getUTCDate() - (days - 1))
+  // Fallback: keep ~2 calendar weeks max when date is missing
+  const cutoff = shiftUtcDays(now, -(tradingDays * 2))
   cutoff.setUTCHours(0, 0, 0, 0)
   return t >= cutoff.getTime()
 }
@@ -644,12 +692,12 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
   const dueSessions = sessionsDueToday(now)
   const latestSession = dueSessions.at(-1)
   const latestDate = latestSession ? alertDateForSession(latestSession, now) : ''
-  const historyDates = recentDateKeys(now, ALERT_HISTORY_DAYS)
+  const historyDates = recentTradingDateKeys(now, ALERT_HISTORY_TRADING_DAYS)
   // Also keep Sydney's previous-UTC-day bucket when it is the overnight session
   for (const session of dueSessions) {
     historyDates.add(alertDateForSession(session, now))
   }
-  const stored = readStored().filter((a) => isRecentAlert(a, now, ALERT_HISTORY_DAYS))
+  const stored = readStored().filter((a) => isRecentAlert(a, now, ALERT_HISTORY_TRADING_DAYS))
 
   // Weekend: keep history, do not scan or lock new signals
   if (!isAlertWeekday(now)) {
@@ -750,13 +798,14 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
     }
   }
 
-  const merged = [...byId.values()].filter((a) => isRecentAlert(a, now, ALERT_HISTORY_DAYS))
+  const merged = [...byId.values()].filter((a) => isRecentAlert(a, now, ALERT_HISTORY_TRADING_DAYS))
   const forScanner = merged.filter(
     (a) => symbols.includes(a.asset) && (a.date ? historyDates.has(a.date) : isRecentAlert(a, now)),
   )
   const next = organizeAlertsForScanner(forScanner, symbols, now)
 
   const organizedIds = new Set(next.map((a) => a.id))
+  // Keep history for scanner symbols + recent alerts for other symbols
   const preserved = merged.filter((a) => !organizedIds.has(a.id))
   writeStored([...preserved, ...next])
   return next
@@ -797,8 +846,28 @@ export function organizeAlertsForScanner(alerts: Alert[], symbols: string[], now
   return out
 }
 
+/** Alerts for selected symbols on the current trading day (Dashboard). */
+export function getTodaysAlerts(alerts: Alert[], symbols: string[], now = new Date()): Alert[] {
+  const today = currentTradingDateKeys(now)
+  const scoped = alerts.filter(
+    (a) => symbols.includes(a.asset) && ((a.date && today.has(a.date)) || (!a.date && isRecentAlert(a, now, 1))),
+  )
+  return organizeAlertsForScanner(scoped, symbols, now)
+}
+
+/** Alerts for selected symbols across the last 5 trading days (My Alerts). */
+export function getHistoryAlerts(alerts: Alert[], symbols: string[], now = new Date()): Alert[] {
+  const window = recentTradingDateKeys(now, ALERT_HISTORY_TRADING_DAYS)
+  const scoped = alerts.filter(
+    (a) =>
+      symbols.includes(a.asset) && (a.date ? window.has(a.date) : isRecentAlert(a, now, ALERT_HISTORY_TRADING_DAYS)),
+  )
+  return organizeAlertsForScanner(scoped, symbols, now)
+}
+
+/** @deprecated Prefer getTodaysAlerts — kept for callers expecting the latest session only. */
 export function getCurrentTrades(alerts: Alert[], symbols: string[]): Alert[] {
-  return organizeAlertsForScanner(alerts, symbols).filter((a) => a.trending)
+  return getTodaysAlerts(alerts, symbols).filter((a) => a.trending)
 }
 
 export function getAlerts(): Alert[] {

@@ -142,6 +142,8 @@ interface AlertsPanelProps {
   liveFeed?: boolean
   /** When true, only the current running trade per selected symbol is shown */
   currentOnly?: boolean
+  /** When true, copy reflects current trading day (Dashboard) */
+  todayOnly?: boolean
   symbols?: string[]
 }
 
@@ -154,6 +156,7 @@ export function AlertsPanel({
   loading = false,
   liveFeed = false,
   currentOnly = false,
+  todayOnly = false,
   symbols = [],
 }: AlertsPanelProps) {
   const [showAll, setShowAll] = useState(false)
@@ -170,13 +173,13 @@ export function AlertsPanel({
         <div>
           <h2 className="font-display">{title}</h2>
           <p className="alerts-sub">
-            {currentOnly
-              ? 'Current 15m entries · bias from 4H→1H'
+            {todayOnly || currentOnly
+              ? 'Selected symbols · current trading day'
               : liveFeed
-                ? 'Live MTF scan (4H→1H→15m) · last 5 days'
+                ? 'Selected symbols · last 5 trading days (saved)'
                 : loading
                   ? 'Scanning markets…'
-                  : 'MTF market scan · last 5 days'}{' '}
+                  : 'Selected symbols · last 5 trading days'}{' '}
             · {symbols.length ? symbols.join(' · ') : 'no symbols selected'}
           </p>
         </div>

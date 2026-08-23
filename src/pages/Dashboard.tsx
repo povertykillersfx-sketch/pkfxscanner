@@ -8,19 +8,21 @@ import './Dashboard.css'
 
 export function Dashboard() {
   const [scannerOpen, setScannerOpen] = useState(false)
-  const { alerts, currentTrades, symbols, loading, liveFeed, reloadWithSymbols } = useScannerAlerts()
+  const { todaysAlerts, alerts, symbols, loading, liveFeed, reloadWithSymbols } = useScannerAlerts()
 
   return (
     <div className="dashboard-page">
       <div className="dashboard-top">
         <AlertsPanel
-          alerts={currentTrades}
+          alerts={todaysAlerts}
           symbols={symbols}
-          currentOnly
+          title="Today’s Alerts"
+          todayOnly
           onEditScanner={() => setScannerOpen(true)}
-          limit={8}
+          limit={24}
           loading={loading}
           liveFeed={liveFeed}
+          emptyHint="No alerts for today yet. Add symbols or wait for the next session open."
         />
 
         <HowItWorksPanel />
