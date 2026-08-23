@@ -18,12 +18,39 @@ export interface SharedSnapshot {
 
 const POLL_MS = 8_000
 
+function env(name: string): string {
+  try {
+    return (
+      (typeof import.meta !== 'undefined' &&
+        (import.meta.env[name] as string | undefined)?.trim()) ||
+      ''
+    )
+  } catch {
+    return ''
+  }
+}
+
+/** Prefer Supabase Edge Function, then VITE_SYNC_URL, then local Vite /api/sync. */
 function syncUrl(): string {
-  const custom =
-    (typeof import.meta !== 'undefined' &&
-      (import.meta.env.VITE_SYNC_URL as string | undefined)?.trim()) ||
-    ''
+  const supabaseUrl = env('VITE_SUPABASE_URL').replace(/\/$/, '')
+  if (supabaseUrl) return `${supabaseUrl}/functions/v1/sync`
+
+  const custom = env('VITE_SYNC_URL')
   return custom || '/api/sync'
+}
+
+function syncHeaders(method: 'GET' | 'PUT'): HeadersInit {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  }
+  if (method === 'PUT') headers['Content-Type'] = 'application/json'
+
+  const anon = env('VITE_SUPABASE_ANON_KEY')
+  if (anon && env('VITE_SUPABASE_URL')) {
+    headers.apikey = anon
+    headers.Authorization = `Bearer ${anon}`
+  }
+  return headers
 }
 
 export async function pullSharedSnapshot(): Promise<SharedSnapshot | null> {
@@ -31,7 +58,7 @@ export async function pullSharedSnapshot(): Promise<SharedSnapshot | null> {
     const res = await fetch(syncUrl(), {
       method: 'GET',
       cache: 'no-store',
-      headers: { Accept: 'application/json' },
+      headers: syncHeaders('GET'),
     })
     if (!res.ok) return null
     return (await res.json()) as SharedSnapshot
@@ -45,7 +72,7 @@ export async function pushSharedSnapshot(
 ) {
   const res = await fetch(syncUrl(), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: syncHeaders('PUT'),
     body: JSON.stringify({
       ...snapshot,
       updatedAt: snapshot.updatedAt || new Date().toISOString(),
