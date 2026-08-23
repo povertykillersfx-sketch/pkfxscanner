@@ -3,7 +3,7 @@
 # Deploy functions: npx supabase functions deploy sync
 #                   npx supabase functions deploy health
 
-project_id = "pkfxscanner"
+project_id = "cojgoldwueewzdwnzinr"
 
 [api]
 enabled = true
