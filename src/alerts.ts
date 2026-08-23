@@ -484,8 +484,11 @@ export function analyzeMarket(
 /**
  * Sessions that have already opened in the current forex day
  * (from the most recent Sydney 22:00 UTC open through now).
+ * New alerts are weekdays only (Mon–Fri; Sunday after Sydney open counts).
  */
 export function sessionsDueToday(now = new Date()): MarketSession[] {
+  if (!isAlertWeekday(now)) return []
+
   const cycleStart = sessionOpenUtc('Sydney', now).getTime()
   const due: MarketSession[] = []
 
@@ -498,6 +501,17 @@ export function sessionsDueToday(now = new Date()): MarketSession[] {
 
   due.sort((a, b) => sessionOpenUtc(a, now).getTime() - sessionOpenUtc(b, now).getTime())
   return due.slice(0, MAX_SIGNALS_PER_DAY)
+}
+
+/**
+ * Whether PKFX should create / send AI alerts right now.
+ * Forex week: closed Sat + Sun before Sydney 22:00 UTC; open Sun 22:00 UTC through Fri.
+ */
+export function isAlertWeekday(now = new Date()): boolean {
+  const day = now.getUTCDay() // 0 = Sun … 6 = Sat
+  if (day === 6) return false // Saturday
+  if (day === 0) return now.getUTCHours() >= 22 // Sunday only after Sydney week open
+  return true // Monday–Friday
 }
 
 /** UTC timestamp when this session most recently opened (already started). */
@@ -624,6 +638,7 @@ function writeStored(alerts: Alert[]) {
  * Each due session is scanned independently at that session's open time
  * (candles truncated as-of the open), so Sydney / Asian / London / NY differ.
  * One locked alert per symbol + session + session-date (no mid-session rewrite).
+ * Weekends: no new alerts are created (Sat + Sun before Sydney open).
  */
 export async function syncAlertsForSymbols(symbols: string[], now = new Date()): Promise<Alert[]> {
   const dueSessions = sessionsDueToday(now)
@@ -636,6 +651,19 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
   }
   const stored = readStored().filter((a) => isRecentAlert(a, now, ALERT_HISTORY_DAYS))
 
+  // Weekend: keep history, do not scan or lock new signals
+  if (!isAlertWeekday(now)) {
+    const kept = stored.map((a) => ({ ...a, trending: false }))
+    const next = organizeAlertsForScanner(
+      kept.filter((a) => symbols.includes(a.asset)),
+      symbols,
+      now,
+    )
+    const organizedIds = new Set(next.map((a) => a.id))
+    const preserved = kept.filter((a) => !organizedIds.has(a.id))
+    writeStored([...preserved, ...next])
+    return next
+  }
   const byId = new Map<string, Alert>()
   for (const alert of stored) {
     byId.set(alert.id, alert)
