@@ -12,11 +12,13 @@ import {
 } from './marketData'
 
 /** Locked session signals — one alert per symbol/session/day (levels never rewrite) */
-const ALERTS_KEY = 'pkfx_live_alerts_v13_session_locked'
+const ALERTS_KEY = 'pkfx_live_alerts_v14_live_on_arrival'
 /** Keep past alerts on My Alerts for this many FX trading days (including today). */
 const ALERT_HISTORY_TRADING_DAYS = 5
 /** Minutes into a session used for the opening scan snapshot. */
 const SESSION_SCAN_GRACE_MIN = 10
+/** Extra minutes after grace where a session still locks to live arrival price. */
+const LIVE_ARRIVAL_BUFFER_MIN = 20
 
 function utcDateKey(d = new Date()): string {
   return d.toISOString().slice(0, 10)
@@ -317,8 +319,8 @@ function readTimeframe(candles: Candle[], lookbackBars: number): TfRead {
 }
 
 /**
- * Entry at the session scan snapshot = last 15m close as-of that session open.
- * Optional spot is only used when it sits on that same truncated bar series.
+ * Entry = market price at lock time (live arrival or session snapshot).
+ * Caller must pass the correct spot for that lock mode.
  */
 function entryFrom15m(
   m15: Candle[],
@@ -343,14 +345,9 @@ function entryFrom15m(
   const microSwingHigh = Math.max(...recent.map((c) => c.high))
   const microSwingLow = Math.min(...recent.map((c) => c.low))
 
-  // Entry is the session-snapshot close (already truncated before analyze)
-  let market = last.close
-  if (marketPrice != null && Number.isFinite(marketPrice)) {
-    // Only accept spot if it matches this snapshot bar (not a later live quote)
-    if (Math.abs(marketPrice - last.close) / Math.max(Math.abs(last.close), 1e-9) < 0.0005) {
-      market = marketPrice
-    }
-  }
+  // Prefer the lock-time spot (live when alert arrives, or session snapshot when backfilling)
+  const market =
+    marketPrice != null && Number.isFinite(marketPrice) ? marketPrice : last.close
 
   const stretch = Math.abs(market - ema21)
   const awaitingPullback = stretch > rawAtr * 0.9
@@ -419,7 +416,7 @@ export interface MarketSignal {
 /**
  * Multi-timeframe signal:
  * - Direction: 4H ∧ 1H preferred; stronger TF only when mixed
- * - Entry: session-snapshot market close (frozen at lock)
+ * - Entry: market price at lock (live on arrival, or session snapshot when backfilling)
  * - SL/TP: 1R stop, TP1 at 1:1, TP2 at 1:2 from that entry
  */
 export function analyzeMultiTimeframe(
@@ -617,8 +614,7 @@ function truncateCandles(candles: Candle[], asOfMs: number): Candle[] {
 
 /**
  * Snapshot the MTF feed as it looked at a session's scan time (open + grace).
- * Entry/SL/TP always come from that frozen snapshot — never from a later live quote.
- * Each session has its own as-of time, so Sydney / Asian / London / NY levels differ.
+ * Used when backfilling older sessions so each keeps its own historical levels.
  */
 function feedAsOfSession(feed: MultiTimeframeFeed, asOfMs: number): MultiTimeframeFeed {
   const m15Candles = truncateCandles(feed.m15.candles, asOfMs)
@@ -639,15 +635,61 @@ function feedAsOfSession(feed: MultiTimeframeFeed, asOfMs: number): MultiTimefra
   }
 }
 
+/** Pin last 15m close to live spot so entry matches the chart when the alert arrives. */
+function feedAtLiveArrival(feed: MultiTimeframeFeed): MultiTimeframeFeed {
+  const liveSpot =
+    feed.spot ??
+    feed.m15.candles[feed.m15.candles.length - 1]?.close ??
+    feed.h1.candles[feed.h1.candles.length - 1]?.close
+  if (liveSpot == null || !Number.isFinite(liveSpot)) return feed
+
+  const m15 = feed.m15.candles.length
+    ? (() => {
+        const candles = feed.m15.candles.map((c) => ({ ...c }))
+        const last = candles[candles.length - 1]!
+        last.close = liveSpot
+        last.high = Math.max(last.high, liveSpot)
+        last.low = Math.min(last.low, liveSpot)
+        return candles
+      })()
+    : feed.m15.candles
+
+  return {
+    ...feed,
+    spot: liveSpot,
+    m15: { ...feed.m15, candles: m15, spot: liveSpot },
+    h1: { ...feed.h1, spot: liveSpot },
+    h4: { ...feed.h4, spot: liveSpot },
+  }
+}
+
+/**
+ * Use live market price when this alert is arriving now:
+ * - the current/latest due session, or
+ * - any session still inside its open arrival window
+ * Older missed sessions are backfilled from their open snapshot (so they differ).
+ */
+function shouldLockToLiveArrival(
+  session: MarketSession,
+  now: Date,
+  latestSession: MarketSession | undefined,
+): boolean {
+  if (latestSession && session === latestSession) return true
+  const openMs = sessionOpenUtc(session, now).getTime()
+  const ageMin = (now.getTime() - openMs) / 60_000
+  return ageMin >= 0 && ageMin <= SESSION_SCAN_GRACE_MIN + LIVE_ARRIVAL_BUFFER_MIN
+}
+
 function createSignal(
   asset: string,
   session: MarketSession,
   date: string,
   now: Date,
   analysis: MarketSignal,
+  options?: { noticedAt?: Date },
 ): Alert {
   const openAt = sessionOpenUtc(session, now)
-  const noticed = new Date(openAt)
+  const noticed = options?.noticedAt ? new Date(options.noticedAt) : new Date(openAt)
   if (noticed.getTime() > now.getTime()) {
     noticed.setTime(now.getTime())
   }
@@ -723,9 +765,9 @@ function writeStored(alerts: Alert[]) {
 
 /**
  * Sync AI alerts for scanner symbols using multi-timeframe live data.
- * Each due session is scanned independently at that session's open (+ grace).
- * Once an alert is locked, entry / SL / TP never change — even if price moves
- * or sync runs again. Sydney / Asian / London / NY each get their own snapshot.
+ * - Current/arriving session: entry = live market price when the alert is created
+ * - Older missed sessions: backfilled from that session's open snapshot (so levels differ)
+ * - Once locked, entry / SL / TP never change — even if price moves later
  * Weekends: no new alerts are created (Sat + Sun before Sydney open).
  */
 export async function syncAlertsForSymbols(symbols: string[], now = new Date()): Promise<Alert[]> {
@@ -816,16 +858,22 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
           continue
         }
 
-        // Independent market scan as-of this session's open (not "now")
-        const asOfMs = sessionScanAsOfMs(session, now)
-        const sessionFeed = feedAsOfSession(feed, asOfMs)
+        const liveArrival = shouldLockToLiveArrival(session, now, latestSession)
+        const sessionFeed = liveArrival
+          ? feedAtLiveArrival(feed)
+          : feedAsOfSession(feed, sessionScanAsOfMs(session, now))
         if (sessionFeed.m15.candles.length < 20 || sessionFeed.spot == null) continue
 
         const analysis = analyzeMultiTimeframe(asset, session, sessionFeed)
         const openLabel = sessionOpenUtc(session, now).toISOString().slice(11, 16)
-        analysis.aiNote = `${analysis.aiNote} Locked at ${session} open (~${openLabel} UTC) — entry/SL/TP fixed.`
+        analysis.aiNote = liveArrival
+          ? `${analysis.aiNote} Locked to live market on arrival (${session}, open ~${openLabel} UTC) — entry/SL/TP fixed.`
+          : `${analysis.aiNote} Backfilled from ${session} open (~${openLabel} UTC) — entry/SL/TP fixed.`
 
-        const signal = createSignal(asset, session, sessionDate, now, analysis)
+        const signal = createSignal(asset, session, sessionDate, now, analysis, {
+          // Arrival locks timestamp when the alert is actually created
+          noticedAt: liveArrival ? now : undefined,
+        })
         bySessionKey.set(key, signal)
         byId.set(signal.id, signal)
       }
