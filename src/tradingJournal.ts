@@ -164,3 +164,84 @@ export function journalStats(entries: JournalEntry[]) {
   const winRate = decided > 0 ? Math.round((wins / decided) * 100) : 0
   return { total: entries.length, wins, losses, be, winRate }
 }
+
+/** Parse a stored P/L string into a signed number (NaN if empty/invalid). */
+export function parsePnlAmount(amount: string): number {
+  const cleaned = amount.trim().replace(/[^\d.+-]/g, '')
+  if (!cleaned || cleaned === '+' || cleaned === '-') return Number.NaN
+  const n = Number(cleaned)
+  return Number.isFinite(n) ? n : Number.NaN
+}
+
+export function formatPnlTotal(total: number, currency: AccountCurrency): string {
+  const prefix = currencyPrefix(currency)
+  const abs = Math.abs(total)
+  const body = Number.isInteger(abs) ? String(abs) : abs.toFixed(2).replace(/\.?0+$/, '')
+  if (total < 0) return `-${prefix}${body}`
+  if (total > 0) return `+${prefix}${body}`
+  return `${prefix}${body}`
+}
+
+export interface DayPnlTotal {
+  currency: AccountCurrency
+  total: number
+}
+
+export interface JournalDayGroup {
+  date: string
+  label: string
+  entries: JournalEntry[]
+  totals: DayPnlTotal[]
+}
+
+function formatJournalDayLabel(dateKey: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey)
+  if (!match) return dateKey || 'Unknown date'
+  const y = Number(match[1])
+  const m = Number(match[2])
+  const d = Number(match[3])
+  const date = new Date(y, m - 1, d)
+  if (Number.isNaN(date.getTime())) return dateKey
+  return date.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+/** Group entries by trade date (newest first) with per-currency day P/L totals. */
+export function groupJournalByDay(entries: JournalEntry[]): JournalDayGroup[] {
+  const order: string[] = []
+  const map = new Map<string, JournalEntry[]>()
+
+  for (const entry of entries) {
+    const key = entry.date || 'unknown'
+    if (!map.has(key)) {
+      map.set(key, [])
+      order.push(key)
+    }
+    map.get(key)!.push(entry)
+  }
+
+  return order.map((date) => {
+    const dayEntries = map.get(date) || []
+    const totalsMap = new Map<AccountCurrency, number>()
+    for (const entry of dayEntries) {
+      const n = parsePnlAmount(entry.pnl)
+      if (!Number.isFinite(n)) continue
+      totalsMap.set(entry.currency, (totalsMap.get(entry.currency) || 0) + n)
+    }
+    const currencyOrder: AccountCurrency[] = ['USD', 'ZAR', 'GBP', 'EUR']
+    const totals: DayPnlTotal[] = currencyOrder
+      .filter((c) => totalsMap.has(c))
+      .map((currency) => ({ currency, total: totalsMap.get(currency)! }))
+
+    return {
+      date,
+      label: formatJournalDayLabel(date),
+      entries: dayEntries,
+      totals,
+    }
+  })
+}

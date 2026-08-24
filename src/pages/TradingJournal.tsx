@@ -8,6 +8,8 @@ import {
   currencyPrefix,
   deleteJournalEntry,
   formatPnl,
+  formatPnlTotal,
+  groupJournalByDay,
   journalStats,
   listJournalEntries,
   type AccountCurrency,
@@ -73,6 +75,7 @@ export function TradingJournal() {
   }, [])
 
   const stats = useMemo(() => journalStats(entries), [entries])
+  const dayGroups = useMemo(() => groupJournalByDay(entries), [entries])
 
   function setResult(result: TradeResult) {
     setForm((f) => ({
@@ -353,37 +356,78 @@ export function TradingJournal() {
             <p className="text-muted">Click New trade to log your first setup.</p>
           </div>
         ) : (
-          <div className="journal-entries">
-            {entries.map((entry) => (
-              <article key={entry.id} className="journal-entry">
-                <div className="journal-entry-top">
-                  <div className="journal-entry-title">
-                    <strong>{entry.symbol}</strong>
-                    <span className={`journal-side side-${entry.side.toLowerCase()}`}>{entry.side}</span>
-                    <span className={`journal-result result-${entry.result.toLowerCase()}`}>{entry.result}</span>
+          <div className="journal-days">
+            {dayGroups.map((day) => {
+              const dayPnlClass =
+                day.totals.length === 0
+                  ? ''
+                  : day.totals.every((t) => t.total > 0)
+                    ? 'is-win'
+                    : day.totals.every((t) => t.total < 0)
+                      ? 'is-loss'
+                      : day.totals.every((t) => t.total === 0)
+                        ? ''
+                        : 'is-mixed'
+
+              return (
+                <section key={day.date} className="journal-day" aria-label={day.label}>
+                  <header className="journal-day-head">
+                    <div className="journal-day-title">
+                      <h3>{day.label}</h3>
+                      <span className="text-muted">
+                        {day.entries.length} trade{day.entries.length === 1 ? '' : 's'}
+                      </span>
+                    </div>
+                    <div className={`journal-day-pnl ${dayPnlClass}`}>
+                      <span className="journal-day-pnl-label">Day P/L</span>
+                      <strong>
+                        {day.totals.length === 0
+                          ? '—'
+                          : day.totals.map((t) => formatPnlTotal(t.total, t.currency)).join(' · ')}
+                      </strong>
+                    </div>
+                  </header>
+
+                  <div className="journal-entries">
+                    {day.entries.map((entry) => (
+                      <article key={entry.id} className="journal-entry">
+                        <div className="journal-entry-top">
+                          <div className="journal-entry-title">
+                            <strong>{entry.symbol}</strong>
+                            <span className={`journal-side side-${entry.side.toLowerCase()}`}>
+                              {entry.side}
+                            </span>
+                            <span className={`journal-result result-${entry.result.toLowerCase()}`}>
+                              {entry.result}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-ghost journal-delete"
+                            aria-label="Delete entry"
+                            onClick={() => onDelete(entry.id)}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                        <div className="journal-entry-meta">
+                          <span>Entry {entry.entry}</span>
+                          {entry.exit ? <span>Exit {entry.exit}</span> : null}
+                          {entry.stopLoss ? <span>SL {entry.stopLoss}</span> : null}
+                          {entry.takeProfit ? <span>TP {entry.takeProfit}</span> : null}
+                          {entry.pnl ? (
+                            <span className="journal-pnl">
+                              P/L {formatPnl(entry.pnl, entry.currency)}
+                            </span>
+                          ) : null}
+                        </div>
+                        {entry.notes ? <p className="journal-entry-notes">{entry.notes}</p> : null}
+                      </article>
+                    ))}
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-ghost journal-delete"
-                    aria-label="Delete entry"
-                    onClick={() => onDelete(entry.id)}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-                <div className="journal-entry-meta">
-                  <span>{entry.date}</span>
-                  <span>Entry {entry.entry}</span>
-                  {entry.exit ? <span>Exit {entry.exit}</span> : null}
-                  {entry.stopLoss ? <span>SL {entry.stopLoss}</span> : null}
-                  {entry.takeProfit ? <span>TP {entry.takeProfit}</span> : null}
-                  {entry.pnl ? (
-                    <span className="journal-pnl">P/L {formatPnl(entry.pnl, entry.currency)}</span>
-                  ) : null}
-                </div>
-                {entry.notes ? <p className="journal-entry-notes">{entry.notes}</p> : null}
-              </article>
-            ))}
+                </section>
+              )
+            })}
           </div>
         )}
       </section>

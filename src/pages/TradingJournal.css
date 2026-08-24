@@ -189,6 +189,81 @@
   margin: 0;
 }
 
+.journal-days {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.journal-day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.journal-day-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  padding: 0.15rem 0.15rem 0.55rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.journal-day-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.journal-day-title h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 750;
+  color: var(--text);
+}
+
+.journal-day-title .text-muted {
+  font-size: 0.8rem;
+}
+
+.journal-day-pnl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.12rem;
+  text-align: right;
+}
+
+.journal-day-pnl-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.journal-day-pnl strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.journal-day-pnl.is-win strong {
+  color: var(--bullish);
+}
+
+.journal-day-pnl.is-loss strong {
+  color: var(--bearish);
+}
+
+.journal-day-pnl.is-mixed strong {
+  color: var(--text);
+}
+
 .journal-entries {
   display: flex;
   flex-direction: column;
