@@ -12,11 +12,16 @@ import {
 } from './marketData'
 
 /** Locked session signals — one alert per symbol/session/day (does not keep rewriting levels) */
-const ALERTS_KEY = 'pkfx_live_alerts_v10_trading_days'
+const ALERTS_KEY = 'pkfx_live_alerts_v11_near_market'
 /** Keep past alerts on My Alerts for this many FX trading days (including today). */
 const ALERT_HISTORY_TRADING_DAYS = 5
 /** Minutes into a session used for the opening scan snapshot. */
 const SESSION_SCAN_GRACE_MIN = 10
+/**
+ * If an alert is locked more than this many minutes after the session scan window,
+ * use the live market price at lock time (so entry matches what traders see now).
+ */
+const LATE_LOCK_AFTER_SCAN_MIN = 20
 
 function utcDateKey(d = new Date()): string {
   return d.toISOString().slice(0, 10)
@@ -117,31 +122,31 @@ function levelBudget(asset: string, entry: number, atr15: number): {
   step: number
 } {
   const px = Math.abs(entry) || 1
-  // Soft ATR clip (~0.08% of price) so daily/coarse bars cannot explode distances
-  const atrCap = px * 0.0008
-  let step = Math.min(Math.max(atr15, px * 0.00012), atrCap)
+  // Soft ATR clip (~0.05% of price) so daily/coarse bars cannot explode distances
+  const atrCap = px * 0.0005
+  let step = Math.min(Math.max(atr15, px * 0.0001), atrCap)
 
-  // Instrument overrides (absolute price units)
+  // Instrument overrides (absolute price units) — kept tight to live price
   switch (asset) {
     case 'USDJPY':
-      step = Math.min(Math.max(step, 0.04), 0.18)
-      return { tick: 0.01, maxStop: 0.25, maxTp1: 0.4, maxTp2: 0.75, step }
+      step = Math.min(Math.max(step, 0.03), 0.12)
+      return { tick: 0.01, maxStop: 0.18, maxTp1: 0.28, maxTp2: 0.5, step }
     case 'USDZAR':
-      step = Math.min(Math.max(step, 0.04), 0.2)
-      return { tick: 0.01, maxStop: 0.35, maxTp1: 0.55, maxTp2: 1.0, step }
+      step = Math.min(Math.max(step, 0.03), 0.14)
+      return { tick: 0.01, maxStop: 0.25, maxTp1: 0.4, maxTp2: 0.7, step }
     case 'GOLD':
-      step = Math.min(Math.max(step, 1.2), 4)
-      return { tick: 0.1, maxStop: 8, maxTp1: 14, maxTp2: 28, step }
+      step = Math.min(Math.max(step, 0.8), 2.5)
+      return { tick: 0.1, maxStop: 5, maxTp1: 8, maxTp2: 16, step }
     case 'US30':
-      step = Math.min(Math.max(step, 40), 120)
-      return { tick: 1, maxStop: 180, maxTp1: 280, maxTp2: 520, step }
+      step = Math.min(Math.max(step, 25), 80)
+      return { tick: 1, maxStop: 120, maxTp1: 180, maxTp2: 320, step }
     case 'NASDAQ':
-      step = Math.min(Math.max(step, 30), 100)
-      return { tick: 1, maxStop: 150, maxTp1: 240, maxTp2: 450, step }
+      step = Math.min(Math.max(step, 20), 70)
+      return { tick: 1, maxStop: 100, maxTp1: 160, maxTp2: 280, step }
     default:
-      // Majors / crosses quoted to 4–5 decimals
-      step = Math.min(Math.max(step, 0.00035), 0.0012)
-      return { tick: 0.0001, maxStop: 0.0025, maxTp1: 0.004, maxTp2: 0.0075, step }
+      // Majors / crosses quoted to 4–5 decimals (~8–20 pips stop)
+      step = Math.min(Math.max(step, 0.00025), 0.0008)
+      return { tick: 0.0001, maxStop: 0.0018, maxTp1: 0.0028, maxTp2: 0.005, step }
   }
 }
 
@@ -306,8 +311,8 @@ function readTimeframe(candles: Candle[], lookbackBars: number): TfRead {
 }
 
 /**
- * Entry at alert release = last traded 15m close (a price the market printed).
- * Optional spot is only used when it sits inside the recent OHLC range.
+ * Entry at alert release = live market spot when the alert is locked.
+ * Uses last 15m close only as fallback; optional spot must be near that print.
  */
 function entryFrom15m(
   m15: Candle[],
@@ -326,20 +331,24 @@ function entryFrom15m(
   const last = window[window.length - 1]!
   const slow = ema(closes, 21)
   const ema21 = slow[slow.length - 1]!
-  const rawAtr = Math.max(atr(window, 14), Math.abs(last.close) * 0.00015)
-  const recent = window.slice(-8)
+  const rawAtr = Math.max(atr(window, 14), Math.abs(last.close) * 0.00012)
+  // Last ~1 hour of 15m bars — keeps SL structure near price, not a multi-hour range
+  const recent = window.slice(-4)
   const microSwingHigh = Math.max(...recent.map((c) => c.high))
   const microSwingLow = Math.min(...recent.map((c) => c.low))
 
-  // Traded range over ~24h of 15m bars (or available history)
   const dayBars = m15.slice(-96)
   const dayHigh = Math.max(...dayBars.map((c) => c.high))
   const dayLow = Math.min(...dayBars.map((c) => c.low))
 
   let market = last.close
   if (marketPrice != null && Number.isFinite(marketPrice)) {
-    const pad = Math.max((dayHigh - dayLow) * 0.01, Math.abs(last.close) * 0.0003)
+    const pad = Math.max((dayHigh - dayLow) * 0.05, Math.abs(last.close) * 0.002)
+    // Prefer live/chart spot whenever it is plausibly the same market
     if (marketPrice >= dayLow - pad && marketPrice <= dayHigh + pad) {
+      market = marketPrice
+    } else if (Math.abs(marketPrice - last.close) / Math.max(Math.abs(last.close), 1e-9) < 0.015) {
+      // Within 1.5% — still use live spot (common for futures vs spot venues)
       market = marketPrice
     }
   }
@@ -377,24 +386,32 @@ function levelsFromHtf(
   // Prefer a stop just beyond the last few 15m bars, but never beyond maxStop
   const structureRisk =
     sentiment === 'Bullish'
-      ? Math.max(entry - m15SwingLow, step * 0.6)
-      : Math.max(m15SwingHigh - entry, step * 0.6)
+      ? Math.max(entry - m15SwingLow, step * 0.55)
+      : Math.max(m15SwingHigh - entry, step * 0.55)
 
-  const risk = clampDist(structureRisk, step * 0.55, maxStop)
+  const risk = clampDist(structureRisk, step * 0.5, maxStop)
   const rev1 = entry - dir * risk
-  const rev2 = entry - dir * clampDist(risk * 1.35, risk * 1.1, maxStop * 1.15)
+  const rev2 = entry - dir * clampDist(risk * 1.25, risk * 1.08, maxStop)
 
   // Targets from R multiples, hard-capped near market
-  let tp1 = entry + dir * clampDist(risk * 1.5, step * 0.9, maxTp1)
-  let tp2 = entry + dir * clampDist(risk * 2.6, Math.abs(tp1 - entry) * 1.35, maxTp2)
+  let tp1 = entry + dir * clampDist(risk * 1.35, step * 0.85, maxTp1)
+  let tp2 = entry + dir * clampDist(risk * 2.2, Math.abs(tp1 - entry) * 1.25, maxTp2)
 
   // Keep ordering + side
-  if (dir * (tp1 - entry) <= 0) tp1 = entry + dir * Math.min(maxTp1, step * 1.2)
-  if (dir * (tp2 - tp1) <= 0) tp2 = tp1 + dir * Math.min(Math.max(maxTp2 - Math.abs(tp1 - entry), step), step * 1.4)
+  if (dir * (tp1 - entry) <= 0) tp1 = entry + dir * Math.min(maxTp1, step * 1.15)
+  if (dir * (tp2 - tp1) <= 0) tp2 = tp1 + dir * Math.min(Math.max(maxTp2 - Math.abs(tp1 - entry), step), step * 1.25)
+
+  // Final safety: never publish levels far from the live entry
+  const softCapStop = maxStop * 1.05
+  const softCapTp2 = maxTp2 * 1.05
+  const safeRev1 = entry - dir * Math.min(Math.abs(entry - rev1), softCapStop)
+  const safeRev2 = entry - dir * Math.min(Math.abs(entry - rev2), softCapStop * 1.1)
+  const safeTp1 = entry + dir * Math.min(Math.abs(tp1 - entry), maxTp1)
+  const safeTp2 = entry + dir * Math.min(Math.abs(tp2 - entry), softCapTp2)
 
   return {
-    targets: [formatPrice(asset, tp1), formatPrice(asset, tp2)],
-    reversals: [formatPrice(asset, rev1), formatPrice(asset, rev2)],
+    targets: [formatPrice(asset, safeTp1), formatPrice(asset, safeTp2)],
+    reversals: [formatPrice(asset, safeRev1), formatPrice(asset, safeRev2)],
   }
 }
 
@@ -458,6 +475,7 @@ export function analyzeMultiTimeframe(
 
   const lastM15 = feed.m15.candles[feed.m15.candles.length - 1]?.close
   const spot = feed.spot != null && Number.isFinite(feed.spot) ? feed.spot : undefined
+  // Entry must be the live/chart spot at release — never a stale mid-bar guess
   const marketAtRelease = spot ?? lastM15
 
   const {
@@ -494,21 +512,24 @@ export function analyzeMultiTimeframe(
         ? 'TradingView spot (OHLC fallback)'
         : 'DEMO / synthetic — not live market'
 
+  const entryLabel = formatPrice(asset, entry)
+  const marketLabel = formatPrice(asset, market)
   const entryHint = awaitingPullback
-    ? `market entry ${formatPrice(asset, entry)} (extended — wait pullback for better fill)`
-    : `entry ${formatPrice(asset, entry)}`
-  const aiNote = `PKFX MTF on ${asset} (${session}): 4H ${h4.sentiment.toLowerCase()} (score ${h4.score > 0 ? '+' : ''}${h4.score}, ${h4.changePct >= 0 ? '+' : ''}${h4.changePct.toFixed(2)}%, RSI ${h4.rsi.toFixed(0)}) → 1H ${h1.sentiment.toLowerCase()} (score ${h1.score > 0 ? '+' : ''}${h1.score}) → ${entryHint} · market ${formatPrice(asset, market)}. ${bias} · conviction ${conviction}; SL/TP capped near market (session-scale). Feed: ${src}.`
+    ? `market entry ${entryLabel} (extended — wait pullback for better fill)`
+    : `entry ${entryLabel}`
+  const aiNote = `PKFX MTF on ${asset} (${session}): 4H ${h4.sentiment.toLowerCase()} (score ${h4.score > 0 ? '+' : ''}${h4.score}, ${h4.changePct >= 0 ? '+' : ''}${h4.changePct.toFixed(2)}%, RSI ${h4.rsi.toFixed(0)}) → 1H ${h1.sentiment.toLowerCase()} (score ${h1.score > 0 ? '+' : ''}${h1.score}) → ${entryHint} · market ${marketLabel}. ${bias} · conviction ${conviction}; SL/TP capped near live entry. Feed: ${src}.`
 
   return {
     sentiment,
     strategy,
-    entry: formatPrice(asset, entry),
+    entry: entryLabel,
     targets,
     reversals,
     aiNote,
     live: feed.live,
     changePct: m15Read.changePct,
-    spot: formatPrice(asset, market),
+    // Keep spot identical to entry so the card never shows a mismatched "market"
+    spot: entryLabel,
     dataSource: feed.source,
   }
 }
@@ -607,11 +628,41 @@ function truncateCandles(candles: Candle[], asOfMs: number): Candle[] {
 }
 
 /**
- * Snapshot the MTF feed as it looked at a session's scan time.
- * Spot/entry always come from the last 15m close at asOf — never a later live quote
- * (that invents prices the market had not printed at session open).
+ * Snapshot the MTF feed for a session scan.
+ * Near session open: truncate to as-of so levels reflect that open.
+ * Late lock: keep the live feed so entry/SL/TP match the price when the alert arrives.
  */
-function feedAsOfSession(feed: MultiTimeframeFeed, asOfMs: number, _nowMs: number): MultiTimeframeFeed {
+function feedForSessionLock(
+  feed: MultiTimeframeFeed,
+  asOfMs: number,
+  nowMs: number,
+): { sessionFeed: MultiTimeframeFeed; lateLock: boolean } {
+  const lateLock = nowMs - asOfMs > LATE_LOCK_AFTER_SCAN_MIN * 60 * 1000
+  if (lateLock) {
+    // Live spot at lock time — pin last 15m close so entry === current market
+    const liveSpot =
+      feed.spot ??
+      feed.m15.candles[feed.m15.candles.length - 1]?.close ??
+      feed.h1.candles[feed.h1.candles.length - 1]?.close
+    if (liveSpot == null || !Number.isFinite(liveSpot)) {
+      return { sessionFeed: feed, lateLock: true }
+    }
+    return {
+      lateLock: true,
+      sessionFeed: {
+        ...feed,
+        spot: liveSpot,
+        m15: {
+          ...feed.m15,
+          candles: pinLastClose(feed.m15.candles, liveSpot),
+          spot: liveSpot,
+        },
+        h1: { ...feed.h1, spot: liveSpot },
+        h4: { ...feed.h4, spot: liveSpot },
+      },
+    }
+  }
+
   const m15Candles = truncateCandles(feed.m15.candles, asOfMs)
   const h1Candles = truncateCandles(feed.h1.candles, asOfMs)
   const h4Candles = truncateCandles(feed.h4.candles, asOfMs)
@@ -621,13 +672,26 @@ function feedAsOfSession(feed: MultiTimeframeFeed, asOfMs: number, _nowMs: numbe
     feed.spot
 
   return {
-    m15: { ...feed.m15, candles: m15Candles, spot: lastClose },
-    h1: { ...feed.h1, candles: h1Candles, spot: lastClose },
-    h4: { ...feed.h4, candles: h4Candles, spot: lastClose },
-    live: feed.live,
-    source: feed.source,
-    spot: lastClose,
+    lateLock: false,
+    sessionFeed: {
+      m15: { ...feed.m15, candles: m15Candles, spot: lastClose },
+      h1: { ...feed.h1, candles: h1Candles, spot: lastClose },
+      h4: { ...feed.h4, candles: h4Candles, spot: lastClose },
+      live: feed.live,
+      source: feed.source,
+      spot: lastClose,
+    },
   }
+}
+
+function pinLastClose(candles: Candle[], spot: number): Candle[] {
+  if (!candles.length) return candles
+  const out = candles.map((c) => ({ ...c }))
+  const last = out[out.length - 1]!
+  last.close = spot
+  last.high = Math.max(last.high, spot)
+  last.low = Math.min(last.low, spot)
+  return out
 }
 
 function createSignal(
@@ -636,9 +700,10 @@ function createSignal(
   date: string,
   now: Date,
   analysis: MarketSignal,
+  options?: { noticedAt?: Date },
 ): Alert {
   const openAt = sessionOpenUtc(session, now)
-  const noticed = new Date(openAt)
+  const noticed = options?.noticedAt ? new Date(options.noticedAt) : new Date(openAt)
   if (noticed.getTime() > now.getTime()) {
     noticed.setTime(now.getTime())
   }
@@ -683,8 +748,10 @@ function writeStored(alerts: Alert[]) {
 
 /**
  * Sync AI alerts for scanner symbols using multi-timeframe live data.
- * Each due session is scanned independently at that session's open time
- * (candles truncated as-of the open), so Sydney / Asian / London / NY differ.
+ * Each due session is scanned near that session's open when possible.
+ * If the alert is locked late (user opens the app after the scan window),
+ * entry / SL / TP use the live market price at lock time so levels match
+ * what traders see on the chart when the alert arrives.
  * One locked alert per symbol + session + session-date (no mid-session rewrite).
  * Weekends: no new alerts are created (Sat + Sun before Sydney open).
  */
@@ -762,16 +829,21 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
         const key = `${asset}|${session}|${sessionDate}`
         if (bySessionKey.has(key)) continue
 
-        // Independent market scan as-of this session's open (not "now" for every session)
+        // Near open: scan as-of session. Late lock: use live price when the alert arrives.
         const asOfMs = sessionScanAsOfMs(session, now)
-        const sessionFeed = feedAsOfSession(feed, asOfMs, nowMs)
+        const { sessionFeed, lateLock } = feedForSessionLock(feed, asOfMs, nowMs)
         if (sessionFeed.m15.candles.length < 20 || sessionFeed.spot == null) continue
 
         const analysis = analyzeMultiTimeframe(asset, session, sessionFeed)
         const openLabel = sessionOpenUtc(session, now).toISOString().slice(11, 16)
-        analysis.aiNote = `${analysis.aiNote} Scanned at ${session} open (~${openLabel} UTC).`
+        analysis.aiNote = lateLock
+          ? `${analysis.aiNote} Locked at live market (session ${session} opened ~${openLabel} UTC).`
+          : `${analysis.aiNote} Scanned at ${session} open (~${openLabel} UTC).`
 
-        const signal = createSignal(asset, session, sessionDate, now, analysis)
+        const signal = createSignal(asset, session, sessionDate, now, analysis, {
+          // Late locks timestamp when the alert actually arrives so levels match that price
+          noticedAt: lateLock ? now : undefined,
+        })
         bySessionKey.set(key, signal)
         byId.set(signal.id, signal)
       }

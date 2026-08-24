@@ -439,6 +439,37 @@ export interface MultiTimeframeFeed {
   source: MarketSource
 }
 
+/** Assets where Yahoo OHLC venue differs from the in-app TradingView chart. */
+const CHART_SPOT_PREFERRED = new Set(['GOLD', 'US30', 'NASDAQ'])
+
+/**
+ * Choose the entry/spot traders will recognize on the chart.
+ * GOLD/indices: prefer TradingView (matches embedded chart).
+ * FX: adopt TV only when it sits inside recent Yahoo OHLC (same market).
+ */
+function resolveAlertSpot(
+  asset: string,
+  candleSpot: number | undefined,
+  candles: Candle[],
+  tvPrice?: number,
+): number | undefined {
+  const fallback = candleSpot ?? candles[candles.length - 1]?.close
+  if (tvPrice == null || !Number.isFinite(tvPrice)) return fallback
+
+  if (CHART_SPOT_PREFERRED.has(asset)) {
+    return tvPrice
+  }
+
+  const recent = candles.slice(-96)
+  if (recent.length < 4) return fallback ?? tvPrice
+
+  const hi = Math.max(...recent.map((c) => c.high))
+  const lo = Math.min(...recent.map((c) => c.low))
+  const pad = Math.max((hi - lo) * 0.03, Math.abs(tvPrice) * 0.0006)
+  if (tvPrice >= lo - pad && tvPrice <= hi + pad) return tvPrice
+  return fallback
+}
+
 export async function fetchMultiTimeframe(asset: string): Promise<MultiTimeframeFeed> {
   // One 60m pull covers 1H + aggregated 4H (fewer upstream calls → fewer rate limits)
   const [h1raw, m15] = await Promise.all([
@@ -458,25 +489,16 @@ export async function fetchMultiTimeframe(asset: string): Promise<MultiTimeframe
   }
   const h1 = h1raw
 
-  // Spot for alerts = last traded close on the 15m series (a price that bar actually printed)
   const candleSpot = m15.candles[m15.candles.length - 1]?.close ?? h1.spot ?? h4.spot
-  let spot = candleSpot
-
-  // Optional TV cross-check: only adopt if it sits inside recent OHLC range (same market)
+  let tvPrice: number | undefined
   try {
     const tv = await fetchTradingViewQuote(asset)
-    const recent = m15.candles.slice(-96)
-    if (recent.length >= 4) {
-      const hi = Math.max(...recent.map((c) => c.high))
-      const lo = Math.min(...recent.map((c) => c.low))
-      const pad = Math.max((hi - lo) * 0.02, Math.abs(tv.price) * 0.0004)
-      if (tv.price >= lo - pad && tv.price <= hi + pad) {
-        spot = tv.price
-      }
-    }
+    tvPrice = tv.price
   } catch {
-    /* keep candle spot */
+    /* optional */
   }
+
+  const spot = resolveAlertSpot(asset, candleSpot, m15.candles, tvPrice)
 
   const live = h4.live && h1.live && m15.live
   const source: MarketSource = live
@@ -485,11 +507,14 @@ export async function fetchMultiTimeframe(asset: string): Promise<MultiTimeframe
       ? 'synthetic'
       : m15.source
 
-  // Do not pinSpot — preserves real highs/lows so entries stay on traded prices
+  // Pin only the last 15m close to chart-aligned spot so entry = what traders see now
+  const m15Pinned =
+    spot != null && Number.isFinite(spot) ? { ...m15, candles: pinSpot(m15.candles, spot), spot } : { ...m15, spot }
+
   return {
     h4: { ...h4, spot },
     h1: { ...h1, spot },
-    m15: { ...m15, spot },
+    m15: m15Pinned,
     live,
     spot,
     source,
