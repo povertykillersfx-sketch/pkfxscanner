@@ -218,6 +218,11 @@ export function SignUp() {
           Sign Up
         </button>
 
+        <p className="signin-legal">
+          By creating account you agree to our{' '}
+          <a href="#terms">Terms of service</a> and <a href="#privacy">privacy policy</a>
+        </p>
+
         <p className="signin-signup">
           Already have an account? <Link to="/">Sign In</Link>
         </p>

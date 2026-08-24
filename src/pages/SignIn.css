@@ -218,6 +218,26 @@
   margin-bottom: 0.65rem;
 }
 
+.signin-legal {
+  width: 100%;
+  margin: -0.35rem 0 1rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.signin-legal a {
+  color: var(--neon-bright);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.signin-legal a:hover {
+  color: var(--neon-soft);
+}
+
 .signin-signup a {
   color: var(--neon-bright);
   font-weight: 700;
