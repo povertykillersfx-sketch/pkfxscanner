@@ -11,17 +11,12 @@ import {
   type MultiTimeframeFeed,
 } from './marketData'
 
-/** Locked session signals — one alert per symbol/session/day (does not keep rewriting levels) */
-const ALERTS_KEY = 'pkfx_live_alerts_v12_rr_1_2'
+/** Locked session signals — one alert per symbol/session/day (levels never rewrite) */
+const ALERTS_KEY = 'pkfx_live_alerts_v13_session_locked'
 /** Keep past alerts on My Alerts for this many FX trading days (including today). */
 const ALERT_HISTORY_TRADING_DAYS = 5
 /** Minutes into a session used for the opening scan snapshot. */
 const SESSION_SCAN_GRACE_MIN = 10
-/**
- * If an alert is locked more than this many minutes after the session scan window,
- * use the live market price at lock time (so entry matches what traders see now).
- */
-const LATE_LOCK_AFTER_SCAN_MIN = 20
 
 function utcDateKey(d = new Date()): string {
   return d.toISOString().slice(0, 10)
@@ -322,8 +317,8 @@ function readTimeframe(candles: Candle[], lookbackBars: number): TfRead {
 }
 
 /**
- * Entry at alert release = live market spot when the alert is locked.
- * Uses last 15m close only as fallback; optional spot must be near that print.
+ * Entry at the session scan snapshot = last 15m close as-of that session open.
+ * Optional spot is only used when it sits on that same truncated bar series.
  */
 function entryFrom15m(
   m15: Candle[],
@@ -348,18 +343,11 @@ function entryFrom15m(
   const microSwingHigh = Math.max(...recent.map((c) => c.high))
   const microSwingLow = Math.min(...recent.map((c) => c.low))
 
-  const dayBars = m15.slice(-96)
-  const dayHigh = Math.max(...dayBars.map((c) => c.high))
-  const dayLow = Math.min(...dayBars.map((c) => c.low))
-
+  // Entry is the session-snapshot close (already truncated before analyze)
   let market = last.close
   if (marketPrice != null && Number.isFinite(marketPrice)) {
-    const pad = Math.max((dayHigh - dayLow) * 0.05, Math.abs(last.close) * 0.002)
-    // Prefer live/chart spot whenever it is plausibly the same market
-    if (marketPrice >= dayLow - pad && marketPrice <= dayHigh + pad) {
-      market = marketPrice
-    } else if (Math.abs(marketPrice - last.close) / Math.max(Math.abs(last.close), 1e-9) < 0.015) {
-      // Within 1.5% — still use live spot (common for futures vs spot venues)
+    // Only accept spot if it matches this snapshot bar (not a later live quote)
+    if (Math.abs(marketPrice - last.close) / Math.max(Math.abs(last.close), 1e-9) < 0.0005) {
       market = marketPrice
     }
   }
@@ -431,7 +419,7 @@ export interface MarketSignal {
 /**
  * Multi-timeframe signal:
  * - Direction: 4H ∧ 1H preferred; stronger TF only when mixed
- * - Entry: exact market at release
+ * - Entry: session-snapshot market close (frozen at lock)
  * - SL/TP: 1R stop, TP1 at 1:1, TP2 at 1:2 from that entry
  */
 export function analyzeMultiTimeframe(
@@ -628,41 +616,11 @@ function truncateCandles(candles: Candle[], asOfMs: number): Candle[] {
 }
 
 /**
- * Snapshot the MTF feed for a session scan.
- * Near session open: truncate to as-of so levels reflect that open.
- * Late lock: keep the live feed so entry/SL/TP match the price when the alert arrives.
+ * Snapshot the MTF feed as it looked at a session's scan time (open + grace).
+ * Entry/SL/TP always come from that frozen snapshot — never from a later live quote.
+ * Each session has its own as-of time, so Sydney / Asian / London / NY levels differ.
  */
-function feedForSessionLock(
-  feed: MultiTimeframeFeed,
-  asOfMs: number,
-  nowMs: number,
-): { sessionFeed: MultiTimeframeFeed; lateLock: boolean } {
-  const lateLock = nowMs - asOfMs > LATE_LOCK_AFTER_SCAN_MIN * 60 * 1000
-  if (lateLock) {
-    // Live spot at lock time — pin last 15m close so entry === current market
-    const liveSpot =
-      feed.spot ??
-      feed.m15.candles[feed.m15.candles.length - 1]?.close ??
-      feed.h1.candles[feed.h1.candles.length - 1]?.close
-    if (liveSpot == null || !Number.isFinite(liveSpot)) {
-      return { sessionFeed: feed, lateLock: true }
-    }
-    return {
-      lateLock: true,
-      sessionFeed: {
-        ...feed,
-        spot: liveSpot,
-        m15: {
-          ...feed.m15,
-          candles: pinLastClose(feed.m15.candles, liveSpot),
-          spot: liveSpot,
-        },
-        h1: { ...feed.h1, spot: liveSpot },
-        h4: { ...feed.h4, spot: liveSpot },
-      },
-    }
-  }
-
+function feedAsOfSession(feed: MultiTimeframeFeed, asOfMs: number): MultiTimeframeFeed {
   const m15Candles = truncateCandles(feed.m15.candles, asOfMs)
   const h1Candles = truncateCandles(feed.h1.candles, asOfMs)
   const h4Candles = truncateCandles(feed.h4.candles, asOfMs)
@@ -672,26 +630,13 @@ function feedForSessionLock(
     feed.spot
 
   return {
-    lateLock: false,
-    sessionFeed: {
-      m15: { ...feed.m15, candles: m15Candles, spot: lastClose },
-      h1: { ...feed.h1, candles: h1Candles, spot: lastClose },
-      h4: { ...feed.h4, candles: h4Candles, spot: lastClose },
-      live: feed.live,
-      source: feed.source,
-      spot: lastClose,
-    },
+    m15: { ...feed.m15, candles: m15Candles, spot: lastClose },
+    h1: { ...feed.h1, candles: h1Candles, spot: lastClose },
+    h4: { ...feed.h4, candles: h4Candles, spot: lastClose },
+    live: feed.live,
+    source: feed.source,
+    spot: lastClose,
   }
-}
-
-function pinLastClose(candles: Candle[], spot: number): Candle[] {
-  if (!candles.length) return candles
-  const out = candles.map((c) => ({ ...c }))
-  const last = out[out.length - 1]!
-  last.close = spot
-  last.high = Math.max(last.high, spot)
-  last.low = Math.min(last.low, spot)
-  return out
 }
 
 function createSignal(
@@ -700,10 +645,9 @@ function createSignal(
   date: string,
   now: Date,
   analysis: MarketSignal,
-  options?: { noticedAt?: Date },
 ): Alert {
   const openAt = sessionOpenUtc(session, now)
-  const noticed = options?.noticedAt ? new Date(options.noticedAt) : new Date(openAt)
+  const noticed = new Date(openAt)
   if (noticed.getTime() > now.getTime()) {
     noticed.setTime(now.getTime())
   }
@@ -727,6 +671,37 @@ function createSignal(
     live: analysis.live,
     spot: analysis.spot,
     dataSource: analysis.dataSource,
+    levelsLocked: true,
+  }
+}
+
+/** True when an alert already has immutable trade levels that must never be rewritten. */
+function hasLockedLevels(alert: Alert): boolean {
+  if (alert.levelsLocked) return true
+  return Boolean(
+    alert.entry &&
+      Array.isArray(alert.targets) &&
+      alert.targets.length > 0 &&
+      Array.isArray(alert.reversals) &&
+      alert.reversals.length > 0,
+  )
+}
+
+/** Preserve entry/SL/TP forever — only trending (and similar flags) may change. */
+function withTrendingOnly(alert: Alert, trending: boolean): Alert {
+  return {
+    ...alert,
+    trending,
+    levelsLocked: true,
+    entry: alert.entry,
+    targets: alert.targets,
+    reversals: alert.reversals,
+    spot: alert.spot,
+    sentiment: alert.sentiment,
+    strategy: alert.strategy,
+    aiNote: alert.aiNote,
+    live: alert.live,
+    dataSource: alert.dataSource,
   }
 }
 
@@ -748,11 +723,9 @@ function writeStored(alerts: Alert[]) {
 
 /**
  * Sync AI alerts for scanner symbols using multi-timeframe live data.
- * Each due session is scanned near that session's open when possible.
- * If the alert is locked late (user opens the app after the scan window),
- * entry / SL / TP use the live market price at lock time so levels match
- * what traders see on the chart when the alert arrives.
- * One locked alert per symbol + session + session-date (no mid-session rewrite).
+ * Each due session is scanned independently at that session's open (+ grace).
+ * Once an alert is locked, entry / SL / TP never change — even if price moves
+ * or sync runs again. Sydney / Asian / London / NY each get their own snapshot.
  * Weekends: no new alerts are created (Sat + Sun before Sydney open).
  */
 export async function syncAlertsForSymbols(symbols: string[], now = new Date()): Promise<Alert[]> {
@@ -764,11 +737,13 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
   for (const session of dueSessions) {
     historyDates.add(alertDateForSession(session, now))
   }
-  const stored = readStored().filter((a) => isRecentAlert(a, now, ALERT_HISTORY_TRADING_DAYS))
+  const stored = readStored()
+    .filter((a) => isRecentAlert(a, now, ALERT_HISTORY_TRADING_DAYS))
+    .map((a) => (hasLockedLevels(a) ? { ...a, levelsLocked: true } : a))
 
   // Weekend: keep history, do not scan or lock new signals
   if (!isAlertWeekday(now)) {
-    const kept = stored.map((a) => ({ ...a, trending: false }))
+    const kept = stored.map((a) => withTrendingOnly(a, false))
     const next = organizeAlertsForScanner(
       kept.filter((a) => symbols.includes(a.asset)),
       symbols,
@@ -787,15 +762,22 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
   const bySessionKey = new Map<string, Alert>()
   for (const alert of stored) {
     if (!symbols.includes(alert.asset)) continue
+    if (!hasLockedLevels(alert)) continue
     const key = `${alert.asset}|${alert.session}|${alert.date}`
     const expectedDate = dueSessions.includes(alert.session)
       ? alertDateForSession(alert.session, now)
       : null
     if (expectedDate && alert.date === expectedDate) {
       const existing = bySessionKey.get(key)
-      if (!existing || new Date(alert.noticedAt) >= new Date(existing.noticedAt)) {
+      // Prefer the earliest locked alert — never replace locked levels with a newer rewrite
+      if (
+        !existing ||
+        new Date(alert.noticedAt).getTime() < new Date(existing.noticedAt).getTime()
+      ) {
         bySessionKey.set(key, alert)
       }
+    } else if (!expectedDate) {
+      // Historical session bucket outside today's due list — keep as-is via byId
     }
   }
 
@@ -814,7 +796,6 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
       }),
     )
     const byAsset = new Map(market)
-    const nowMs = now.getTime()
 
     for (const asset of missingAssets) {
       const feed = byAsset.get(asset)
@@ -827,23 +808,24 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
       for (const session of dueSessions) {
         const sessionDate = alertDateForSession(session, now)
         const key = `${asset}|${session}|${sessionDate}`
+        // Hard lock: if this session already has levels, skip forever
         if (bySessionKey.has(key)) continue
+        const existingById = byId.get(`${asset}-${sessionDate}-${session}`)
+        if (existingById && hasLockedLevels(existingById)) {
+          bySessionKey.set(key, existingById)
+          continue
+        }
 
-        // Near open: scan as-of session. Late lock: use live price when the alert arrives.
+        // Independent market scan as-of this session's open (not "now")
         const asOfMs = sessionScanAsOfMs(session, now)
-        const { sessionFeed, lateLock } = feedForSessionLock(feed, asOfMs, nowMs)
+        const sessionFeed = feedAsOfSession(feed, asOfMs)
         if (sessionFeed.m15.candles.length < 20 || sessionFeed.spot == null) continue
 
         const analysis = analyzeMultiTimeframe(asset, session, sessionFeed)
         const openLabel = sessionOpenUtc(session, now).toISOString().slice(11, 16)
-        analysis.aiNote = lateLock
-          ? `${analysis.aiNote} Locked at live market (session ${session} opened ~${openLabel} UTC).`
-          : `${analysis.aiNote} Scanned at ${session} open (~${openLabel} UTC).`
+        analysis.aiNote = `${analysis.aiNote} Locked at ${session} open (~${openLabel} UTC) — entry/SL/TP fixed.`
 
-        const signal = createSignal(asset, session, sessionDate, now, analysis, {
-          // Late locks timestamp when the alert actually arrives so levels match that price
-          noticedAt: lateLock ? now : undefined,
-        })
+        const signal = createSignal(asset, session, sessionDate, now, analysis)
         bySessionKey.set(key, signal)
         byId.set(signal.id, signal)
       }
@@ -852,12 +834,10 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
 
   // Only update trending flags — never rewrite locked levels
   for (const [key, alert] of bySessionKey) {
-    const next = {
-      ...alert,
-      trending: Boolean(
-        latestSession && alert.session === latestSession && alert.date === latestDate,
-      ),
-    }
+    const next = withTrendingOnly(
+      alert,
+      Boolean(latestSession && alert.session === latestSession && alert.date === latestDate),
+    )
     bySessionKey.set(key, next)
     byId.set(next.id, next)
   }
@@ -866,7 +846,7 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
     const isLatest =
       Boolean(latestSession) && alert.session === latestSession && alert.date === latestDate
     if (alert.trending && !isLatest) {
-      byId.set(id, { ...alert, trending: false })
+      byId.set(id, withTrendingOnly(alert, false))
     }
   }
 
@@ -895,16 +875,18 @@ export function organizeAlertsForScanner(alerts: Alert[], symbols: string[], now
 
     if (!forSymbol.length) continue
 
-    const marked = forSymbol.map((a) => ({
-      ...a,
-      trending: Boolean(latestSession && a.session === latestSession && a.date === latestDate),
-    }))
+    const marked = forSymbol.map((a) =>
+      withTrendingOnly(
+        a,
+        Boolean(latestSession && a.session === latestSession && a.date === latestDate),
+      ),
+    )
 
     if (latestSession && !marked.some((a) => a.trending)) {
       const fallback = marked.find((a) => a.session === latestSession) ?? marked[0]
       if (fallback) {
         const idx = marked.findIndex((a) => a.id === fallback.id)
-        if (idx >= 0) marked[idx] = { ...marked[idx]!, trending: true }
+        if (idx >= 0) marked[idx] = withTrendingOnly(marked[idx]!, true)
       }
     }
 

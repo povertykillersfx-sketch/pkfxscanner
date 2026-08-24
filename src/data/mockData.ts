@@ -25,6 +25,8 @@ export interface Alert {
   spot?: string
   /** Data source label: yahoo / twelve / tradingview-spot / synthetic */
   dataSource?: string
+  /** Once true, entry / SL / TP must never be rewritten */
+  levelsLocked?: boolean
 }
 
 export interface CourseVideo {
