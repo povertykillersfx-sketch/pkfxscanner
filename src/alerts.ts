@@ -12,7 +12,7 @@ import {
 } from './marketData'
 
 /** Locked session signals — one alert per symbol/session/day (does not keep rewriting levels) */
-const ALERTS_KEY = 'pkfx_live_alerts_v11_near_market'
+const ALERTS_KEY = 'pkfx_live_alerts_v12_rr_1_2'
 /** Keep past alerts on My Alerts for this many FX trading days (including today). */
 const ALERT_HISTORY_TRADING_DAYS = 5
 /** Minutes into a session used for the opening scan snapshot. */
@@ -106,47 +106,58 @@ function formatPrice(asset: string, value: number): string {
 }
 
 /**
- * Realistic price-step plan so SL/TP stay near market at release.
- * Caps wild ATR/pivots from coarse or multi-hour ranges.
+ * Instrument risk budget: stop distance room + TP room for a clean 1:1 / 1:2 R:R.
+ * Caps still prevent wild multi-hour ranges from blowing out levels.
  */
 function levelBudget(asset: string, entry: number, atr15: number): {
   /** Typical 15m noise / min stop padding */
   tick: number
-  /** Max stop distance from entry */
+  /** Max stop distance from entry (1R cap) */
   maxStop: number
-  /** Max TP1 distance from entry */
+  /** Max TP1 distance (= 1R, mirrors maxStop) */
   maxTp1: number
-  /** Max TP2 distance from entry */
+  /** Max TP2 distance (= 2R) */
   maxTp2: number
   /** Working ATR clipped to instrument norms */
   step: number
 } {
   const px = Math.abs(entry) || 1
-  // Soft ATR clip (~0.05% of price) so daily/coarse bars cannot explode distances
-  const atrCap = px * 0.0005
-  let step = Math.min(Math.max(atr15, px * 0.0001), atrCap)
+  // Soft ATR clip (~0.07% of price)
+  const atrCap = px * 0.0007
+  let step = Math.min(Math.max(atr15, px * 0.00012), atrCap)
 
-  // Instrument overrides (absolute price units) — kept tight to live price
   switch (asset) {
-    case 'USDJPY':
-      step = Math.min(Math.max(step, 0.03), 0.12)
-      return { tick: 0.01, maxStop: 0.18, maxTp1: 0.28, maxTp2: 0.5, step }
-    case 'USDZAR':
-      step = Math.min(Math.max(step, 0.03), 0.14)
-      return { tick: 0.01, maxStop: 0.25, maxTp1: 0.4, maxTp2: 0.7, step }
-    case 'GOLD':
-      step = Math.min(Math.max(step, 0.8), 2.5)
-      return { tick: 0.1, maxStop: 5, maxTp1: 8, maxTp2: 16, step }
-    case 'US30':
-      step = Math.min(Math.max(step, 25), 80)
-      return { tick: 1, maxStop: 120, maxTp1: 180, maxTp2: 320, step }
-    case 'NASDAQ':
-      step = Math.min(Math.max(step, 20), 70)
-      return { tick: 1, maxStop: 100, maxTp1: 160, maxTp2: 280, step }
-    default:
-      // Majors / crosses quoted to 4–5 decimals (~8–20 pips stop)
-      step = Math.min(Math.max(step, 0.00025), 0.0008)
-      return { tick: 0.0001, maxStop: 0.0018, maxTp1: 0.0028, maxTp2: 0.005, step }
+    case 'USDJPY': {
+      step = Math.min(Math.max(step, 0.04), 0.16)
+      const maxStop = 0.28
+      return { tick: 0.01, maxStop, maxTp1: maxStop, maxTp2: maxStop * 2, step }
+    }
+    case 'USDZAR': {
+      step = Math.min(Math.max(step, 0.04), 0.18)
+      const maxStop = 0.4
+      return { tick: 0.01, maxStop, maxTp1: maxStop, maxTp2: maxStop * 2, step }
+    }
+    case 'GOLD': {
+      step = Math.min(Math.max(step, 1.0), 3.5)
+      const maxStop = 9
+      return { tick: 0.1, maxStop, maxTp1: maxStop, maxTp2: maxStop * 2, step }
+    }
+    case 'US30': {
+      step = Math.min(Math.max(step, 35), 100)
+      const maxStop = 200
+      return { tick: 1, maxStop, maxTp1: maxStop, maxTp2: maxStop * 2, step }
+    }
+    case 'NASDAQ': {
+      step = Math.min(Math.max(step, 25), 90)
+      const maxStop = 160
+      return { tick: 1, maxStop, maxTp1: maxStop, maxTp2: maxStop * 2, step }
+    }
+    default: {
+      // Majors / crosses (~12–30 pips stop room)
+      step = Math.min(Math.max(step, 0.0003), 0.001)
+      const maxStop = 0.003
+      return { tick: 0.0001, maxStop, maxTp1: maxStop, maxTp2: maxStop * 2, step }
+    }
   }
 }
 
@@ -332,8 +343,8 @@ function entryFrom15m(
   const slow = ema(closes, 21)
   const ema21 = slow[slow.length - 1]!
   const rawAtr = Math.max(atr(window, 14), Math.abs(last.close) * 0.00012)
-  // Last ~1 hour of 15m bars — keeps SL structure near price, not a multi-hour range
-  const recent = window.slice(-4)
+  // Last ~90m of 15m bars — structure for 1R without multi-hour stretch
+  const recent = window.slice(-6)
   const microSwingHigh = Math.max(...recent.map((c) => c.high))
   const microSwingLow = Math.min(...recent.map((c) => c.low))
 
@@ -367,8 +378,10 @@ function entryFrom15m(
 }
 
 /**
- * SL + targets anchored to entry with hard instrument caps.
- * Nearby micro-structure may nudge levels only inside those caps.
+ * SL + targets from entry using a fixed risk:reward plan:
+ * - SL = 1R (structure-aware, instrument-capped)
+ * - TP1 = 1R (1:1)
+ * - TP2 = 2R (1:2)
  */
 function levelsFromHtf(
   asset: string,
@@ -381,37 +394,24 @@ function levelsFromHtf(
   atr15: number,
 ): { targets: string[]; reversals: string[] } {
   const dir: 1 | -1 = sentiment === 'Bullish' ? 1 : -1
-  const { step, maxStop, maxTp1, maxTp2 } = levelBudget(asset, entry, atr15)
+  const { step, maxStop } = levelBudget(asset, entry, atr15)
 
-  // Prefer a stop just beyond the last few 15m bars, but never beyond maxStop
+  // 1R from recent 15m structure, floored by ATR step and capped by instrument max
   const structureRisk =
     sentiment === 'Bullish'
-      ? Math.max(entry - m15SwingLow, step * 0.55)
-      : Math.max(m15SwingHigh - entry, step * 0.55)
+      ? Math.max(entry - m15SwingLow, step * 0.75)
+      : Math.max(m15SwingHigh - entry, step * 0.75)
 
-  const risk = clampDist(structureRisk, step * 0.5, maxStop)
-  const rev1 = entry - dir * risk
-  const rev2 = entry - dir * clampDist(risk * 1.25, risk * 1.08, maxStop)
+  const risk = clampDist(structureRisk, step * 0.7, maxStop)
 
-  // Targets from R multiples, hard-capped near market
-  let tp1 = entry + dir * clampDist(risk * 1.35, step * 0.85, maxTp1)
-  let tp2 = entry + dir * clampDist(risk * 2.2, Math.abs(tp1 - entry) * 1.25, maxTp2)
-
-  // Keep ordering + side
-  if (dir * (tp1 - entry) <= 0) tp1 = entry + dir * Math.min(maxTp1, step * 1.15)
-  if (dir * (tp2 - tp1) <= 0) tp2 = tp1 + dir * Math.min(Math.max(maxTp2 - Math.abs(tp1 - entry), step), step * 1.25)
-
-  // Final safety: never publish levels far from the live entry
-  const softCapStop = maxStop * 1.05
-  const softCapTp2 = maxTp2 * 1.05
-  const safeRev1 = entry - dir * Math.min(Math.abs(entry - rev1), softCapStop)
-  const safeRev2 = entry - dir * Math.min(Math.abs(entry - rev2), softCapStop * 1.1)
-  const safeTp1 = entry + dir * Math.min(Math.abs(tp1 - entry), maxTp1)
-  const safeTp2 = entry + dir * Math.min(Math.abs(tp2 - entry), softCapTp2)
+  const sl = entry - dir * risk
+  const extSl = entry - dir * clampDist(risk * 1.2, risk * 1.05, maxStop * 1.15)
+  const tp1 = entry + dir * risk // 1:1
+  const tp2 = entry + dir * risk * 2 // 1:2
 
   return {
-    targets: [formatPrice(asset, safeTp1), formatPrice(asset, safeTp2)],
-    reversals: [formatPrice(asset, safeRev1), formatPrice(asset, safeRev2)],
+    targets: [formatPrice(asset, tp1), formatPrice(asset, tp2)],
+    reversals: [formatPrice(asset, sl), formatPrice(asset, extSl)],
   }
 }
 
@@ -432,7 +432,7 @@ export interface MarketSignal {
  * Multi-timeframe signal:
  * - Direction: 4H ∧ 1H preferred; stronger TF only when mixed
  * - Entry: exact market at release
- * - SL/TP: instrument-capped distances from that entry (not distant pivots)
+ * - SL/TP: 1R stop, TP1 at 1:1, TP2 at 1:2 from that entry
  */
 export function analyzeMultiTimeframe(
   asset: string,
@@ -517,7 +517,7 @@ export function analyzeMultiTimeframe(
   const entryHint = awaitingPullback
     ? `market entry ${entryLabel} (extended — wait pullback for better fill)`
     : `entry ${entryLabel}`
-  const aiNote = `PKFX MTF on ${asset} (${session}): 4H ${h4.sentiment.toLowerCase()} (score ${h4.score > 0 ? '+' : ''}${h4.score}, ${h4.changePct >= 0 ? '+' : ''}${h4.changePct.toFixed(2)}%, RSI ${h4.rsi.toFixed(0)}) → 1H ${h1.sentiment.toLowerCase()} (score ${h1.score > 0 ? '+' : ''}${h1.score}) → ${entryHint} · market ${marketLabel}. ${bias} · conviction ${conviction}; SL/TP capped near live entry. Feed: ${src}.`
+  const aiNote = `PKFX MTF on ${asset} (${session}): 4H ${h4.sentiment.toLowerCase()} (score ${h4.score > 0 ? '+' : ''}${h4.score}, ${h4.changePct >= 0 ? '+' : ''}${h4.changePct.toFixed(2)}%, RSI ${h4.rsi.toFixed(0)}) → 1H ${h1.sentiment.toLowerCase()} (score ${h1.score > 0 ? '+' : ''}${h1.score}) → ${entryHint} · market ${marketLabel}. ${bias} · conviction ${conviction}; SL 1R · TP1 1:1 · TP2 1:2. Feed: ${src}.`
 
   return {
     sentiment,
