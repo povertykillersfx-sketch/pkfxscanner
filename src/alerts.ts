@@ -12,13 +12,18 @@ import {
 } from './marketData'
 
 /** Locked session signals — one alert per symbol/session/day (levels never rewrite) */
-const ALERTS_KEY = 'pkfx_live_alerts_v14_live_on_arrival'
+const ALERTS_KEY = 'pkfx_live_alerts_v15_session_price_at_open'
 /** Keep past alerts on My Alerts for this many FX trading days (including today). */
 const ALERT_HISTORY_TRADING_DAYS = 5
 /** Minutes into a session used for the opening scan snapshot. */
 const SESSION_SCAN_GRACE_MIN = 10
 /** Extra minutes after grace where a session still locks to live arrival price. */
-const LIVE_ARRIVAL_BUFFER_MIN = 20
+const LIVE_ARRIVAL_BUFFER_MIN = 25
+/** Max distance from session scan time to accept an OHLC bar as that alert's market. */
+const SESSION_PRICE_MAX_LAG_MS = 40 * 60 * 1000
+
+/** Assets where Yahoo OHLC venue differs from the TradingView chart. */
+const CHART_BASIS_ASSETS = new Set(['GOLD', 'US30', 'NASDAQ'])
 
 function utcDateKey(d = new Date()): string {
   return d.toISOString().slice(0, 10)
@@ -596,52 +601,106 @@ function sessionScanAsOfMs(session: MarketSession, now = new Date()): number {
 
 function truncateCandles(candles: Candle[], asOfMs: number): Candle[] {
   if (!candles.length) return candles
-  const cut = candles.filter((c) => Number.isFinite(c.timestamp) && c.timestamp <= asOfMs)
-  if (cut.length >= 24) return cut
-  if (cut.length >= 12) return cut
-
-  // Synthetic / broken timestamps: drop newest bars proportional to how far asOf is
-  const firstTs = candles[0]!.timestamp
-  const lastTs = candles[candles.length - 1]!.timestamp
-  if (!Number.isFinite(firstTs) || !Number.isFinite(lastTs) || lastTs <= firstTs) {
-    return candles
+  let end = -1
+  for (let i = 0; i < candles.length; i++) {
+    const ts = candles[i]!.timestamp
+    if (Number.isFinite(ts) && ts <= asOfMs) end = i
   }
-  if (asOfMs >= lastTs) return candles
-  const ratio = Math.min(1, Math.max(0.3, (asOfMs - firstTs) / (lastTs - firstTs)))
-  const keep = Math.max(24, Math.floor(candles.length * ratio))
-  return candles.slice(0, Math.min(candles.length, keep))
+  if (end < 0) return []
+  const start = Math.max(0, end - 47)
+  return candles.slice(start, end + 1)
 }
 
 /**
- * Snapshot the MTF feed as it looked at a session's scan time (open + grace).
- * Used when backfilling older sessions so each keeps its own historical levels.
+ * Market price printed at (or just before) the session alert time.
+ * Returns undefined when no bar is close enough — caller must skip locking.
  */
-function feedAsOfSession(feed: MultiTimeframeFeed, asOfMs: number): MultiTimeframeFeed {
+function marketPriceAt(candles: Candle[], asOfMs: number): { price: number; barTs: number } | undefined {
+  let best: Candle | undefined
+  for (const c of candles) {
+    if (!Number.isFinite(c.timestamp) || !Number.isFinite(c.close)) continue
+    // Accept bars up to one 15m slot after asOf (bar that contains the scan instant)
+    if (c.timestamp > asOfMs + 15 * 60 * 1000) continue
+    if (!best || c.timestamp >= best.timestamp) best = c
+  }
+  if (!best) return undefined
+  if (Math.abs(best.timestamp - asOfMs) > SESSION_PRICE_MAX_LAG_MS) return undefined
+  return { price: best.close, barTs: best.timestamp }
+}
+
+/**
+ * Align a Yahoo/futures historical print to the chart venue using live basis.
+ * GOLD/US30/NASDAQ chart symbols differ from Yahoo OHLC symbols.
+ */
+function toChartPrice(asset: string, ohlcPrice: number, feed: MultiTimeframeFeed): number {
+  if (!CHART_BASIS_ASSETS.has(asset)) return ohlcPrice
+  const chartLive = feed.spot
+  const ohlcLive = feed.ohlcSpot
+  if (
+    chartLive != null &&
+    ohlcLive != null &&
+    Number.isFinite(chartLive) &&
+    Number.isFinite(ohlcLive) &&
+    ohlcLive > 0
+  ) {
+    return ohlcPrice * (chartLive / ohlcLive)
+  }
+  // If we only have chart live and no separate ohlc, keep ohlc historical as-is
+  return ohlcPrice
+}
+
+/**
+ * Snapshot feed at a session's alert time with entry = market at that moment.
+ * Uses the OHLC bar nearest the session scan time (not a later live quote).
+ */
+function feedAsOfSession(
+  asset: string,
+  feed: MultiTimeframeFeed,
+  asOfMs: number,
+): MultiTimeframeFeed | null {
+  const at = marketPriceAt(feed.m15.candles, asOfMs) ?? marketPriceAt(feed.h1.candles, asOfMs)
+  if (!at) return null
+
+  const entryPrice = toChartPrice(asset, at.price, feed)
   const m15Candles = truncateCandles(feed.m15.candles, asOfMs)
   const h1Candles = truncateCandles(feed.h1.candles, asOfMs)
   const h4Candles = truncateCandles(feed.h4.candles, asOfMs)
-  const lastClose =
-    m15Candles[m15Candles.length - 1]?.close ??
-    h1Candles[h1Candles.length - 1]?.close ??
-    feed.spot
+  if (m15Candles.length < 8 && h1Candles.length < 8) return null
+
+  const pin = (candles: Candle[]) => {
+    if (!candles.length) return candles
+    const out = candles.map((c) => ({ ...c }))
+    const last = out[out.length - 1]!
+    last.close = entryPrice
+    last.high = Math.max(last.high, entryPrice)
+    last.low = Math.min(last.low, entryPrice)
+    // Stamp scan time so entry is tied to the alert moment
+    last.timestamp = Math.min(asOfMs, Math.max(last.timestamp, at.barTs))
+    return out
+  }
+
+  const m15 = m15Candles.length ? pin(m15Candles) : pin(feed.m15.candles.slice(-24))
+  const h1 = h1Candles.length ? h1Candles : feed.h1.candles.slice(-24)
+  const h4 = h4Candles.length ? h4Candles : feed.h4.candles.slice(-16)
 
   return {
-    m15: { ...feed.m15, candles: m15Candles, spot: lastClose },
-    h1: { ...feed.h1, candles: h1Candles, spot: lastClose },
-    h4: { ...feed.h4, candles: h4Candles, spot: lastClose },
+    m15: { ...feed.m15, candles: m15, spot: entryPrice },
+    h1: { ...feed.h1, candles: h1, spot: entryPrice },
+    h4: { ...feed.h4, candles: h4, spot: entryPrice },
     live: feed.live,
     source: feed.source,
-    spot: lastClose,
+    spot: entryPrice,
+    ohlcSpot: at.price,
   }
 }
 
-/** Pin last 15m close to live spot so entry matches the chart when the alert arrives. */
-function feedAtLiveArrival(feed: MultiTimeframeFeed): MultiTimeframeFeed {
+/** Pin last 15m close to live chart spot so entry matches the market when the alert arrives. */
+function feedAtLiveArrival(feed: MultiTimeframeFeed): MultiTimeframeFeed | null {
   const liveSpot =
     feed.spot ??
     feed.m15.candles[feed.m15.candles.length - 1]?.close ??
     feed.h1.candles[feed.h1.candles.length - 1]?.close
-  if (liveSpot == null || !Number.isFinite(liveSpot)) return feed
+  if (liveSpot == null || !Number.isFinite(liveSpot)) return null
 
   const m15 = feed.m15.candles.length
     ? (() => {
@@ -664,20 +723,24 @@ function feedAtLiveArrival(feed: MultiTimeframeFeed): MultiTimeframeFeed {
 }
 
 /**
- * Use live market price when this alert is arriving now:
- * - the current/latest due session, or
- * - any session still inside its open arrival window
- * Older missed sessions are backfilled from their open snapshot (so they differ).
+ * Live market lock only while this session is actually arriving
+ * (inside open window). The latest session also uses live if still
+ * the active due session and within an extended arrival buffer.
+ * Older sessions always use their own open-time market print.
  */
 function shouldLockToLiveArrival(
   session: MarketSession,
   now: Date,
   latestSession: MarketSession | undefined,
 ): boolean {
-  if (latestSession && session === latestSession) return true
   const openMs = sessionOpenUtc(session, now).getTime()
   const ageMin = (now.getTime() - openMs) / 60_000
-  return ageMin >= 0 && ageMin <= SESSION_SCAN_GRACE_MIN + LIVE_ARRIVAL_BUFFER_MIN
+  if (ageMin < 0) return false
+  // Fresh open window for any session
+  if (ageMin <= SESSION_SCAN_GRACE_MIN + LIVE_ARRIVAL_BUFFER_MIN) return true
+  // Latest session only stays on live briefly after that (avoid hours-late drift)
+  if (latestSession && session === latestSession && ageMin <= 90) return true
+  return false
 }
 
 function createSignal(
@@ -765,9 +828,9 @@ function writeStored(alerts: Alert[]) {
 
 /**
  * Sync AI alerts for scanner symbols using multi-timeframe live data.
- * - Current/arriving session: entry = live market price when the alert is created
- * - Older missed sessions: backfilled from that session's open snapshot (so levels differ)
- * - Once locked, entry / SL / TP never change — even if price moves later
+ * - Arriving session (open window / current): entry = live chart price at lock
+ * - Older sessions: entry = market print at that session's open (chart-aligned)
+ * - Once locked, entry / SL / TP never change
  * Weekends: no new alerts are created (Sat + Sun before Sydney open).
  */
 export async function syncAlertsForSymbols(symbols: string[], now = new Date()): Promise<Alert[]> {
@@ -859,20 +922,22 @@ export async function syncAlertsForSymbols(symbols: string[], now = new Date()):
         }
 
         const liveArrival = shouldLockToLiveArrival(session, now, latestSession)
+        const asOfMs = sessionScanAsOfMs(session, now)
         const sessionFeed = liveArrival
           ? feedAtLiveArrival(feed)
-          : feedAsOfSession(feed, sessionScanAsOfMs(session, now))
-        if (sessionFeed.m15.candles.length < 20 || sessionFeed.spot == null) continue
+          : feedAsOfSession(asset, feed, asOfMs)
+        if (!sessionFeed || sessionFeed.m15.candles.length < 8 || sessionFeed.spot == null) continue
 
         const analysis = analyzeMultiTimeframe(asset, session, sessionFeed)
         const openLabel = sessionOpenUtc(session, now).toISOString().slice(11, 16)
+        const entryShown = analysis.entry
         analysis.aiNote = liveArrival
-          ? `${analysis.aiNote} Locked to live market on arrival (${session}, open ~${openLabel} UTC) — entry/SL/TP fixed.`
-          : `${analysis.aiNote} Backfilled from ${session} open (~${openLabel} UTC) — entry/SL/TP fixed.`
+          ? `${analysis.aiNote} Locked to live market on arrival at ${entryShown} (${session}, open ~${openLabel} UTC) — levels fixed.`
+          : `${analysis.aiNote} Locked to ${session} open market at ${entryShown} (~${openLabel} UTC) — levels fixed.`
 
         const signal = createSignal(asset, session, sessionDate, now, analysis, {
-          // Arrival locks timestamp when the alert is actually created
-          noticedAt: liveArrival ? now : undefined,
+          // Arrival locks use "now"; backfills use the session open time
+          noticedAt: liveArrival ? now : sessionOpenUtc(session, now),
         })
         bySessionKey.set(key, signal)
         byId.set(signal.id, signal)

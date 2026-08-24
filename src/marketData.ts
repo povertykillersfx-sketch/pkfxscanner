@@ -435,7 +435,10 @@ export interface MultiTimeframeFeed {
   h1: CandleFetchResult
   m15: CandleFetchResult
   live: boolean
+  /** Chart-aligned spot used for live arrival locks */
   spot?: number
+  /** Raw OHLC last close before chart-spot pinning (for historical basis adjust) */
+  ohlcSpot?: number
   source: MarketSource
 }
 
@@ -507,7 +510,7 @@ export async function fetchMultiTimeframe(asset: string): Promise<MultiTimeframe
       ? 'synthetic'
       : m15.source
 
-  // Pin only the last 15m close to chart-aligned spot so entry = what traders see now
+  // Pin only the last 15m close to chart-aligned spot so live entry matches the chart
   const m15Pinned =
     spot != null && Number.isFinite(spot) ? { ...m15, candles: pinSpot(m15.candles, spot), spot } : { ...m15, spot }
 
@@ -517,6 +520,7 @@ export async function fetchMultiTimeframe(asset: string): Promise<MultiTimeframe
     m15: m15Pinned,
     live,
     spot,
+    ohlcSpot: candleSpot,
     source,
   }
 }
