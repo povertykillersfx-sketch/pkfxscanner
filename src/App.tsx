@@ -23,12 +23,16 @@ import { Community } from './pages/Community'
 import { EconomicCalendar } from './pages/EconomicCalendar'
 import { TradingJournal } from './pages/TradingJournal'
 import { ChoosePlan } from './pages/ChoosePlan'
+import { PrivacyPolicy } from './pages/PrivacyPolicy'
+import { TermsOfService } from './pages/TermsOfService'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<SignIn />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfService />} />
       <Route path="/choose-plan" element={<ChoosePlan />} />
       <Route path="/forgot" element={<ForgotPassword />} />
       <Route path="/logout" element={<Logout />} />

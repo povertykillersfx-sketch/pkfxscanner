@@ -220,7 +220,7 @@ export function SignUp() {
 
         <p className="signin-legal">
           By creating account you agree to our{' '}
-          <a href="#terms">Terms of service</a> and <a href="#privacy">privacy policy</a>
+          <Link to="/terms">Terms of service</Link> and <Link to="/privacy">privacy policy</Link>
         </p>
 
         <p className="signin-signup">
