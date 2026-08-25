@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Logo } from '../components/Logo'
 import { PortalShell } from '../components/PortalShell'
 import { getCurrentUser, login, setSignupFunnelEmail } from '../auth'
 import { playLoginSuccessSound } from '../sounds'
@@ -68,6 +69,9 @@ export function SignIn() {
       subcopy="AI-powered alerts, sessions, and education — built for serious FX traders."
     >
       <form className="portal-panel" onSubmit={handleSubmit}>
+        <div className="portal-panel-logo">
+          <Logo size="md" />
+        </div>
         <h2 className="portal-panel-title font-display">Welcome back</h2>
         <p className="portal-panel-lead">Sign in to access your PKFX portal.</p>
 

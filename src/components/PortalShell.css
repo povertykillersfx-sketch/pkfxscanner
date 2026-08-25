@@ -267,13 +267,23 @@
   margin-bottom: 1.15rem;
 }
 
+.portal-panel-logo {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 1.15rem;
+}
+
+.portal-panel-logo .logo-md .logo-img {
+  height: clamp(44px, 6vh, 56px);
+}
+
 .portal-panel-title {
   margin: 0 0 0.35rem;
   font-size: clamp(1.35rem, 2.2vw, 1.6rem);
   font-weight: 750;
   letter-spacing: -0.02em;
   color: var(--text);
-  text-align: left;
+  text-align: center;
   text-shadow: var(--glow-text);
 }
 
@@ -282,7 +292,7 @@
   font-size: 0.9rem;
   line-height: 1.45;
   color: var(--text-muted);
-  text-align: left;
+  text-align: center;
 }
 
 .portal-fields {
@@ -561,6 +571,14 @@
 
   .portal-shell-locked .portal-panel {
     padding: 1.2rem 1.1rem 1.05rem;
+  }
+
+  .portal-shell-locked .portal-panel-logo {
+    margin-bottom: 0.7rem;
+  }
+
+  .portal-shell-locked .portal-panel-logo .logo-md .logo-img {
+    height: 40px;
   }
 
   .portal-shell-locked .portal-panel-lead {

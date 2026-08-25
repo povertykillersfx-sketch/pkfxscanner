@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Logo } from '../components/Logo'
 import { PortalShell } from '../components/PortalShell'
 import { capitalizeName, register } from '../auth'
 import { COUNTRY_DIAL_CODES, DEFAULT_COUNTRY, type CountryDialCode } from '../data/countryDialCodes'
@@ -76,6 +77,9 @@ export function SignUp() {
       subcopy="Create your account, choose a plan, and unlock the full trading system."
     >
       <form className="portal-panel signup-card" onSubmit={handleSubmit}>
+        <div className="portal-panel-logo">
+          <Logo size="md" />
+        </div>
         <h2 className="portal-panel-title font-display">Create account</h2>
         <p className="portal-panel-lead">A few details to get you into the portal.</p>
 

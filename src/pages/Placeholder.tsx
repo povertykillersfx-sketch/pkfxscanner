@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { Logo } from '../components/Logo'
 import { PortalShell } from '../components/PortalShell'
 import { logout, resetPassword } from '../auth'
 import './Placeholder.css'
@@ -69,6 +70,9 @@ export function ForgotPassword() {
       subcopy="Set a new password and get back into your PKFX portal."
     >
       <form className="portal-panel" onSubmit={handleSubmit}>
+        <div className="portal-panel-logo">
+          <Logo size="md" />
+        </div>
         <h2 className="portal-panel-title font-display">Reset password</h2>
         <p className="portal-panel-lead">Enter your email and choose a new password.</p>
 
