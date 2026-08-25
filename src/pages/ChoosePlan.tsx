@@ -45,9 +45,7 @@ export function ChoosePlan() {
     <div className="cyber-bg choose-plan-page">
       <div className="choose-plan-orb choose-plan-orb-a" aria-hidden />
       <div className="choose-plan-orb choose-plan-orb-b" aria-hidden />
-      <div className="choose-plan-orb choose-plan-orb-c" aria-hidden />
       <div className="choose-plan-grid" aria-hidden />
-      <div className="choose-plan-vignette" aria-hidden />
 
       <main className="choose-plan-stage animate-fade-up">
         <div className="choose-plan-brand">
@@ -55,7 +53,6 @@ export function ChoosePlan() {
         </div>
 
         <header className="choose-plan-intro">
-          <p className="choose-plan-eyebrow">Premium Access</p>
           <h1 className="font-display">
             Let&apos;s get you started{firstName ? `, ${firstName}` : ''}
           </h1>
@@ -64,7 +61,6 @@ export function ChoosePlan() {
 
         <section className="choose-plan-offer" aria-label="Annual package">
           <div className="choose-plan-offer-top">
-            <div className="choose-plan-offer-badge">Most selected</div>
             <p className="choose-plan-kicker">{PLAN.name}</p>
             <div className="choose-plan-price">
               <span className="choose-plan-amount">{PLAN.priceLabel}</span>
@@ -76,7 +72,7 @@ export function ChoosePlan() {
             <p className="choose-plan-price-note">Billed once a year. Cancel anytime before renewal.</p>
           </div>
 
-          <h2 className="choose-plan-includes-title">Included in your membership</h2>
+          <h2 className="choose-plan-includes-title">Here is what you get inside</h2>
           <ul className="choose-plan-benefits">
             {PLAN.benefits.map((benefit, index) => {
               const Icon = BENEFIT_ICONS[index] ?? Check

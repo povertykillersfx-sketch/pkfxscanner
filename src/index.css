@@ -72,13 +72,12 @@
   --toggle-shadow: 0 0 18px rgba(191, 0, 255, 0.55), 0 8px 24px rgba(0, 0, 0, 0.35);
   --toggle-shadow-hover: 0 0 28px rgba(224, 64, 255, 0.75), 0 12px 28px rgba(0, 0, 0, 0.4);
 
-  --premium-metal: #d4af7a;
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'Outfit', sans-serif;
-  --display-tracking: -0.025em;
-  --sidebar-width: 236px;
-  --radius: 14px;
-  --radius-sm: 10px;
+  --font-display: 'Poppins', sans-serif;
+  --font-body: 'Poppins', sans-serif;
+  --display-tracking: -0.01em;
+  --sidebar-width: 220px;
+  --radius: 12px;
+  --radius-sm: 8px;
   --radius-pill: 999px;
 }
 
@@ -282,7 +281,7 @@ ul {
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(16px);
   box-shadow: var(--shadow-panel);
 }
 
@@ -472,7 +471,7 @@ ul {
   flex-direction: column;
   min-width: 0;
   min-height: 100vh;
-  padding: 1.35rem 1.65rem 2.15rem;
+  padding: 1.25rem 1.5rem 2rem;
 }
 
 .main-scroll {

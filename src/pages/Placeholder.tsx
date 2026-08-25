@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { PortalShell } from '../components/PortalShell'
+import { Logo } from '../components/Logo'
 import { logout, resetPassword } from '../auth'
 import './Placeholder.css'
 import './SignIn.css'
@@ -63,66 +63,53 @@ export function ForgotPassword() {
   }
 
   return (
-    <PortalShell
-      eyebrow="Account Recovery"
-      headline="Reset access."
-      subcopy="Set a new password and get back into your PKFX portal."
-    >
-      <form className="portal-panel" onSubmit={handleSubmit}>
-        <h2 className="portal-panel-title font-display">Reset password</h2>
-        <p className="portal-panel-lead">Enter your email and choose a new password.</p>
-
-        <div className="portal-fields">
-          <label className="portal-field">
-            <span className="portal-label">Email</span>
-            <input
-              className="field"
-              type="text"
-              inputMode="email"
-              placeholder="you@email.com"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value)
-                setError('')
-                setMessage('')
-              }}
-              autoComplete="username"
-              required
-            />
-          </label>
-          <label className="portal-field">
-            <span className="portal-label">New password</span>
-            <input
-              className="field"
-              type="password"
-              placeholder="At least 6 characters"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value)
-                setError('')
-                setMessage('')
-              }}
-              autoComplete="new-password"
-              required
-              minLength={6}
-            />
-          </label>
+    <div className="cyber-bg signin-page">
+      <div className="signin-scan" aria-hidden />
+      <form className="signin-card panel panel-glow animate-fade-up" onSubmit={handleSubmit}>
+        <div className="signin-logo">
+          <Logo size="lg" />
         </div>
-
-        {error && <p className="portal-error">{error}</p>}
-        {message && <p className="portal-success">{message}</p>}
-
-        <button type="submit" className="btn btn-primary">
+        <h1 className="signin-title font-display">Reset Password</h1>
+        <div className="signin-fields">
+          <input
+            className="field"
+            type="text"
+            inputMode="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              setError('')
+              setMessage('')
+            }}
+            autoComplete="username"
+            required
+          />
+          <input
+            className="field"
+            type="password"
+            placeholder="New password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              setError('')
+              setMessage('')
+            }}
+            autoComplete="new-password"
+            required
+            minLength={6}
+          />
+        </div>
+        {error && <p className="signin-error">{error}</p>}
+        {message && <p className="signin-hint">{message}</p>}
+        <button type="submit" className="btn btn-primary signin-btn">
           Save new password
         </button>
-
-        <div className="portal-meta">
-          <p>
-            <Link to="/">Back to sign in</Link>
-          </p>
-        </div>
+        <p className="signin-signup">
+          <Link to="/">Back to Sign In</Link>
+        </p>
       </form>
-    </PortalShell>
+    </div>
   )
 }
 

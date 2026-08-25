@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { PortalShell } from '../components/PortalShell'
+import { Logo } from '../components/Logo'
 import { getCurrentUser, login, setSignupFunnelEmail } from '../auth'
 import { playLoginSuccessSound } from '../sounds'
 import './SignIn.css'
@@ -61,65 +61,56 @@ export function SignIn() {
   }
 
   return (
-    <PortalShell
-      locked
-      eyebrow="Member Portal"
-      headline="Trade with precision."
-      subcopy="AI-powered alerts, sessions, and education — built for serious FX traders."
-    >
-      <form className="portal-panel" onSubmit={handleSubmit}>
-        <h2 className="portal-panel-title font-display">Welcome back</h2>
-        <p className="portal-panel-lead">Sign in to access your PKFX portal.</p>
-
-        <div className="portal-fields">
-          <label className="portal-field">
-            <span className="portal-label">Email</span>
-            <input
-              className="field"
-              type="text"
-              inputMode="email"
-              placeholder="you@email.com"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value)
-                setError('')
-              }}
-              autoComplete="username"
-              required
-            />
-          </label>
-          <label className="portal-field">
-            <span className="portal-label">Password</span>
-            <input
-              className="field"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value)
-                setError('')
-              }}
-              autoComplete="current-password"
-              required
-            />
-          </label>
+    <div className="cyber-bg signin-page signin-page-fixed">
+      <div className="signin-scan" aria-hidden />
+      <form className="signin-card panel panel-glow animate-fade-up animate-pulse-neon" onSubmit={handleSubmit}>
+        <div className="signin-logo">
+          <Logo size="lg" />
         </div>
 
-        {error && <p className="portal-error">{error}</p>}
+        <h1 className="signin-title font-display">Sign In</h1>
 
-        <button type="submit" className="btn btn-primary">
-          Sign In
+        <div className="signin-fields">
+          <input
+            className="field"
+            type="text"
+            inputMode="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              setError('')
+            }}
+            autoComplete="username"
+            required
+          />
+          <input
+            className="field"
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              setError('')
+            }}
+            autoComplete="current-password"
+            required
+          />
+        </div>
+
+        {error && <p className="signin-error">{error}</p>}
+
+        <button type="submit" className="btn btn-primary signin-btn">
+          Login
         </button>
 
-        <div className="portal-meta">
-          <p>
-            Don&apos;t have an account? <Link to="/signup">Create account</Link>
-          </p>
-          <Link to="/forgot" className="portal-forgot">
-            Forgot password?
-          </Link>
-        </div>
+        <p className="signin-signup">
+          Don&apos;t have an account? <Link to="/signup">Sign Up now</Link>
+        </p>
+        <Link to="/forgot" className="signin-forgot">
+          Forgot password?
+        </Link>
       </form>
-    </PortalShell>
+    </div>
   )
 }

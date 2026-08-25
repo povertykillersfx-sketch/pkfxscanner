@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import { PortalShell } from '../components/PortalShell'
+import { Logo } from '../components/Logo'
 import { capitalizeName, register } from '../auth'
 import { COUNTRY_DIAL_CODES, DEFAULT_COUNTRY, type CountryDialCode } from '../data/countryDialCodes'
 import './SignIn.css'
@@ -69,187 +69,164 @@ export function SignUp() {
   }
 
   return (
-    <PortalShell
-      compactBrand
-      eyebrow="Join PKFX"
-      headline="Build your edge."
-      subcopy="Create your account, choose a plan, and unlock the full trading system."
-    >
-      <form className="portal-panel signup-card" onSubmit={handleSubmit}>
-        <h2 className="portal-panel-title font-display">Create account</h2>
-        <p className="portal-panel-lead">A few details to get you into the portal.</p>
-
-        <div className="portal-fields">
-          <div className="portal-name-row">
-            <label className="portal-field">
-              <span className="portal-label">First name</span>
-              <input
-                className="field"
-                type="text"
-                placeholder="First name"
-                value={firstName}
-                onChange={(e) => {
-                  setFirstName(capitalizeName(e.target.value))
-                  setError('')
-                }}
-                autoComplete="given-name"
-                required
-              />
-            </label>
-            <label className="portal-field">
-              <span className="portal-label">Surname</span>
-              <input
-                className="field"
-                type="text"
-                placeholder="Surname"
-                value={surname}
-                onChange={(e) => {
-                  setSurname(capitalizeName(e.target.value))
-                  setError('')
-                }}
-                autoComplete="family-name"
-                required
-              />
-            </label>
-          </div>
-
-          <label className="portal-field">
-            <span className="portal-label">Email</span>
-            <input
-              className="field"
-              type="text"
-              inputMode="email"
-              placeholder="you@email.com"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value)
-                setError('')
-              }}
-              autoComplete="email"
-              required
-            />
-          </label>
-
-          <div className="portal-field">
-            <span className="portal-label">Phone</span>
-            <div className={`phone-field ${error.toLowerCase().includes('phone') ? 'has-error' : ''}`} ref={dialRef}>
-              <button
-                type="button"
-                className="phone-dial-btn"
-                aria-label="Choose country code"
-                aria-expanded={dialOpen}
-                onClick={() => setDialOpen((v) => !v)}
-              >
-                <span className="phone-flag">{country.flag}</span>
-                <span className="phone-dial">{country.dial}</span>
-                <ChevronDown size={14} />
-              </button>
-              <input
-                className="field phone-input"
-                type="tel"
-                inputMode="tel"
-                placeholder="71 123 4567"
-                value={phone}
-                onChange={(e) => {
-                  setPhone(e.target.value)
-                  setError('')
-                }}
-                autoComplete="tel-national"
-                required
-              />
-              {dialOpen && (
-                <div className="phone-dial-menu" role="listbox">
-                  <input
-                    className="field phone-dial-search"
-                    type="search"
-                    placeholder="Search"
-                    value={dialQuery}
-                    onChange={(e) => setDialQuery(e.target.value)}
-                    autoFocus
-                  />
-                  <div className="phone-dial-list">
-                    {filteredCountries.map((c) => (
-                      <button
-                        key={`${c.iso}-${c.dial}`}
-                        type="button"
-                        className={`phone-dial-option ${c.iso === country.iso && c.dial === country.dial ? 'active' : ''}`}
-                        onClick={() => {
-                          setCountry(c)
-                          setDialOpen(false)
-                          setDialQuery('')
-                          setError('')
-                        }}
-                      >
-                        <span className="phone-flag">{c.flag}</span>
-                        <span className="phone-option-name">{c.name}</span>
-                        <span className="phone-option-dial">{c.dial}</span>
-                      </button>
-                    ))}
-                    {filteredCountries.length === 0 && <p className="phone-dial-empty">No countries found</p>}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <label className="portal-field">
-            <span className="portal-label">Password</span>
-            <input
-              className="field"
-              type="password"
-              placeholder="At least 6 characters"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value)
-                setError('')
-              }}
-              autoComplete="new-password"
-              required
-              minLength={6}
-            />
-          </label>
-          <label className="portal-field">
-            <span className="portal-label">Confirm password</span>
-            <input
-              className={`field ${confirmPassword && confirmPassword !== password ? 'field-error' : ''}`}
-              type="password"
-              placeholder="Repeat password"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value)
-                setError('')
-              }}
-              autoComplete="new-password"
-              required
-              minLength={6}
-            />
-          </label>
+    <div className="cyber-bg signin-page">
+      <div className="signin-scan" aria-hidden />
+      <form className="signin-card panel panel-glow animate-fade-up signup-card" onSubmit={handleSubmit}>
+        <div className="signin-logo">
+          <Logo size="lg" />
         </div>
 
-        {error && <p className="portal-error">{error}</p>}
+        <h1 className="signin-title font-display">Sign Up</h1>
+        <p className="signin-sub">Create your account, then choose your plan to get started.</p>
+
+        <div className="signin-fields">
+          <input
+            className="field"
+            type="text"
+            placeholder="First Name"
+            value={firstName}
+            onChange={(e) => {
+              setFirstName(capitalizeName(e.target.value))
+              setError('')
+            }}
+            autoComplete="given-name"
+            required
+          />
+          <input
+            className="field"
+            type="text"
+            placeholder="Surname"
+            value={surname}
+            onChange={(e) => {
+              setSurname(capitalizeName(e.target.value))
+              setError('')
+            }}
+            autoComplete="family-name"
+            required
+          />
+          <input
+            className="field"
+            type="text"
+            inputMode="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              setError('')
+            }}
+            autoComplete="email"
+            required
+          />
+
+          <div className={`phone-field ${error.toLowerCase().includes('phone') ? 'has-error' : ''}`} ref={dialRef}>
+            <button
+              type="button"
+              className="phone-dial-btn"
+              aria-label="Choose country code"
+              aria-expanded={dialOpen}
+              onClick={() => setDialOpen((v) => !v)}
+            >
+              <span className="phone-flag">{country.flag}</span>
+              <span className="phone-dial">{country.dial}</span>
+              <ChevronDown size={14} />
+            </button>
+            <input
+              className="field phone-input"
+              type="tel"
+              inputMode="tel"
+              placeholder="71 123 4567"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value)
+                setError('')
+              }}
+              autoComplete="tel-national"
+              required
+            />
+            {dialOpen && (
+              <div className="phone-dial-menu" role="listbox">
+                <input
+                  className="field phone-dial-search"
+                  type="search"
+                  placeholder="Search"
+                  value={dialQuery}
+                  onChange={(e) => setDialQuery(e.target.value)}
+                  autoFocus
+                />
+                <div className="phone-dial-list">
+                  {filteredCountries.map((c) => (
+                    <button
+                      key={`${c.iso}-${c.dial}`}
+                      type="button"
+                      className={`phone-dial-option ${c.iso === country.iso && c.dial === country.dial ? 'active' : ''}`}
+                      onClick={() => {
+                        setCountry(c)
+                        setDialOpen(false)
+                        setDialQuery('')
+                        setError('')
+                      }}
+                    >
+                      <span className="phone-flag">{c.flag}</span>
+                      <span className="phone-option-name">{c.name}</span>
+                      <span className="phone-option-dial">{c.dial}</span>
+                    </button>
+                  ))}
+                  {filteredCountries.length === 0 && <p className="phone-dial-empty">No countries found</p>}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <input
+            className="field"
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              setError('')
+            }}
+            autoComplete="new-password"
+            required
+            minLength={6}
+          />
+          <input
+            className={`field ${confirmPassword && confirmPassword !== password ? 'field-error' : ''}`}
+            type="password"
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value)
+              setError('')
+            }}
+            autoComplete="new-password"
+            required
+            minLength={6}
+          />
+        </div>
+
+        {error && <p className="signin-error">{error}</p>}
         {!error && confirmPassword && confirmPassword !== password && (
-          <p className="portal-error">Passwords do not match.</p>
+          <p className="signin-error">Passwords do not match.</p>
         )}
 
         <button
           type="submit"
-          className="btn btn-primary"
+          className="btn btn-primary signin-btn"
           disabled={Boolean(confirmPassword && password !== confirmPassword)}
         >
-          Continue
+          Sign Up
         </button>
 
-        <p className="portal-legal">
-          By creating an account you agree to our{' '}
-          <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>.
+        <p className="signin-legal">
+          By creating account you agree to our{' '}
+          <Link to="/terms">Terms of service</Link> and <Link to="/privacy">privacy policy</Link>
         </p>
 
-        <div className="portal-meta">
-          <p>
-            Already have an account? <Link to="/">Sign in</Link>
-          </p>
-        </div>
+        <p className="signin-signup">
+          Already have an account? <Link to="/">Sign In</Link>
+        </p>
       </form>
-    </PortalShell>
+    </div>
   )
 }
