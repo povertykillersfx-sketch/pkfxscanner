@@ -73,9 +73,9 @@
   --toggle-shadow-hover: 0 0 28px rgba(224, 64, 255, 0.75), 0 12px 28px rgba(0, 0, 0, 0.4);
 
   --premium-metal: #d4af7a;
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'Outfit', sans-serif;
-  --display-tracking: -0.025em;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --display-tracking: -0.02em;
   --sidebar-width: 236px;
   --radius: 14px;
   --radius-sm: 10px;
