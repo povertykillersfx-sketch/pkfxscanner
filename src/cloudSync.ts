@@ -14,6 +14,8 @@ export interface SharedSnapshot {
     title: string
     subtitle: string
   } | null
+  /** Optional until Supabase trade_ideas column is live */
+  tradeIdeas?: unknown[]
 }
 
 const POLL_MS = 8_000
@@ -64,6 +66,7 @@ function rowToSnapshot(row: {
   courses?: unknown
   ebooks?: unknown
   how_it_works?: unknown
+  trade_ideas?: unknown
   updated_at?: string
 } | null): SharedSnapshot {
   return {
@@ -72,6 +75,9 @@ function rowToSnapshot(row: {
     courses: Array.isArray(row?.courses) ? row!.courses : [],
     ebooks: Array.isArray(row?.ebooks) ? row!.ebooks : [],
     howItWorks: (row?.how_it_works as SharedSnapshot['howItWorks']) ?? null,
+    tradeIdeas: 'trade_ideas' in (row || {}) 
+      ? Array.isArray(row?.trade_ideas) ? row!.trade_ideas : []
+      : undefined,
   }
 }
 
@@ -82,6 +88,7 @@ function snapshotToRow(snapshot: Omit<SharedSnapshot, 'updatedAt'> & { updatedAt
     courses: snapshot.courses ?? [],
     ebooks: snapshot.ebooks ?? [],
     how_it_works: snapshot.howItWorks ?? null,
+    trade_ideas: Array.isArray(snapshot.tradeIdeas) ? snapshot.tradeIdeas : [],
     updated_at: snapshot.updatedAt || new Date().toISOString(),
   }
 }
@@ -268,7 +275,8 @@ function isRemoteEmpty(snapshot: SharedSnapshot) {
   const hasCourses = (snapshot.courses?.length || 0) > 0
   const hasEbooks = (snapshot.ebooks?.length || 0) > 0
   const hasHow = Boolean(snapshot.howItWorks?.url?.trim())
-  return !hasCommunity && !hasCourses && !hasEbooks && !hasHow
+  const hasTradeIdeas = (snapshot.tradeIdeas?.length || 0) > 0
+  return !hasCommunity && !hasCourses && !hasEbooks && !hasHow && !hasTradeIdeas
 }
 
 /** Start background pull so phones/tablets pick up admin edits. */

@@ -10,6 +10,7 @@ import {
   pushSharedSnapshot,
   type SharedSnapshot,
 } from './cloudSync'
+import { listTradeIdeas, replaceTradeIdeasFromSync } from './tradeIdeas'
 
 export type { CommunitySettings, CommunityChannel, CommunityResource, LiveSession }
 
@@ -163,7 +164,7 @@ export function saveTelegramSettings(settings: TelegramSettings) {
 const DEFAULT_HOW_IT_WORKS: HowItWorksVideo = {
   url: '',
   title: 'How To Use PKFX',
-  subtitle: '(Live market + AI alerts)',
+  subtitle: '(Live market + Trade Ideas)',
 }
 
 export function getHowItWorksVideo(): HowItWorksVideo {
@@ -301,6 +302,10 @@ export function applySharedSnapshot(snapshot: SharedSnapshot, opts?: { silent?: 
     }
   }
 
+  if (Array.isArray(snapshot.tradeIdeas)) {
+    replaceTradeIdeasFromSync(snapshot.tradeIdeas, { silent: opts?.silent })
+  }
+
   if (snapshot.updatedAt) noteSharedUpdatedAt(snapshot.updatedAt)
 }
 
@@ -310,6 +315,7 @@ function buildSharedSnapshot(): Omit<SharedSnapshot, 'updatedAt'> & { updatedAt?
     courses: getAdminCourses(),
     ebooks: getAdminEbooks(),
     howItWorks: getHowItWorksVideo(),
+    tradeIdeas: listTradeIdeas(),
   }
 }
 
@@ -345,6 +351,7 @@ export function resetAdminContent() {
   writeJson(TELEGRAM_KEY, { sample: '', botToken: '', chatId: '' })
   writeJson(HOW_IT_WORKS_KEY, { ...DEFAULT_HOW_IT_WORKS })
   writeJson(COMMUNITY_KEY, structuredClone(DEFAULT_COMMUNITY))
+  replaceTradeIdeasFromSync([])
   for (const key of COMMUNITY_LEGACY_KEYS) {
     try {
       localStorage.removeItem(key)

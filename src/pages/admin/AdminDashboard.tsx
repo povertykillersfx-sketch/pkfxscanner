@@ -176,7 +176,7 @@ export function AdminDashboard() {
               id="how-video-sub"
               value={howItWorks.subtitle}
               onChange={(e) => setHowItWorks({ ...howItWorks, subtitle: e.target.value })}
-              placeholder="(Live market + AI alerts)"
+              placeholder="(Live market + Trade Ideas)"
             />
           </div>
           <button type="submit" className="admin-btn">

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { TradeIdeasPanel } from '../components/TradeIdeaCard'
-import { HowItWorksPanel } from '../components/HowItWorksPanel'
 import { StatsRow } from '../components/StatsRow'
-import { listPublishedTradeIdeas, type TradeIdea } from '../tradeIdeas'
-import './Dashboard.css'
+import {
+  listPublishedTradeIdeas,
+  type TradeIdea,
+} from '../tradeIdeas'
+import './TradeIdeasPage.css'
 
-export function Dashboard() {
+export function TradeIdeasPage() {
   const [ideas, setIdeas] = useState<TradeIdea[]>(() => listPublishedTradeIdeas())
 
   useEffect(() => {
@@ -21,19 +23,13 @@ export function Dashboard() {
   }, [])
 
   return (
-    <div className="dashboard-page">
-      <div className="dashboard-top">
-        <TradeIdeasPanel
-          ideas={ideas}
-          title="Trade Ideas"
-          subtitle="Latest published setups from PKFX"
-          limit={12}
-          emptyHint="No trade ideas published yet. New ideas will appear here in real time."
-        />
-
-        <HowItWorksPanel />
-      </div>
-
+    <div className="trade-ideas-page">
+      <TradeIdeasPanel
+        ideas={ideas}
+        title="Trade Ideas"
+        subtitle="Live setups published by PKFX"
+        emptyHint="No trade ideas have been published yet. New ideas will appear here as soon as they go live."
+      />
       <StatsRow savedTradeIdeas={ideas.length} />
     </div>
   )

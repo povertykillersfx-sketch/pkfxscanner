@@ -3,12 +3,16 @@ import { STATS } from '../data/mockData'
 import './StatsRow.css'
 
 interface StatsRowProps {
-  savedAlerts?: number
+  savedTradeIdeas?: number
 }
 
-export function StatsRow({ savedAlerts }: StatsRowProps) {
+export function StatsRow({ savedTradeIdeas }: StatsRowProps) {
   const items = [
-    { label: 'Saved Alerts', value: String(savedAlerts ?? STATS.savedAlerts), icon: Bell },
+    {
+      label: 'Trade Ideas',
+      value: String(savedTradeIdeas ?? STATS.savedAlerts),
+      icon: Bell,
+    },
     { label: 'Win Rate', value: STATS.winRate, icon: Clock3 },
   ]
 

@@ -17,7 +17,7 @@ import './Sidebar.css'
 
 const primaryNav = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/alerts', label: 'My Alerts', icon: BarChart3 },
+  { to: '/trade-ideas', label: 'Trade Ideas', icon: BarChart3 },
   { to: '/ebooks', label: 'E-Books', icon: BookOpen },
   { to: '/courses', label: 'Courses', icon: Video },
   { to: '/community', label: 'Community', icon: Users },

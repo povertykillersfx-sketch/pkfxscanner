@@ -42,7 +42,7 @@ export function AdminRequests() {
   function onSave(e: FormEvent) {
     e.preventDefault()
     saveTelegramSettings(settings)
-    setMessage('Alert settings saved.')
+    setMessage('Notification settings saved.')
   }
 
   function onTest() {
@@ -138,13 +138,13 @@ export function AdminRequests() {
             <h2>Notification Settings</h2>
           </div>
           <p className="admin-muted" style={{ marginBottom: '0.85rem' }}>
-            Enter your telegram chatID so you can be instantly notified when new alerts are scanned.
+            Enter your telegram chatID so you can be instantly notified when new trade ideas are published.
           </p>
           <form className="admin-form" onSubmit={onSave}>
             <div className="admin-field">
-              <label>Alert sample</label>
+              <label>Trade Idea sample</label>
               <textarea
-                placeholder="Provide a sample of how you'd like the alerts to be structured."
+                placeholder="Provide a sample of how you'd like trade ideas to be structured."
                 value={settings.sample}
                 onChange={(e) => setSettings({ ...settings, sample: e.target.value })}
               />

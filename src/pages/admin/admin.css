@@ -483,3 +483,147 @@
     grid-template-columns: 1fr;
   }
 }
+
+.admin-error {
+  color: #b91c1c;
+  font-size: 0.9rem;
+  margin: 0.75rem 0 0;
+  font-weight: 600;
+}
+
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--admin-muted, #64748b);
+}
+
+.admin-form-grid input,
+.admin-form-grid select,
+.admin-form-grid textarea {
+  border: 1px solid var(--admin-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  background: var(--admin-card, #fff);
+  color: var(--admin-text, #0f172a);
+  font-weight: 500;
+}
+
+.admin-form-grid textarea {
+  resize: vertical;
+  min-height: 5rem;
+}
+
+.admin-span-2 {
+  grid-column: 1 / -1;
+}
+
+.admin-btn.primary {
+  background: var(--admin-blue, #0052ff);
+  color: #fff;
+}
+
+.admin-btn.danger {
+  color: #b91c1c;
+  border-color: color-mix(in srgb, #b91c1c 35%, #e2e8f0);
+}
+
+.admin-idea-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-idea-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--admin-border, #e2e8f0);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--admin-blue, #0052ff) 4%, #fff);
+}
+
+.admin-idea-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-idea-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.admin-idea-levels {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--admin-text, #0f172a);
+  font-weight: 600;
+}
+
+.admin-idea-notes {
+  margin: 0.4rem 0 0;
+  font-size: 0.86rem;
+  color: var(--admin-muted, #64748b);
+  line-height: 1.4;
+}
+
+.admin-idea-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.admin-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.admin-pill.buy {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.admin-pill.sell {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.admin-pill.live {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.admin-pill.draft {
+  color: #64748b;
+  background: #e2e8f0;
+}
+
+@media (max-width: 720px) {
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-idea-row {
+    flex-direction: column;
+  }
+}
