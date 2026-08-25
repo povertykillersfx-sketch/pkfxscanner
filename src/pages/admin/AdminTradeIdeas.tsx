@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Pencil, Save, Send, Trash2, EyeOff } from 'lucide-react'
 import { publishSharedContent } from '../../adminStore'
+import { currentMarketSession } from '../../alerts'
 import type { MarketSession } from '../../data/mockData'
 import {
   TRADE_IDEA_PAIRS,
-  TRADE_IDEA_SESSIONS,
   calculateRiskReward,
   createTradeIdea,
   deleteTradeIdea,
@@ -37,7 +37,7 @@ function emptyForm(): FormState {
     stopLoss: '',
     tp1: '',
     tp2: '',
-    session: 'New York',
+    session: currentMarketSession(),
     notes: '',
   }
 }
@@ -76,6 +76,18 @@ export function AdminTradeIdeas() {
       window.removeEventListener('pkfx-sync-status', onSync)
     }
   }, [])
+
+  // Keep create-form session locked to the live market session clock
+  useEffect(() => {
+    if (editingId) return
+    function syncSession() {
+      const next = currentMarketSession()
+      setForm((f) => (f.session === next ? f : { ...f, session: next }))
+    }
+    syncSession()
+    const id = window.setInterval(syncSession, 60_000)
+    return () => window.clearInterval(id)
+  }, [editingId])
 
   async function persistNote(note: string) {
     setMessage(note)
@@ -120,6 +132,8 @@ export function AdminTradeIdeas() {
       return
     }
 
+    const session = editingId ? form.session : currentMarketSession()
+
     if (editingId) {
       updateTradeIdea(editingId, {
         pair: form.pair,
@@ -128,7 +142,7 @@ export function AdminTradeIdeas() {
         stopLoss: form.stopLoss,
         tp1: form.tp1,
         tp2: form.tp2,
-        session: form.session,
+        session,
         notes: form.notes,
         publishedAt: publish
           ? new Date().toISOString()
@@ -144,7 +158,7 @@ export function AdminTradeIdeas() {
         stopLoss: form.stopLoss,
         tp1: form.tp1,
         tp2: form.tp2,
-        session: form.session,
+        session,
         notes: form.notes,
         publish,
       })
@@ -227,19 +241,13 @@ export function AdminTradeIdeas() {
             />
           </label>
           <label>
-            <span>Session</span>
-            <select
+            <span>Session (auto)</span>
+            <input
               value={form.session}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, session: e.target.value as MarketSession }))
-              }
-            >
-              {TRADE_IDEA_SESSIONS.map((session) => (
-                <option key={session} value={session}>
-                  {session}
-                </option>
-              ))}
-            </select>
+              readOnly
+              title="Set automatically from the current market session"
+              aria-label={`Session auto-selected: ${form.session}`}
+            />
           </label>
           <label>
             <span>Stop Loss</span>

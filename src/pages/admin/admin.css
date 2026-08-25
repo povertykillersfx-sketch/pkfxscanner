@@ -517,6 +517,12 @@
   font-weight: 500;
 }
 
+.admin-form-grid input:read-only {
+  background: color-mix(in srgb, var(--admin-border, #e2e8f0) 35%, transparent);
+  color: var(--admin-text, #0f172a);
+  cursor: default;
+}
+
 .admin-form-grid textarea {
   resize: vertical;
   min-height: 5rem;

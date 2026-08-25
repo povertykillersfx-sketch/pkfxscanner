@@ -563,6 +563,26 @@ export function sessionsDueToday(now = new Date()): MarketSession[] {
 }
 
 /**
+ * Active market session right now: the most recently opened
+ * Sydney → Asian → London → New York window (by UTC open hour).
+ */
+export function currentMarketSession(now = new Date()): MarketSession {
+  const due = sessionsDueToday(now)
+  if (due.length) return due[due.length - 1]!
+
+  let best: MarketSession = 'Sydney'
+  let bestMs = -Infinity
+  for (const session of MARKET_SESSIONS) {
+    const openMs = sessionOpenUtc(session.id, now).getTime()
+    if (openMs <= now.getTime() && openMs > bestMs) {
+      bestMs = openMs
+      best = session.id
+    }
+  }
+  return best
+}
+
+/**
  * Whether PKFX should create / send AI alerts right now.
  * Forex week: closed Sat + Sun before Sydney 22:00 UTC; open Sun 22:00 UTC through Fri.
  */
