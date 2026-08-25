@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
-import { Pencil, Plus, Save, Send, Trash2, EyeOff } from 'lucide-react'
+import { Pencil, Save, Send, Trash2, EyeOff } from 'lucide-react'
 import { publishSharedContent } from '../../adminStore'
 import {
   TRADE_IDEA_PAIRS,
@@ -18,6 +17,7 @@ import './admin.css'
 type FormState = {
   pair: string
   direction: TradeDirection
+  entryZone: string
   stopLoss: string
   tp1: string
   tp2: string
@@ -28,6 +28,7 @@ function emptyForm(): FormState {
   return {
     pair: 'EURUSD',
     direction: 'Buy',
+    entryZone: '',
     stopLoss: '',
     tp1: '',
     tp2: '',
@@ -79,6 +80,7 @@ export function AdminTradeIdeas() {
     setForm({
       pair: idea.pair,
       direction: idea.direction,
+      entryZone: idea.entryZone,
       stopLoss: idea.stopLoss,
       tp1: idea.tp1,
       tp2: idea.tp2,
@@ -94,10 +96,13 @@ export function AdminTradeIdeas() {
     setError('')
   }
 
-  async function onSubmit(e: FormEvent, publish: boolean) {
-    e.preventDefault()
+  async function save(publish: boolean) {
     if (!form.pair.trim()) {
       setError('Choose a currency pair.')
+      return
+    }
+    if (!form.entryZone.trim()) {
+      setError('Enter an entry zone or price.')
       return
     }
     if (!form.stopLoss.trim() || !form.tp1.trim() || !form.tp2.trim()) {
@@ -106,23 +111,24 @@ export function AdminTradeIdeas() {
     }
 
     if (editingId) {
+      const existing = listTradeIdeas().find((i) => i.id === editingId)
       updateTradeIdea(editingId, {
         pair: form.pair,
         direction: form.direction,
+        entryZone: form.entryZone,
         stopLoss: form.stopLoss,
         tp1: form.tp1,
         tp2: form.tp2,
         notes: form.notes,
-        publishedAt: publish
-          ? new Date().toISOString()
-          : listTradeIdeas().find((i) => i.id === editingId)?.publishedAt ?? null,
+        publishedAt: publish ? new Date().toISOString() : existing?.publishedAt ?? null,
+        archived: publish ? false : existing?.archived,
       })
-      if (publish) publishTradeIdea(editingId)
       await persistNote(publish ? 'Trade Idea updated and published.' : 'Trade Idea saved.')
     } else {
       createTradeIdea({
         pair: form.pair,
         direction: form.direction,
+        entryZone: form.entryZone,
         stopLoss: form.stopLoss,
         tp1: form.tp1,
         tp2: form.tp2,
@@ -163,7 +169,10 @@ export function AdminTradeIdeas() {
 
       <form
         className="admin-card"
-        onSubmit={(e) => void onSubmit(e, true)}
+        onSubmit={(e) => {
+          e.preventDefault()
+          void save(true)
+        }}
       >
         <div className="admin-card-head">
           <h2>{editingId ? 'Edit Trade Idea' : 'Create Trade Idea'}</h2>
@@ -200,6 +209,15 @@ export function AdminTradeIdeas() {
               <option value="Buy">Buy</option>
               <option value="Sell">Sell</option>
             </select>
+          </label>
+          <label className="admin-span-2">
+            <span>Entry zone</span>
+            <input
+              value={form.entryZone}
+              onChange={(e) => setForm((f) => ({ ...f, entryZone: e.target.value }))}
+              placeholder="e.g. 1.0850 or 1.0840 - 1.0860"
+              required
+            />
           </label>
           <label>
             <span>Stop Loss</span>
@@ -245,11 +263,7 @@ export function AdminTradeIdeas() {
           <button type="submit" className="admin-btn primary">
             <Send size={16} /> Publish to clients
           </button>
-          <button
-            type="button"
-            className="admin-btn"
-            onClick={(e) => void onSubmit(e as unknown as FormEvent, false)}
-          >
+          <button type="button" className="admin-btn ghost" onClick={() => void save(false)}>
             <Save size={16} /> Save draft
           </button>
         </div>
@@ -280,7 +294,8 @@ export function AdminTradeIdeas() {
                       </span>
                     </div>
                     <p className="admin-idea-levels">
-                      SL {idea.stopLoss || '—'} · TP1 {idea.tp1 || '—'} · TP2 {idea.tp2 || '—'}
+                      Entry {idea.entryZone || '—'} · SL {idea.stopLoss || '—'} · TP1{' '}
+                      {idea.tp1 || '—'} · TP2 {idea.tp2 || '—'}
                     </p>
                     {idea.notes ? <p className="admin-idea-notes">{idea.notes}</p> : null}
                   </div>
