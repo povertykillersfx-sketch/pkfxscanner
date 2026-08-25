@@ -132,7 +132,7 @@ export function AlertCard({ alert }: AlertCardProps) {
             {alert.entry && (
               <p className="alert-entry price-line">
                 <span>
-                  Entry: <strong>{alert.entry}</strong>
+                  Approx Entry: <strong>{alert.entry}</strong>
                   {alert.spot && alert.spot !== alert.entry && (
                     <>
                       {' '}

@@ -331,7 +331,7 @@ export function AdminTradeIdeas() {
                       {rr ? <span className="admin-pill live">R:R {rr}</span> : null}
                     </div>
                     <p className="admin-idea-levels">
-                      Entry {idea.entry || '—'} · SL {idea.stopLoss || '—'} · TP1 {idea.tp1 || '—'} ·
+                      Approx Entry {idea.entry || '—'} · SL {idea.stopLoss || '—'} · TP1 {idea.tp1 || '—'} ·
                       TP2 {idea.tp2 || '—'} · {idea.session}
                     </p>
                     {idea.notes ? <p className="admin-idea-notes">{idea.notes}</p> : null}

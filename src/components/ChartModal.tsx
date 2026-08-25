@@ -315,7 +315,7 @@ function FloatingAlertPanel({
         {alert.entry && (
           <p className="floating-entry level-bar-copyable">
             <span>
-              Entry: <strong>{alert.entry}</strong>
+              Approx Entry: <strong>{alert.entry}</strong>
             </span>
             <CopyLevelButton value={alert.entry} />
           </p>
