@@ -287,10 +287,16 @@
   border-radius: var(--radius-sm);
   background: var(--bg-field, color-mix(in srgb, var(--panel) 80%, transparent));
   overflow: visible;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease;
 }
 
 .phone-field.has-error {
   border-color: var(--badge-bearish-border);
+}
+
+.phone-field:focus-within {
+  border-color: var(--neon-bright);
+  box-shadow: var(--glow-sm);
 }
 
 .phone-dial-btn {
@@ -306,10 +312,12 @@
   flex-shrink: 0;
   font-weight: 650;
   font-size: 0.9rem;
+  transition: color 0.2s ease, background 0.2s ease;
 }
 
 .phone-dial-btn:hover {
   color: var(--neon-bright);
+  background: color-mix(in srgb, var(--neon) 8%, transparent);
 }
 
 .phone-flag {
@@ -341,6 +349,7 @@
   background: var(--panel, #120424);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
   overflow: hidden;
+  animation: pop-in 0.22s cubic-bezier(0.34, 1.4, 0.64, 1) both;
 }
 
 [data-theme='light'] .phone-dial-menu {
@@ -373,11 +382,16 @@
   text-align: left;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: background 0.15s ease, transform 0.15s ease;
 }
 
 .phone-dial-option:hover,
 .phone-dial-option.active {
   background: color-mix(in srgb, var(--neon) 12%, transparent);
+}
+
+.phone-dial-option:hover {
+  transform: translateX(2px);
 }
 
 .phone-option-name {
