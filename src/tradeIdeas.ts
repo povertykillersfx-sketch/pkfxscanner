@@ -165,10 +165,6 @@ export function replaceTradeIdeasFromSync(ideas: unknown[], opts?: { silent?: bo
 /** Map a published Trade Idea into the AlertCard visual format. */
 export function tradeIdeaToAlert(idea: TradeIdea, opts?: { trending?: boolean }): Alert {
   const noticedAt = idea.publishedAt || idea.updatedAt || idea.createdAt
-  const directionLabel = idea.direction === 'Sell' ? 'sell-side' : 'buy-side'
-  const note =
-    idea.notes.trim() ||
-    `PKFX Trade Idea on ${idea.pair} (${idea.session}): ${directionLabel} · approx entry ${idea.entry || '—'} · SL ${idea.stopLoss || '—'} · TP1 ${idea.tp1 || '—'} · TP2 ${idea.tp2 || '—'}.`
 
   return {
     id: idea.id,
@@ -182,7 +178,7 @@ export function tradeIdeaToAlert(idea: TradeIdea, opts?: { trending?: boolean })
     targets: [idea.tp1, idea.tp2].filter(Boolean),
     reversals: [idea.stopLoss].filter(Boolean),
     entry: idea.entry || undefined,
-    aiNote: note,
+    aiNote: idea.notes.trim() || undefined,
     live: true,
     levelsLocked: true,
   }

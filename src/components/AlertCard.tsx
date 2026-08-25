@@ -69,7 +69,7 @@ export function AlertCard({ alert }: AlertCardProps) {
 
         {expanded && (
           <div className="alert-body animate-fade-up">
-            <p className="alert-ai-note">{alert.aiNote}</p>
+            {alert.aiNote ? <p className="alert-ai-note">{alert.aiNote}</p> : null}
 
             {isCurrent && (
               <div className="trending-label">
