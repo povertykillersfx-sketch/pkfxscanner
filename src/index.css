@@ -443,19 +443,11 @@ ul {
   box-shadow: none;
 }
 
-[data-theme='dark'] .badge-bearish {
-  box-shadow: 0 0 10px rgba(255, 45, 106, 0.35);
-}
-
 .badge-bullish {
   color: var(--badge-bullish-fg);
   background: var(--badge-bullish-bg);
   border-color: var(--badge-bullish-border);
   box-shadow: none;
-}
-
-[data-theme='dark'] .badge-bullish {
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
 }
 
 /* ——— Layout ——— */
