@@ -11,17 +11,6 @@
   align-items: start;
 }
 
-.dashboard-ideas-col {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.dashboard-ideas-more {
-  align-self: flex-start;
-}
-
 .how-it-works {
   padding: 1.1rem;
 }
