@@ -258,7 +258,19 @@
 }
 
 .signup-card {
-  width: min(420px, 100%);
+  width: 100%;
+}
+
+.portal-name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 420px) {
+  .portal-name-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .field.field-error {
