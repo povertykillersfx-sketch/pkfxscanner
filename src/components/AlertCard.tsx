@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import {
+  Check,
   ChevronDown,
   ChevronUp,
+  Copy,
   TrendingDown,
   TrendingUp,
   Rocket,
@@ -15,6 +17,54 @@ import './AlertCard.css'
 
 interface AlertCardProps {
   alert: Alert
+}
+
+function copyText(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text)
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.setAttribute('readonly', '')
+      ta.style.position = 'absolute'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      resolve()
+    } catch (err) {
+      reject(err)
+    }
+  })
+}
+
+function CopyPriceButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await copyText(value)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1400)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className={`price-copy-btn${copied ? ' is-copied' : ''}`}
+      aria-label={copied ? 'Copied' : `Copy ${value}`}
+      title={copied ? 'Copied' : 'Copy price'}
+      onClick={() => void handleCopy()}
+    >
+      {copied ? <Check size={13} strokeWidth={2.5} /> : <Copy size={13} strokeWidth={2} />}
+    </button>
+  )
 }
 
 export function AlertCard({ alert }: AlertCardProps) {
@@ -80,14 +130,17 @@ export function AlertCard({ alert }: AlertCardProps) {
             )}
 
             {alert.entry && (
-              <p className="alert-entry">
-                Entry: <strong>{alert.entry}</strong>
-                {alert.spot && alert.spot !== alert.entry && (
-                  <>
-                    {' '}
-                    · market <strong>{alert.spot}</strong>
-                  </>
-                )}
+              <p className="alert-entry price-line">
+                <span>
+                  Entry: <strong>{alert.entry}</strong>
+                  {alert.spot && alert.spot !== alert.entry && (
+                    <>
+                      {' '}
+                      · market <strong>{alert.spot}</strong>
+                    </>
+                  )}
+                </span>
+                <CopyPriceButton value={alert.entry} />
               </p>
             )}
 
@@ -95,16 +148,22 @@ export function AlertCard({ alert }: AlertCardProps) {
               <div className="levels-col">
                 <h4>Possible Targets</h4>
                 {alert.targets.map((t, i) => (
-                  <div key={`t-${t}-${i}`} className="level-bar target">
-                    TP{i + 1} · {t}
+                  <div key={`t-${t}-${i}`} className="level-bar target price-line">
+                    <span>
+                      TP{i + 1} · {t}
+                    </span>
+                    <CopyPriceButton value={t} />
                   </div>
                 ))}
               </div>
               <div className="levels-col">
                 <h4>Invalidation</h4>
                 {alert.reversals.map((r, i) => (
-                  <div key={`r-${r}-${i}`} className="level-bar reversal">
-                    {i === 0 ? 'SL' : 'Ext'} · {r}
+                  <div key={`r-${r}-${i}`} className="level-bar reversal price-line">
+                    <span>
+                      {i === 0 ? 'SL' : 'Ext'} · {r}
+                    </span>
+                    <CopyPriceButton value={r} />
                   </div>
                 ))}
               </div>
