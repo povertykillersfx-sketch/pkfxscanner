@@ -6,6 +6,7 @@ import { currentMarketSession } from '../../alerts'
 import type { MarketSession } from '../../data/mockData'
 import {
   TRADE_IDEA_PAIRS,
+  TRADE_IDEA_SESSIONS,
   calculateRiskReward,
   createTradeIdea,
   deleteTradeIdea,
@@ -46,6 +47,7 @@ export function AdminTradeIdeas() {
   const [ideas, setIdeas] = useState<TradeIdea[]>(() => listTradeIdeas())
   const [form, setForm] = useState<FormState>(emptyForm)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [sessionManual, setSessionManual] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [syncNote, setSyncNote] = useState('Publish syncs Trade Ideas to every client device.')
@@ -77,9 +79,9 @@ export function AdminTradeIdeas() {
     }
   }, [])
 
-  // Keep create-form session locked to the live market session clock
+  // Auto-fill session from market clock until admin picks manually
   useEffect(() => {
-    if (editingId) return
+    if (editingId || sessionManual) return
     function syncSession() {
       const next = currentMarketSession()
       setForm((f) => (f.session === next ? f : { ...f, session: next }))
@@ -87,7 +89,7 @@ export function AdminTradeIdeas() {
     syncSession()
     const id = window.setInterval(syncSession, 60_000)
     return () => window.clearInterval(id)
-  }, [editingId])
+  }, [editingId, sessionManual])
 
   async function persistNote(note: string) {
     setMessage(note)
@@ -97,6 +99,7 @@ export function AdminTradeIdeas() {
 
   function startEdit(idea: TradeIdea) {
     setEditingId(idea.id)
+    setSessionManual(true)
     setForm({
       pair: idea.pair,
       direction: idea.direction,
@@ -113,6 +116,7 @@ export function AdminTradeIdeas() {
 
   function resetForm() {
     setEditingId(null)
+    setSessionManual(false)
     setForm(emptyForm())
     setError('')
   }
@@ -132,8 +136,6 @@ export function AdminTradeIdeas() {
       return
     }
 
-    const session = editingId ? form.session : currentMarketSession()
-
     if (editingId) {
       updateTradeIdea(editingId, {
         pair: form.pair,
@@ -142,7 +144,7 @@ export function AdminTradeIdeas() {
         stopLoss: form.stopLoss,
         tp1: form.tp1,
         tp2: form.tp2,
-        session,
+        session: form.session,
         notes: form.notes,
         publishedAt: publish
           ? new Date().toISOString()
@@ -158,7 +160,7 @@ export function AdminTradeIdeas() {
         stopLoss: form.stopLoss,
         tp1: form.tp1,
         tp2: form.tp2,
-        session,
+        session: form.session,
         notes: form.notes,
         publish,
       })
@@ -241,13 +243,20 @@ export function AdminTradeIdeas() {
             />
           </label>
           <label>
-            <span>Session (auto)</span>
-            <input
+            <span>Session{sessionManual ? '' : ' (auto)'}</span>
+            <select
               value={form.session}
-              readOnly
-              title="Set automatically from the current market session"
-              aria-label={`Session auto-selected: ${form.session}`}
-            />
+              onChange={(e) => {
+                setSessionManual(true)
+                setForm((f) => ({ ...f, session: e.target.value as MarketSession }))
+              }}
+            >
+              {TRADE_IDEA_SESSIONS.map((session) => (
+                <option key={session} value={session}>
+                  {session}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             <span>Stop Loss</span>
