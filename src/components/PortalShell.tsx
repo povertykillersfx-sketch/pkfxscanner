@@ -36,10 +36,12 @@ export function PortalShell({
 
       <aside className="portal-brand">
         <div className="portal-brand-inner">
-          <div className="portal-brand-logo motion-scale-in">
-            <Logo size="lg" />
+          <div className="portal-brand-lockup motion-scale-in">
+            <div className="portal-brand-logo">
+              <Logo size="lg" />
+            </div>
+            <p className="portal-eyebrow">{eyebrow}</p>
           </div>
-          <p className="portal-eyebrow motion-rise motion-d1">{eyebrow}</p>
           <h1 className="portal-headline font-display motion-rise motion-d2">{headline}</h1>
           <p className="portal-subcopy motion-rise motion-d3">{subcopy}</p>
           <div className="portal-brand-rule motion-rule" aria-hidden />
