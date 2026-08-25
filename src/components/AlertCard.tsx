@@ -135,6 +135,7 @@ export function AlertCard({ alert }: AlertCardProps) {
 interface AlertsPanelProps {
   alerts: Alert[]
   title?: string
+  subtitle?: string
   onEditScanner?: () => void
   limit?: number
   emptyHint?: string
@@ -149,10 +150,11 @@ interface AlertsPanelProps {
 
 export function AlertsPanel({
   alerts,
-  title = 'My Alerts',
+  title = 'Trade Ideas',
+  subtitle,
   onEditScanner,
   limit,
-  emptyHint = 'No symbols in your scanner yet. Click Add Symbols to add instruments.',
+  emptyHint = 'No trade ideas published yet.',
   loading = false,
   liveFeed = false,
   currentOnly = false,
@@ -167,21 +169,21 @@ export function AlertsPanel({
 
   const visible = showAll || !limit ? scoped : scoped.slice(0, limit)
 
+  const defaultSub =
+    todayOnly || currentOnly
+      ? 'Published Trade Ideas · current setups'
+      : liveFeed
+        ? 'Published Trade Ideas · synced live'
+        : loading
+          ? 'Loading Trade Ideas…'
+          : 'Published Trade Ideas from PKFX'
+
   return (
     <section className="alerts-panel panel panel-glow animate-fade-up">
       <div className="alerts-panel-header">
         <div>
           <h2 className="font-display">{title}</h2>
-          <p className="alerts-sub">
-            {todayOnly || currentOnly
-              ? 'Selected symbols · current trading day'
-              : liveFeed
-                ? 'Selected symbols · last 5 trading days (saved)'
-                : loading
-                  ? 'Scanning markets…'
-                  : 'Selected symbols · last 5 trading days'}{' '}
-            · {symbols.length ? symbols.join(' · ') : 'no symbols selected'}
-          </p>
+          <p className="alerts-sub">{subtitle || defaultSub}</p>
         </div>
         {onEditScanner && (
           <button type="button" className="btn btn-outline edit-scanner" onClick={onEditScanner}>

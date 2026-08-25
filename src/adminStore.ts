@@ -10,6 +10,7 @@ import {
   pushSharedSnapshot,
   type SharedSnapshot,
 } from './cloudSync'
+import { listTradeIdeas, replaceTradeIdeasFromSync } from './tradeIdeas'
 
 export type { CommunitySettings, CommunityChannel, CommunityResource, LiveSession }
 
@@ -301,6 +302,10 @@ export function applySharedSnapshot(snapshot: SharedSnapshot, opts?: { silent?: 
     }
   }
 
+  if (Array.isArray(snapshot.tradeIdeas)) {
+    replaceTradeIdeasFromSync(snapshot.tradeIdeas, { silent: opts?.silent })
+  }
+
   if (snapshot.updatedAt) noteSharedUpdatedAt(snapshot.updatedAt)
 }
 
@@ -310,6 +315,7 @@ function buildSharedSnapshot(): Omit<SharedSnapshot, 'updatedAt'> & { updatedAt?
     courses: getAdminCourses(),
     ebooks: getAdminEbooks(),
     howItWorks: getHowItWorksVideo(),
+    tradeIdeas: listTradeIdeas(),
   }
 }
 

@@ -11,6 +11,7 @@ type Snapshot = {
   courses: unknown
   ebooks: unknown
   howItWorks: unknown
+  tradeIdeas: unknown
 }
 
 function ensureStore() {
@@ -25,6 +26,7 @@ function ensureStore() {
           courses: [],
           ebooks: [],
           howItWorks: null,
+          tradeIdeas: [],
         },
         null,
         2,
@@ -36,7 +38,15 @@ function ensureStore() {
 
 function readLocal(): Snapshot {
   ensureStore()
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) as Snapshot
+  const raw = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) as Partial<Snapshot>
+  return {
+    updatedAt: raw.updatedAt || new Date().toISOString(),
+    community: raw.community ?? null,
+    courses: Array.isArray(raw.courses) ? raw.courses : [],
+    ebooks: Array.isArray(raw.ebooks) ? raw.ebooks : [],
+    howItWorks: raw.howItWorks ?? null,
+    tradeIdeas: Array.isArray(raw.tradeIdeas) ? raw.tradeIdeas : [],
+  }
 }
 
 function writeLocal(snapshot: Snapshot) {
@@ -72,6 +82,7 @@ function rowToSnapshot(row: Record<string, unknown> | null): Snapshot {
     courses: Array.isArray(row?.courses) ? row.courses : [],
     ebooks: Array.isArray(row?.ebooks) ? row.ebooks : [],
     howItWorks: row?.how_it_works ?? null,
+    tradeIdeas: Array.isArray(row?.trade_ideas) ? row.trade_ideas : [],
   }
 }
 
@@ -97,6 +108,7 @@ async function pullSupabase(mode: string): Promise<Snapshot | null> {
         courses: [],
         ebooks: [],
         howItWorks: null,
+        tradeIdeas: [],
       }
     }
     return rowToSnapshot(rows[0]!)
@@ -123,6 +135,7 @@ async function pushSupabase(mode: string, snapshot: Snapshot): Promise<boolean> 
         courses: snapshot.courses ?? [],
         ebooks: snapshot.ebooks ?? [],
         how_it_works: snapshot.howItWorks ?? null,
+        trade_ideas: Array.isArray(snapshot.tradeIdeas) ? snapshot.tradeIdeas : [],
         updated_at: snapshot.updatedAt,
       }),
     })
@@ -175,6 +188,7 @@ function syncMiddleware(mode: string): Connect.NextHandleFunction {
           courses: parsed.courses ?? [],
           ebooks: parsed.ebooks ?? [],
           howItWorks: parsed.howItWorks ?? null,
+          tradeIdeas: Array.isArray(parsed.tradeIdeas) ? parsed.tradeIdeas : [],
           updatedAt: new Date().toISOString(),
         }
         writeLocal(next)

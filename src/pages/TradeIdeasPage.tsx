@@ -6,7 +6,7 @@ import { publishedTradeIdeasAsAlerts } from '../tradeIdeas'
 import type { Alert } from '../data/mockData'
 import './Dashboard.css'
 
-function usePublishedIdeaAlerts() {
+export function TradeIdeasPage() {
   const [alerts, setAlerts] = useState<Alert[]>(() => publishedTradeIdeasAsAlerts())
 
   useEffect(() => {
@@ -21,26 +21,18 @@ function usePublishedIdeaAlerts() {
     }
   }, [])
 
-  return alerts
-}
-
-export function Dashboard() {
-  const alerts = usePublishedIdeaAlerts()
-
   return (
     <div className="dashboard-page">
       <div className="dashboard-top">
         <AlertsPanel
           alerts={alerts}
           title="Trade Ideas"
-          subtitle="Published setups from PKFX · live levels"
-          limit={12}
-          emptyHint="No trade ideas published yet. New ideas will appear here when Admin publishes."
+          subtitle="All published Trade Ideas from PKFX"
+          limit={40}
+          emptyHint="No trade ideas published yet. Check back after Admin publishes a setup."
         />
-
         <HowItWorksPanel />
       </div>
-
       <StatsRow savedTradeIdeas={alerts.length} />
     </div>
   )
