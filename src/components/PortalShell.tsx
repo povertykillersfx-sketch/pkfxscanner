@@ -11,6 +11,8 @@ interface PortalShellProps {
   eyebrow?: string
   headline?: string
   subcopy?: string
+  /** Show the Poverty Killers FX foot line under the rule. */
+  showFoot?: boolean
 }
 
 export function PortalShell({
@@ -19,7 +21,8 @@ export function PortalShell({
   compactBrand = false,
   eyebrow = 'Member Portal',
   headline = 'Trade with precision.',
-  subcopy = 'AI-powered alerts, sessions, and education — built for serious FX traders.',
+  subcopy,
+  showFoot = true,
 }: PortalShellProps) {
   return (
     <div
@@ -43,9 +46,13 @@ export function PortalShell({
             <p className="portal-eyebrow">{eyebrow}</p>
           </div>
           <h1 className="portal-headline font-display motion-rise motion-d2">{headline}</h1>
-          <p className="portal-subcopy motion-rise motion-d3">{subcopy}</p>
-          <div className="portal-brand-rule motion-rule" aria-hidden />
-          <p className="portal-brand-foot motion-rise motion-d5">Poverty Killers FX</p>
+          {subcopy ? <p className="portal-subcopy motion-rise motion-d3">{subcopy}</p> : null}
+          {showFoot ? (
+            <>
+              <div className="portal-brand-rule motion-rule" aria-hidden />
+              <p className="portal-brand-foot motion-rise motion-d5">Poverty Killers FX</p>
+            </>
+          ) : null}
         </div>
       </aside>
 

@@ -65,7 +65,7 @@ export function SignIn() {
       locked
       eyebrow="Member Portal"
       headline="Trade with precision."
-      subcopy="AI-powered alerts, sessions, and education — built for serious FX traders."
+      showFoot={false}
     >
       <form className="portal-panel" onSubmit={handleSubmit}>
         <h2 className="portal-panel-title font-display">Welcome back</h2>

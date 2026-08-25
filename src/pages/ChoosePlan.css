@@ -84,11 +84,14 @@
 }
 
 .choose-plan-brand {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 0.85rem;
   animation: choose-plan-pulse 3.8s ease-in-out infinite;
 }
 
 .choose-plan-brand .logo-lg .logo-img {
-  height: clamp(64px, 10vw, 88px);
+  height: clamp(72px, 11vw, 96px);
 }
 
 @keyframes choose-plan-pulse {
