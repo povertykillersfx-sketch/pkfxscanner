@@ -162,6 +162,43 @@ export function replaceTradeIdeasFromSync(ideas: unknown[], opts?: { silent?: bo
   writeAll(next, { silent: opts?.silent, skipPublish: true })
 }
 
+function parsePrice(raw: string): number | null {
+  const cleaned = raw.replace(/,/g, '').trim()
+  if (!cleaned) return null
+  // Midpoint if a zone like "1.08 - 1.09"
+  const parts = cleaned.split(/\s*[-–—to]+\s*/i).map((p) => Number(p.trim()))
+  const nums = parts.filter((n) => Number.isFinite(n))
+  if (nums.length === 0) return null
+  if (nums.length === 1) return nums[0]!
+  return (nums[0]! + nums[nums.length - 1]!) / 2
+}
+
+/**
+ * Overall risk-to-reward using TP2.
+ * Buy: reward = TP2 - entry, risk = entry - SL
+ * Sell: reward = entry - TP2, risk = SL - entry
+ * Returns e.g. "1:2.0" or null if levels are invalid.
+ */
+export function calculateRiskReward(
+  entryRaw: string,
+  stopLossRaw: string,
+  tp2Raw: string,
+  direction: TradeDirection,
+): string | null {
+  const entry = parsePrice(entryRaw)
+  const sl = parsePrice(stopLossRaw)
+  const tp2 = parsePrice(tp2Raw)
+  if (entry == null || sl == null || tp2 == null) return null
+
+  const risk = direction === 'Buy' ? entry - sl : sl - entry
+  const reward = direction === 'Buy' ? tp2 - entry : entry - tp2
+  if (!(risk > 0) || !(reward > 0)) return null
+
+  const ratio = reward / risk
+  const formatted = ratio >= 10 ? ratio.toFixed(1) : ratio.toFixed(2).replace(/\.?0+$/, '') || ratio.toFixed(1)
+  return `1:${formatted}`
+}
+
 /** Map a published Trade Idea into the AlertCard visual format. */
 export function tradeIdeaToAlert(idea: TradeIdea, opts?: { trending?: boolean }): Alert {
   const noticedAt = idea.publishedAt || idea.updatedAt || idea.createdAt
@@ -181,6 +218,7 @@ export function tradeIdeaToAlert(idea: TradeIdea, opts?: { trending?: boolean })
     aiNote: idea.notes.trim() || undefined,
     live: true,
     levelsLocked: true,
+    riskReward: calculateRiskReward(idea.entry, idea.stopLoss, idea.tp2, idea.direction) || undefined,
   }
 }
 

@@ -110,6 +110,12 @@ export function AlertCard({ alert }: AlertCardProps) {
               </div>
             </div>
 
+            {alert.riskReward && (
+              <p className="alert-rr">
+                Risk : Reward (TP2) <strong>{alert.riskReward}</strong>
+              </p>
+            )}
+
             <div className="alert-actions">
               <button type="button" className="btn-dark" onClick={() => setChartOpen(true)}>
                 VIEW CHART

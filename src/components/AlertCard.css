@@ -192,6 +192,23 @@
   color: var(--text);
 }
 
+.alert-rr {
+  margin: 0.75rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: var(--text-muted);
+}
+
+.alert-rr strong {
+  color: var(--neon-bright);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 .trend-orb {
   width: 26px;
   height: 26px;

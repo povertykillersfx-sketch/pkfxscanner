@@ -6,6 +6,7 @@ import type { MarketSession } from '../../data/mockData'
 import {
   TRADE_IDEA_PAIRS,
   TRADE_IDEA_SESSIONS,
+  calculateRiskReward,
   createTradeIdea,
   deleteTradeIdea,
   listTradeIdeas,
@@ -48,6 +49,8 @@ export function AdminTradeIdeas() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [syncNote, setSyncNote] = useState('Publish syncs Trade Ideas to every client device.')
+
+  const liveRr = calculateRiskReward(form.entry, form.stopLoss, form.tp2, form.direction)
 
   useEffect(() => {
     function onIdeas() {
@@ -277,6 +280,15 @@ export function AdminTradeIdeas() {
         </div>
 
         {error ? <p className="admin-error">{error}</p> : null}
+        {liveRr ? (
+          <p className="admin-rr-preview">
+            Overall risk : reward (to TP2) <strong>{liveRr}</strong>
+          </p>
+        ) : form.entry && form.stopLoss && form.tp2 ? (
+          <p className="admin-error">
+            Check levels — SL must be past entry against the direction, and TP2 must be in profit.
+          </p>
+        ) : null}
 
         <div className="admin-actions">
           <button type="submit" className="admin-btn primary">
@@ -304,6 +316,7 @@ export function AdminTradeIdeas() {
           <div className="admin-idea-list">
             {ideas.map((idea) => {
               const live = Boolean(idea.publishedAt) && !idea.archived
+              const rr = calculateRiskReward(idea.entry, idea.stopLoss, idea.tp2, idea.direction)
               return (
                 <article key={idea.id} className="admin-idea-row">
                   <div className="admin-idea-main">
@@ -315,6 +328,7 @@ export function AdminTradeIdeas() {
                       <span className={`admin-pill ${live ? 'live' : 'draft'}`}>
                         {live ? 'Published' : 'Draft'}
                       </span>
+                      {rr ? <span className="admin-pill live">R:R {rr}</span> : null}
                     </div>
                     <p className="admin-idea-levels">
                       Entry {idea.entry || '—'} · SL {idea.stopLoss || '—'} · TP1 {idea.tp1 || '—'} ·

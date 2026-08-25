@@ -27,6 +27,8 @@ export interface Alert {
   dataSource?: string
   /** Once true, entry / SL / TP must never be rewritten */
   levelsLocked?: boolean
+  /** Overall risk:reward to TP2, e.g. "1:2.0" */
+  riskReward?: string
 }
 
 export interface CourseVideo {

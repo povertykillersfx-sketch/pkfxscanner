@@ -627,3 +627,15 @@
     flex-direction: column;
   }
 }
+
+.admin-rr-preview {
+  margin: 0.75rem 0 0;
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: var(--admin-text, #0f172a);
+}
+
+.admin-rr-preview strong {
+  color: var(--admin-blue, #0052ff);
+  font-weight: 800;
+}
