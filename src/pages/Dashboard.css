@@ -1,13 +1,13 @@
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.4rem;
 }
 
 .dashboard-top {
   display: grid;
-  grid-template-columns: 1fr minmax(260px, 320px);
-  gap: 1.15rem;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 1.4rem;
   align-items: start;
 }
 
