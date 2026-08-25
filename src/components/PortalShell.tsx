@@ -34,21 +34,21 @@ export function PortalShell({
         <span className="portal-vignette" />
       </div>
 
-      <aside className="portal-brand animate-fade-up">
+      <aside className="portal-brand">
         <div className="portal-brand-inner">
-          <div className="portal-brand-logo">
+          <div className="portal-brand-logo motion-scale-in">
             <Logo size="lg" />
           </div>
-          <p className="portal-eyebrow">{eyebrow}</p>
-          <h1 className="portal-headline font-display">{headline}</h1>
-          <p className="portal-subcopy">{subcopy}</p>
-          <div className="portal-brand-rule" aria-hidden />
-          <p className="portal-brand-foot">Poverty Killers FX</p>
+          <p className="portal-eyebrow motion-rise motion-d1">{eyebrow}</p>
+          <h1 className="portal-headline font-display motion-rise motion-d2">{headline}</h1>
+          <p className="portal-subcopy motion-rise motion-d3">{subcopy}</p>
+          <div className="portal-brand-rule motion-rule" aria-hidden />
+          <p className="portal-brand-foot motion-rise motion-d5">Poverty Killers FX</p>
         </div>
       </aside>
 
       <section className="portal-stage">
-        <div className="portal-stage-inner animate-fade-up stagger-2">{children}</div>
+        <div className="portal-stage-inner motion-rise-soft motion-d4">{children}</div>
       </section>
     </div>
   )

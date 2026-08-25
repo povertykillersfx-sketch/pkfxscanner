@@ -49,20 +49,20 @@ export function ChoosePlan() {
       <div className="choose-plan-grid" aria-hidden />
       <div className="choose-plan-vignette" aria-hidden />
 
-      <main className="choose-plan-stage animate-fade-up">
-        <div className="choose-plan-brand">
+      <main className="choose-plan-stage">
+        <div className="choose-plan-brand motion-scale-in">
           <Logo size="lg" />
         </div>
 
         <header className="choose-plan-intro">
-          <p className="choose-plan-eyebrow">Premium Access</p>
-          <h1 className="font-display">
+          <p className="choose-plan-eyebrow motion-rise motion-d1">Premium Access</p>
+          <h1 className="font-display motion-rise motion-d2">
             Let&apos;s get you started{firstName ? `, ${firstName}` : ''}
           </h1>
-          <p>Unlock the full PKFX trading system — one simple annual plan.</p>
+          <p className="motion-rise motion-d3">Unlock the full PKFX trading system — one simple annual plan.</p>
         </header>
 
-        <section className="choose-plan-offer" aria-label="Annual package">
+        <section className="choose-plan-offer motion-rise-soft motion-d4" aria-label="Annual package">
           <div className="choose-plan-offer-top">
             <div className="choose-plan-offer-badge">Most selected</div>
             <p className="choose-plan-kicker">{PLAN.name}</p>
@@ -81,7 +81,7 @@ export function ChoosePlan() {
             {PLAN.benefits.map((benefit, index) => {
               const Icon = BENEFIT_ICONS[index] ?? Check
               return (
-                <li key={benefit} className={`choose-plan-benefit stagger-${index + 1}`}>
+                <li key={benefit} className={`choose-plan-benefit motion-rise motion-d${Math.min(index + 5, 7)}`}>
                   <span className="choose-plan-benefit-icon" aria-hidden>
                     <Icon size={18} strokeWidth={2} />
                   </span>
