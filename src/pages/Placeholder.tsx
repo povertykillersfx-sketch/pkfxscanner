@@ -27,7 +27,7 @@ export function Favorites() {
   return (
     <Placeholder
       title="My Favorites"
-      description="Your saved trade ideas and bookmarked lessons will appear here."
+      description="Your saved alerts and bookmarked lessons will appear here."
     />
   )
 }

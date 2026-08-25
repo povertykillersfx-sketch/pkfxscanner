@@ -11,7 +11,6 @@ type Snapshot = {
   courses: unknown
   ebooks: unknown
   howItWorks: unknown
-  tradeIdeas: unknown
 }
 
 function ensureStore() {
@@ -26,7 +25,6 @@ function ensureStore() {
           courses: [],
           ebooks: [],
           howItWorks: null,
-          tradeIdeas: [],
         },
         null,
         2,
@@ -74,7 +72,6 @@ function rowToSnapshot(row: Record<string, unknown> | null): Snapshot {
     courses: Array.isArray(row?.courses) ? row.courses : [],
     ebooks: Array.isArray(row?.ebooks) ? row.ebooks : [],
     howItWorks: row?.how_it_works ?? null,
-    tradeIdeas: Array.isArray(row?.trade_ideas) ? row.trade_ideas : [],
   }
 }
 
@@ -100,7 +97,6 @@ async function pullSupabase(mode: string): Promise<Snapshot | null> {
         courses: [],
         ebooks: [],
         howItWorks: null,
-        tradeIdeas: [],
       }
     }
     return rowToSnapshot(rows[0]!)
@@ -127,7 +123,6 @@ async function pushSupabase(mode: string, snapshot: Snapshot): Promise<boolean> 
         courses: snapshot.courses ?? [],
         ebooks: snapshot.ebooks ?? [],
         how_it_works: snapshot.howItWorks ?? null,
-        trade_ideas: Array.isArray(snapshot.tradeIdeas) ? snapshot.tradeIdeas : [],
         updated_at: snapshot.updatedAt,
       }),
     })
@@ -180,7 +175,6 @@ function syncMiddleware(mode: string): Connect.NextHandleFunction {
           courses: parsed.courses ?? [],
           ebooks: parsed.ebooks ?? [],
           howItWorks: parsed.howItWorks ?? null,
-          tradeIdeas: Array.isArray(parsed.tradeIdeas) ? parsed.tradeIdeas : [],
           updatedAt: new Date().toISOString(),
         }
         writeLocal(next)

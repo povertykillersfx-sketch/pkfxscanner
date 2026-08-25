@@ -5,7 +5,7 @@ import { RequireAuth, RequireAdmin, RequireClient } from './components/RequireAu
 import { SignIn } from './pages/SignIn'
 import { SignUp } from './pages/SignUp'
 import { Dashboard } from './pages/Dashboard'
-import { TradeIdeasPage } from './pages/TradeIdeasPage'
+import { AlertsPage } from './pages/AlertsPage'
 import { EBooks } from './pages/EBooks'
 import { Courses } from './pages/Courses'
 import { AdminDashboard } from './pages/admin/AdminDashboard'
@@ -13,7 +13,6 @@ import { AdminRequests } from './pages/admin/AdminRequests'
 import { AdminTutorials } from './pages/admin/AdminTutorials'
 import { AdminMembers } from './pages/admin/AdminMembers'
 import { AdminEvents } from './pages/admin/AdminEvents'
-import { AdminTradeIdeas } from './pages/admin/AdminTradeIdeas'
 import {
   Billing,
   Favorites,
@@ -42,8 +41,7 @@ export default function App() {
         <Route element={<RequireClient />}>
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/trade-ideas" element={<TradeIdeasPage />} />
-            <Route path="/alerts" element={<Navigate to="/trade-ideas" replace />} />
+            <Route path="/alerts" element={<AlertsPage />} />
             <Route path="/ebooks" element={<EBooks />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/community" element={<Community />} />
@@ -59,7 +57,6 @@ export default function App() {
         <Route element={<RequireAdmin />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
-            <Route path="trade-ideas" element={<AdminTradeIdeas />} />
             <Route path="requests" element={<AdminRequests />} />
             <Route path="tutorials" element={<AdminTutorials />} />
             <Route path="events" element={<AdminEvents />} />

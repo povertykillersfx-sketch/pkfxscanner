@@ -1,6 +1,6 @@
 /**
  * PKFX shared sync Edge Function
- * GET  → read community / courses / ebooks / how_it_works / trade_ideas
+ * GET  → read community / courses / ebooks / how_it_works
  * PUT  → upsert the same payload (admin publish)
  *
  * Deploy: npx supabase functions deploy sync
@@ -15,7 +15,6 @@ type SharedRow = {
   courses: unknown
   ebooks: unknown
   how_it_works: unknown
-  trade_ideas: unknown
   updated_at: string
 }
 
@@ -37,7 +36,6 @@ function toSnapshot(row: SharedRow | null) {
     courses: Array.isArray(row?.courses) ? row!.courses : [],
     ebooks: Array.isArray(row?.ebooks) ? row!.ebooks : [],
     howItWorks: row?.how_it_works ?? null,
-    tradeIdeas: Array.isArray(row?.trade_ideas) ? row!.trade_ideas : [],
   }
 }
 
@@ -65,7 +63,6 @@ Deno.serve(async (req) => {
         courses?: unknown
         ebooks?: unknown
         howItWorks?: unknown
-        tradeIdeas?: unknown
         updatedAt?: string
       }
 
@@ -76,7 +73,6 @@ Deno.serve(async (req) => {
         courses: Array.isArray(body.courses) ? body.courses : [],
         ebooks: Array.isArray(body.ebooks) ? body.ebooks : [],
         how_it_works: body.howItWorks ?? null,
-        trade_ideas: Array.isArray(body.tradeIdeas) ? body.tradeIdeas : [],
         updated_at: updatedAt,
       }
 
