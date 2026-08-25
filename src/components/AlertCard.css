@@ -387,15 +387,21 @@
 }
 
 .level-bar.target {
+  background: color-mix(in srgb, var(--neon) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--neon) 50%, transparent);
+  color: var(--neon-soft);
+}
+
+.level-bar.reversal {
   background: var(--badge-bearish-bg);
   border: 1px solid var(--badge-bearish-border);
   color: var(--badge-bearish-fg);
 }
 
-.level-bar.reversal {
-  background: var(--badge-bullish-bg);
-  border: 1px solid var(--badge-bullish-border);
-  color: var(--badge-bullish-fg);
+[data-theme='light'] .level-bar.target {
+  background: color-mix(in srgb, var(--accent) 12%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--neon-bright);
 }
 
 .alert-actions {
