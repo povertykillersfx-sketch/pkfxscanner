@@ -40,7 +40,7 @@
   height: min(48vw, 520px);
   top: -12%;
   left: -8%;
-  background: radial-gradient(circle, rgba(191, 0, 255, 0.5), transparent 68%);
+  background: radial-gradient(circle, rgba(191, 0, 255, 0.22), transparent 68%);
 }
 
 .portal-orb-b {
@@ -136,21 +136,19 @@
 
 .portal-brand-logo {
   line-height: 0;
-  animation: portal-logo-glow 4s ease-in-out infinite;
 }
 
 .portal-brand-logo .logo-lg .logo-img {
   height: clamp(72px, 9vw, 104px);
-  filter: drop-shadow(0 0 18px rgba(191, 0, 255, 0.45));
 }
 
 @keyframes portal-logo-glow {
   0%,
   100% {
-    filter: drop-shadow(0 0 12px rgba(191, 0, 255, 0.35));
+    filter: none;
   }
   50% {
-    filter: drop-shadow(0 0 28px rgba(224, 64, 255, 0.7));
+    filter: none;
   }
 }
 
@@ -216,12 +214,9 @@
   border-radius: calc(var(--radius) + 6px);
   border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
   background:
-    linear-gradient(165deg, rgba(191, 0, 255, 0.12), transparent 38%),
-    linear-gradient(180deg, rgba(18, 4, 36, 0.88), rgba(10, 2, 24, 0.92));
-  box-shadow:
-    0 0 0 1px rgba(212, 175, 122, 0.08),
-    var(--glow-md),
-    0 28px 64px rgba(0, 0, 0, 0.35);
+    linear-gradient(165deg, rgba(191, 0, 255, 0.06), transparent 38%),
+    linear-gradient(180deg, rgba(18, 4, 36, 0.9), rgba(10, 2, 24, 0.94));
+  box-shadow: var(--shadow-panel-glow);
   backdrop-filter: blur(22px);
   transition:
     border-color 0.28s cubic-bezier(0.4, 0, 0.2, 1),
@@ -230,11 +225,8 @@
 }
 
 .portal-panel:focus-within {
-  border-color: color-mix(in srgb, var(--neon-bright) 80%, transparent);
-  box-shadow:
-    0 0 0 1px rgba(212, 175, 122, 0.14),
-    0 0 28px rgba(191, 0, 255, 0.45),
-    0 32px 72px rgba(0, 0, 0, 0.4);
+  border-color: color-mix(in srgb, var(--neon-bright) 55%, transparent);
+  box-shadow: var(--shadow-panel-glow), 0 0 0 1px rgba(191, 0, 255, 0.12);
   transform: translateY(-2px);
 }
 
@@ -348,11 +340,10 @@
   font-weight: 750;
   letter-spacing: 0.02em;
   border-radius: 10px;
-  animation: portal-cta-breathe 3.2s ease-in-out infinite;
 }
 
 .portal-panel .btn-primary:hover {
-  animation: none;
+  filter: brightness(1.05);
 }
 
 .portal-meta a {
@@ -383,20 +374,6 @@
 
 .portal-meta a:hover::after {
   transform: scaleX(1);
-}
-
-@keyframes portal-cta-breathe {
-  0%,
-  100% {
-    box-shadow: 0 0 18px rgba(191, 0, 255, 0.4), 0 12px 28px rgba(0, 0, 0, 0.28);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(224, 64, 255, 0.65), 0 16px 36px rgba(0, 0, 0, 0.35);
-  }
-}
-
-[data-theme='light'] .portal-panel .btn-primary {
-  animation: none;
 }
 
 .portal-meta {

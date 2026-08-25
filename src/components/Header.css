@@ -57,7 +57,7 @@
 
 [data-theme='dark'] .header-welcome .name {
   color: var(--neon-bright);
-  text-shadow: var(--glow-text);
+  text-shadow: none;
 }
 
 .wave {

@@ -41,7 +41,7 @@
   height: min(52vw, 420px);
   top: -8%;
   left: -6%;
-  background: radial-gradient(circle, rgba(191, 0, 255, 0.45), transparent 68%);
+  background: radial-gradient(circle, rgba(191, 0, 255, 0.2), transparent 68%);
 }
 
 .choose-plan-orb-b {
@@ -87,21 +87,10 @@
   display: flex;
   justify-content: center;
   margin: 0 0 0.85rem;
-  animation: choose-plan-pulse 3.8s ease-in-out infinite;
 }
 
 .choose-plan-brand .logo-lg .logo-img {
   height: clamp(72px, 11vw, 96px);
-}
-
-@keyframes choose-plan-pulse {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 10px rgba(191, 0, 255, 0.35));
-  }
-  50% {
-    filter: drop-shadow(0 0 22px rgba(224, 64, 255, 0.65));
-  }
 }
 
 .choose-plan-eyebrow {
@@ -153,11 +142,8 @@
 
 .choose-plan-offer:hover {
   transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--neon-bright) 75%, transparent);
-  box-shadow:
-    0 0 0 1px rgba(212, 175, 122, 0.16),
-    0 0 32px rgba(191, 0, 255, 0.4),
-    0 34px 72px rgba(0, 0, 0, 0.38);
+  border-color: color-mix(in srgb, var(--neon-bright) 55%, transparent);
+  box-shadow: var(--shadow-panel-glow);
 }
 
 .choose-plan-offer-badge {
@@ -293,7 +279,7 @@
 
 .choose-plan-benefit:hover .choose-plan-benefit-icon {
   transform: scale(1.08);
-  box-shadow: 0 0 14px rgba(191, 0, 255, 0.35);
+  box-shadow: var(--glow-sm);
   background: color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
@@ -305,21 +291,10 @@
   letter-spacing: 0.02em;
   border-radius: 11px;
   box-shadow: var(--glow-md);
-  animation: choose-plan-cta-glow 2.8s ease-in-out infinite;
 }
 
 .choose-plan-cta:hover {
-  animation: none;
-}
-
-@keyframes choose-plan-cta-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 16px rgba(191, 0, 255, 0.4), 0 10px 28px rgba(0, 0, 0, 0.28);
-  }
-  50% {
-    box-shadow: 0 0 28px rgba(224, 64, 255, 0.7), 0 14px 34px rgba(0, 0, 0, 0.35);
-  }
+  filter: brightness(1.05);
 }
 
 .choose-plan-secure {
