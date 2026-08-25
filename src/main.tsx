@@ -7,7 +7,6 @@ import { ThemeToggle } from './components/ThemeToggle'
 import { trackDailyVisit } from './analytics'
 import { bootstrapCloudSync } from './bootstrapSync'
 import './index.css'
-import './motion.css'
 
 trackDailyVisit()
 bootstrapCloudSync()

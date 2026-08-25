@@ -142,19 +142,6 @@
   backdrop-filter: blur(18px);
   position: relative;
   overflow: hidden;
-  transition:
-    border-color 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.choose-plan-offer:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--neon-bright) 75%, transparent);
-  box-shadow:
-    0 0 0 1px rgba(212, 175, 122, 0.16),
-    0 0 32px rgba(191, 0, 255, 0.4),
-    0 34px 72px rgba(0, 0, 0, 0.38);
 }
 
 .choose-plan-offer-badge {
@@ -170,7 +157,6 @@
   color: #1a0a05;
   background: linear-gradient(135deg, #e8c992, #d4af7a 55%, #b8925a);
   box-shadow: 0 6px 16px rgba(212, 175, 122, 0.28);
-  animation: pop-in 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) 0.55s both;
 }
 
 .choose-plan-offer-top {
@@ -259,17 +245,8 @@
   font-size: 0.96rem;
   font-weight: 600;
   color: var(--text);
-  border-radius: 12px;
-  padding: 0.35rem 0.4rem;
-  margin: 0 -0.4rem;
-  transition:
-    background 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.choose-plan-benefit:hover {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  transform: translateX(4px);
+  opacity: 0;
+  animation: fade-up 0.55s ease forwards;
 }
 
 .choose-plan-benefit-icon {
@@ -282,16 +259,6 @@
   color: var(--neon-bright);
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  transition:
-    transform 0.25s cubic-bezier(0.34, 1.4, 0.64, 1),
-    box-shadow 0.25s ease,
-    background 0.25s ease;
-}
-
-.choose-plan-benefit:hover .choose-plan-benefit-icon {
-  transform: scale(1.08);
-  box-shadow: 0 0 14px rgba(191, 0, 255, 0.35);
-  background: color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .choose-plan-cta {
@@ -303,10 +270,6 @@
   border-radius: 11px;
   box-shadow: var(--glow-md);
   animation: choose-plan-cta-glow 2.8s ease-in-out infinite;
-}
-
-.choose-plan-cta:hover {
-  animation: none;
 }
 
 @keyframes choose-plan-cta-glow {
