@@ -120,3 +120,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 520px) {
+  .dashboard-page {
+    gap: 0.85rem;
+  }
+}

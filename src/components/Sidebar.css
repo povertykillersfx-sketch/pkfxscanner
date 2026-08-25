@@ -2,6 +2,7 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   background:
     linear-gradient(180deg, rgba(28, 8, 52, 0.35), transparent 28%),
     var(--bg-sidebar);
@@ -22,6 +23,10 @@
   height: 100%;
   padding: 1.35rem 0.95rem 1.5rem;
   gap: 1.45rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sidebar-logo {
@@ -114,5 +119,9 @@
   .sidebar {
     width: min(270px, 85vw);
     box-shadow: 8px 0 40px rgba(0, 0, 0, 0.2), var(--glow-md);
+  }
+
+  .sidebar-inner {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
   }
 }

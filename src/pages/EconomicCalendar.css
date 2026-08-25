@@ -23,6 +23,22 @@
   min-height: 520px;
   padding: 0;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.econ-calendar-frame::before {
+  content: 'Swipe sideways to see Actual / Forecast / Prior';
+  display: none;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg-panel-solid) 92%, transparent);
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .econ-status {
@@ -200,6 +216,14 @@
 }
 
 @media (max-width: 900px) {
+  .econ-calendar-frame {
+    min-height: 420px;
+  }
+
+  .econ-calendar-frame::before {
+    display: block;
+  }
+
   .econ-table {
     --econ-cols: 3.6rem minmax(7rem, 9rem) 1.4rem minmax(8rem, 1fr) 5.25rem 5.25rem 5.25rem;
     min-width: 640px;

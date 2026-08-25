@@ -10,6 +10,10 @@
   margin-bottom: 1.15rem;
 }
 
+.alerts-panel-header > div {
+  min-width: 0;
+}
+
 .alerts-panel-header h2 {
   font-size: 1.05rem;
   font-weight: 700;
@@ -63,11 +67,12 @@
 
 .alert-row {
   display: grid;
-  grid-template-columns: auto auto auto auto auto 1fr auto auto;
+  grid-template-columns: auto auto auto auto auto minmax(0, 1fr) auto auto;
   align-items: center;
   column-gap: 0.7rem;
   row-gap: 0.45rem;
   padding: 0.85rem 0.95rem;
+  min-width: 0;
 }
 
 .alert-asset {
@@ -212,8 +217,10 @@
 .price-copy-btn {
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
   border-radius: 6px;
   flex-shrink: 0;
   color: inherit;
@@ -311,8 +318,8 @@
 }
 
 .expand-btn {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -458,19 +465,50 @@
     gap: 0.9rem;
   }
 
-  .alert-row {
-    grid-template-columns: auto auto auto 1fr auto;
-    grid-template-rows: auto auto;
+  .alerts-panel-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
   }
 
-  .alert-date {
-    grid-column: 1 / -2;
-    justify-self: start;
+  .alert-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem 0.55rem;
+  }
+
+  .alert-asset-btn {
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .alert-row > .badge {
+    order: 2;
   }
 
   .expand-btn {
-    grid-row: 1 / span 2;
-    align-self: center;
+    order: 3;
+    margin-left: auto;
+  }
+
+  .alert-session {
+    order: 4;
+  }
+
+  .live-pill,
+  .demo-pill {
+    order: 5;
+  }
+
+  .trend-orb {
+    order: 6;
+  }
+
+  .alert-date {
+    order: 7;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .levels-grid {
@@ -478,19 +516,46 @@
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 720px) {
   .levels-grid {
     grid-template-columns: 1fr;
     gap: 0.95rem;
   }
 
+  .alerts-panel {
+    padding: 1rem 0.95rem 1.15rem;
+  }
+
   .alert-row {
-    grid-template-columns: auto auto 1fr auto;
+    padding: 0.8rem 0.8rem;
   }
 
   .alert-session,
   .live-pill,
   .demo-pill {
-    justify-self: start;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 520px) {
+  .alerts-panel-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .edit-scanner {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .alert-body {
+    padding: 0.35rem 0.8rem 0.95rem;
+  }
+
+  .price-copy-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
   }
 }

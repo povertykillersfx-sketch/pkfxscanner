@@ -1,10 +1,15 @@
 .choose-plan-page {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 2rem 1.1rem 2.5rem;
-  overflow: hidden;
+  padding-left: max(1.1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.1rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(2.5rem, env(safe-area-inset-bottom, 0px));
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .choose-plan-grid {
@@ -375,11 +380,7 @@
   filter: none;
 }
 
-@media (max-width: 520px) {
-  .choose-plan-offer {
-    padding: 1.25rem 1.05rem 1.15rem;
-  }
-
+@media (max-width: 640px) {
   .choose-plan-offer-top {
     padding-right: 0;
   }
@@ -388,6 +389,19 @@
     position: static;
     display: inline-flex;
     margin-bottom: 0.75rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .choose-plan-page {
+    padding: 1.25rem 0.85rem 1.75rem;
+    padding-left: max(0.85rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.85rem, env(safe-area-inset-right, 0px));
+    padding-bottom: max(1.75rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .choose-plan-offer {
+    padding: 1.25rem 1.05rem 1.15rem;
   }
 
   .choose-plan-benefit {

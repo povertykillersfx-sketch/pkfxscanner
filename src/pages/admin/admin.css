@@ -577,6 +577,9 @@
   font-size: 0.88rem;
   color: var(--admin-text, #0f172a);
   font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .admin-idea-notes {
@@ -631,6 +634,25 @@
 
   .admin-idea-row {
     flex-direction: column;
+  }
+
+  .admin-idea-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .admin-idea-levels {
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-page {
+    padding-bottom: 0.5rem;
+  }
+
+  .admin-card {
+    padding: 0.95rem 0.85rem;
   }
 }
 

@@ -80,17 +80,27 @@
   display: flex;
   gap: 0.5rem;
   margin-bottom: 0.65rem;
+  flex-wrap: wrap;
 }
 
 .scanner-search {
   text-align: left;
-  flex: 1;
+  flex: 1 1 160px;
+  min-width: 0;
 }
 
 .scanner-add-visible {
   white-space: nowrap;
   font-size: 0.82rem;
-  padding: 0.45rem 0.7rem;
+  padding: 0.55rem 0.75rem;
+  min-height: 40px;
+}
+
+@media (max-width: 480px) {
+  .scanner-add-visible {
+    width: 100%;
+    white-space: normal;
+  }
 }
 
 .scanner-list {

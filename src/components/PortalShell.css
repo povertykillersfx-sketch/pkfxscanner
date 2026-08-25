@@ -448,7 +448,10 @@
 .portal-shell-locked .portal-panel {
   max-height: calc(100vh - 3rem);
   max-height: calc(100dvh - 3rem);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .portal-shell-compact .portal-stage-inner {
