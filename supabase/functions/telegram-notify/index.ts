@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
       tp2: String(idea.tp2 || ''),
       notes: String(idea.notes || ''),
       session: String(idea.session || ''),
+      publishedAt: idea.publishedAt ? String(idea.publishedAt) : undefined,
     }
 
     const supabase = adminClient()

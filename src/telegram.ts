@@ -56,6 +56,7 @@ export async function notifyTradeIdeaPublished(
           tp2: idea.tp2,
           notes: idea.notes,
           session: idea.session,
+          publishedAt: idea.publishedAt || undefined,
         },
       }),
     })
