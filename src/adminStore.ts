@@ -55,6 +55,8 @@ export interface TelegramSettings {
   sample: string
   botToken: string
   chatId: string
+  botUsername?: string
+  messageTemplate?: string
 }
 
 /** Client dashboard “How it works?” video (shown under How it works) */
@@ -159,6 +161,8 @@ export function getTelegramSettings(): TelegramSettings {
     sample: '',
     botToken: '',
     chatId: '',
+    botUsername: 'PovertyKillersFxBot',
+    messageTemplate: '',
   })
 }
 

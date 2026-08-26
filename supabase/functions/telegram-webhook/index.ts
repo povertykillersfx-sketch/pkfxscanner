@@ -6,7 +6,7 @@
  */
 import { jsonResponse } from '../_shared/cors.ts'
 import { adminClient, normalizeEmail } from '../_shared/supabase.ts'
-import { requireTelegramEnv, telegramApi } from '../_shared/telegram.ts'
+import { loadTelegramSettings, telegramApi } from '../_shared/telegram.ts'
 
 type TgUpdate = {
   message?: {
@@ -42,7 +42,9 @@ Deno.serve(async (req) => {
     }
 
     const token = (match[1] || '').trim()
-    const { token: botToken } = requireTelegramEnv()
+    const settings = await loadTelegramSettings()
+    const botToken = settings.bot_token
+    if (!botToken) return jsonResponse({ error: 'Bot token not configured' }, 500)
 
     if (!token) {
       await telegramApi(botToken, 'sendMessage', {
