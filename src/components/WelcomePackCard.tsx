@@ -155,12 +155,12 @@ export function WelcomePackCard() {
       ) : (
         <button type="button" className="welcome-pack-banner is-claimable" onClick={openClaim}>
           <span className="welcome-pack-banner-main">
-            <span className="welcome-pack-banner-title-row">
-              <Gift size={18} strokeWidth={2.25} aria-hidden />
+            <Gift size={18} strokeWidth={2.25} aria-hidden className="welcome-pack-banner-gift" />
+            <span className="welcome-pack-banner-copy">
               <span className="welcome-pack-banner-title">PKFX Welcome Pack — Claim Yours</span>
-            </span>
-            <span className="welcome-pack-banner-includes">
-              Exclusive PKFX t-shirt · PKFX Branded Mug · PKFX Keychain
+              <span className="welcome-pack-banner-includes">
+                Exclusive PKFX t-shirt · PKFX Branded Mug · PKFX Keychain
+              </span>
             </span>
           </span>
           <ArrowRight size={16} strokeWidth={2.25} aria-hidden className="welcome-pack-banner-arrow" />
