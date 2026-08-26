@@ -17,6 +17,8 @@ export interface WelcomePackOrder {
   postalCode: string
   shirtSize: string
   shirtColor: string
+  /** MT5 login after deposit confirmation */
+  mt5Account: string
   status: WelcomePackStatus
   courier: string
   trackingNumber: string
@@ -135,6 +137,7 @@ function normalizeOrder(raw: Partial<WelcomePackOrder> & { id: string }): Welcom
     postalCode: (raw.postalCode || '').trim(),
     shirtSize: (raw.shirtSize || '').trim().toUpperCase(),
     shirtColor: (raw.shirtColor || '').trim(),
+    mt5Account: (raw.mt5Account || '').trim(),
     status: normalizeStatus(raw.status),
     courier: (raw.courier || '').trim(),
     trackingNumber: (raw.trackingNumber || '').trim(),
@@ -236,6 +239,7 @@ export type ClaimWelcomePackInput = {
   postalCode: string
   shirtSize: string
   shirtColor: string
+  mt5Account: string
 }
 
 /** Submit a claim. Returns error message or null on success. */
@@ -256,6 +260,7 @@ export function claimWelcomePack(input: ClaimWelcomePackInput): string | null {
   const postalCode = input.postalCode.trim()
   const shirtSize = input.shirtSize.trim().toUpperCase()
   const shirtColor = input.shirtColor.trim()
+  const mt5Account = input.mt5Account.trim()
 
   if (!name) return 'Name is required.'
   if (!email) return 'Email is required.'
@@ -265,6 +270,7 @@ export function claimWelcomePack(input: ClaimWelcomePackInput): string | null {
   if (!postalCode) return 'Postal code is required.'
   if (!shirtSize) return 'T-shirt size is required.'
   if (!shirtColor) return 'T-shirt color is required.'
+  if (!mt5Account) return 'MT5 account number is required.'
 
   const now = new Date().toISOString()
   const order = normalizeOrder({
@@ -278,6 +284,7 @@ export function claimWelcomePack(input: ClaimWelcomePackInput): string | null {
     postalCode,
     shirtSize,
     shirtColor,
+    mt5Account,
     status: 'pending',
     courier: '',
     trackingNumber: '',

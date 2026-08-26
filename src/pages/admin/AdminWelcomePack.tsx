@@ -173,6 +173,8 @@ export function AdminWelcomePack() {
                       <br />
                       Tee {order.shirtSize} · {order.shirtColor}
                       <br />
+                      MT5 {order.mt5Account || '—'}
+                      <br />
                       Claimed {new Date(order.createdAt).toLocaleString()}
                     </p>
                   </div>

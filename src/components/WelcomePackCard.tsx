@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowRight, Check, X } from 'lucide-react'
+import { ArrowRight, Check, ExternalLink, X } from 'lucide-react'
+import { getCommunitySettings } from '../adminStore'
 import { getCurrentUser } from '../auth'
 import {
   SA_PROVINCES,
@@ -17,6 +18,8 @@ import {
   type MemberNotification,
 } from '../welcomePack'
 import './WelcomePackCard.css'
+
+type ClaimStep = 1 | 2 | 3
 
 function useWelcomePack() {
   const [order, setOrder] = useState<WelcomePackOrder | null>(() => getMyWelcomePackOrder())
@@ -49,13 +52,25 @@ function useWelcomePack() {
   }
 }
 
+function getBrokerLink(): { title: string; url: string } {
+  const brokers = getCommunitySettings().resources.filter(
+    (r) => r.category === 'broker' && r.url.trim(),
+  )
+  const first = brokers[0]
+  if (first) return { title: first.title.replace(/^Broker sign-up —\s*/i, '') || 'our broker', url: first.url }
+  return { title: 'Exness', url: 'https://www.exness.com/' }
+}
+
 export function WelcomePackCard() {
   const user = getCurrentUser()
   const { order, notifs, refresh } = useWelcomePack()
   const [openForm, setOpenForm] = useState(false)
   const [openStatus, setOpenStatus] = useState(false)
+  const [step, setStep] = useState<ClaimStep>(1)
+  const [deposited, setDeposited] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const broker = useMemo(() => getBrokerLink(), [openForm])
 
   const [form, setForm] = useState({
     name: user?.fullName || '',
@@ -66,6 +81,7 @@ export function WelcomePackCard() {
     postalCode: '',
     shirtSize: 'L',
     shirtColor: 'Black' as string,
+    mt5Account: '',
   })
 
   useEffect(() => {
@@ -84,6 +100,26 @@ export function WelcomePackCard() {
       window.removeEventListener('keydown', onKey)
     }
   }, [openForm, openStatus])
+
+  function openClaim() {
+    setStep(1)
+    setDeposited(false)
+    setError('')
+    setOpenForm(true)
+  }
+
+  function goNextFromStep2() {
+    setError('')
+    if (!deposited) {
+      setError('Confirm you’ve deposited first.')
+      return
+    }
+    if (!form.mt5Account.trim()) {
+      setError('Enter your MT5 account number to continue.')
+      return
+    }
+    setStep(3)
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -117,7 +153,7 @@ export function WelcomePackCard() {
           <span className="welcome-pack-banner-meta">{statusLabel(order!.status)}</span>
         </button>
       ) : (
-        <button type="button" className="welcome-pack-banner" onClick={() => setOpenForm(true)}>
+        <button type="button" className="welcome-pack-banner" onClick={openClaim}>
           <span>PKFX Welcome Pack — Claim Yours</span>
           <ArrowRight size={16} strokeWidth={2.25} aria-hidden />
         </button>
@@ -159,117 +195,211 @@ export function WelcomePackCard() {
                 >
                   <X size={16} />
                 </button>
+
                 <h2 id="welcome-pack-title" className="font-display">
-                  Claim your PKFX Welcome Pack
+                  Claim your Welcome Pack
                 </h2>
-                <p className="welcome-pack-modal-sub">
-                  One pack per member. Enter shipping details to claim.
-                </p>
+                <p className="welcome-pack-modal-sub">Three quick steps. You’re almost there.</p>
 
-                <form className="welcome-pack-form" onSubmit={(e) => void onSubmit(e)}>
-                  <div className="welcome-pack-form-grid">
-                    <label>
-                      <span>Full name</span>
-                      <input
-                        value={form.name}
-                        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                        required
-                        autoComplete="name"
-                      />
-                    </label>
-                    <label>
-                      <span>Email</span>
-                      <input
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                        required
-                        autoComplete="email"
-                      />
-                    </label>
-                    <label>
-                      <span>Phone</span>
-                      <input
-                        value={form.phone}
-                        onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                        required
-                        autoComplete="tel"
-                        placeholder="+27…"
-                      />
-                    </label>
-                    <label className="welcome-pack-span-2">
-                      <span>Street address</span>
-                      <input
-                        value={form.address}
-                        onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                        required
-                        autoComplete="street-address"
-                      />
-                    </label>
-                    <label>
-                      <span>Province</span>
-                      <select
-                        value={form.province}
-                        onChange={(e) => setForm((f) => ({ ...f, province: e.target.value }))}
-                        required
-                      >
-                        {SA_PROVINCES.map((p) => (
-                          <option key={p} value={p}>
-                            {p}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Postal code</span>
-                      <input
-                        value={form.postalCode}
-                        onChange={(e) => setForm((f) => ({ ...f, postalCode: e.target.value }))}
-                        required
-                        autoComplete="postal-code"
-                      />
-                    </label>
-                    <label>
-                      <span>T-shirt size</span>
-                      <select
-                        value={form.shirtSize}
-                        onChange={(e) => setForm((f) => ({ ...f, shirtSize: e.target.value }))}
-                        required
-                      >
-                        {WELCOME_PACK_SHIRT_SIZES.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>T-shirt color</span>
-                      <select
-                        value={form.shirtColor}
-                        onChange={(e) => setForm((f) => ({ ...f, shirtColor: e.target.value }))}
-                        required
-                      >
-                        {WELCOME_PACK_SHIRT_COLORS.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                <ol className="welcome-pack-progress" aria-label="Claim progress">
+                  {[
+                    { n: 1 as ClaimStep, label: 'Broker' },
+                    { n: 2 as ClaimStep, label: 'Deposit' },
+                    { n: 3 as ClaimStep, label: 'Claim' },
+                  ].map(({ n, label }) => (
+                    <li
+                      key={n}
+                      className={`welcome-pack-progress-item${step === n ? ' is-current' : ''}${
+                        step > n ? ' is-done' : ''
+                      }`}
+                    >
+                      <span className="welcome-pack-progress-num">
+                        {step > n ? <Check size={14} strokeWidth={2.75} /> : n}
+                      </span>
+                      <span className="welcome-pack-progress-label">{label}</span>
+                    </li>
+                  ))}
+                </ol>
+
+                {step === 1 && (
+                  <div className="welcome-pack-step-body">
+                    <h3>Step 1 — Open a broker account</h3>
+                    <p>Use our link so we can verify your account later.</p>
+                    <a
+                      className="btn btn-outline welcome-pack-broker-link"
+                      href={broker.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open {broker.title}
+                      <ExternalLink size={15} />
+                    </a>
+                    <div className="welcome-pack-form-actions">
+                      <button type="button" className="btn btn-outline" onClick={() => setOpenForm(false)}>
+                        Later
+                      </button>
+                      <button type="button" className="btn btn-primary" onClick={() => setStep(2)}>
+                        I’ve opened my account
+                      </button>
+                    </div>
                   </div>
+                )}
 
-                  {error ? <p className="welcome-pack-error">{error}</p> : null}
+                {step === 2 && (
+                  <div className="welcome-pack-step-body">
+                    <h3>Step 2 — Verify & deposit</h3>
+                    <p>Fund the account when you’re ready. We’ll ask for your MT5 number next.</p>
 
-                  <div className="welcome-pack-form-actions">
-                    <button type="button" className="btn btn-outline" onClick={() => setOpenForm(false)}>
-                      Cancel
-                    </button>
-                    <button type="submit" className="btn btn-primary" disabled={submitting}>
-                      {submitting ? 'Submitting…' : 'Claim Welcome Pack'}
-                    </button>
+                    <label className="welcome-pack-check">
+                      <input
+                        type="checkbox"
+                        checked={deposited}
+                        onChange={(e) => {
+                          setDeposited(e.target.checked)
+                          setError('')
+                        }}
+                      />
+                      <span>I’ve deposited into my account</span>
+                    </label>
+
+                    {deposited && (
+                      <label className="welcome-pack-mt5">
+                        <span>MT5 account number</span>
+                        <input
+                          value={form.mt5Account}
+                          onChange={(e) => setForm((f) => ({ ...f, mt5Account: e.target.value }))}
+                          placeholder="e.g. 12345678"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          autoFocus
+                        />
+                      </label>
+                    )}
+
+                    {error ? <p className="welcome-pack-error">{error}</p> : null}
+
+                    <div className="welcome-pack-form-actions">
+                      <button type="button" className="btn btn-outline" onClick={() => setStep(1)}>
+                        Back
+                      </button>
+                      <button type="button" className="btn btn-primary" onClick={goNextFromStep2}>
+                        Continue
+                      </button>
+                    </div>
                   </div>
-                </form>
+                )}
+
+                {step === 3 && (
+                  <form className="welcome-pack-step-body" onSubmit={(e) => void onSubmit(e)}>
+                    <h3>Step 3 — Claim the pack</h3>
+                    <p>Where should we send it?</p>
+
+                    <div className="welcome-pack-form-grid">
+                      <label>
+                        <span>Full name</span>
+                        <input
+                          value={form.name}
+                          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                          required
+                          autoComplete="name"
+                        />
+                      </label>
+                      <label>
+                        <span>Email</span>
+                        <input
+                          type="email"
+                          value={form.email}
+                          onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                          required
+                          autoComplete="email"
+                        />
+                      </label>
+                      <label>
+                        <span>Phone</span>
+                        <input
+                          value={form.phone}
+                          onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                          required
+                          autoComplete="tel"
+                          placeholder="+27…"
+                        />
+                      </label>
+                      <label className="welcome-pack-span-2">
+                        <span>Street address</span>
+                        <input
+                          value={form.address}
+                          onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                          required
+                          autoComplete="street-address"
+                        />
+                      </label>
+                      <label>
+                        <span>Province</span>
+                        <select
+                          value={form.province}
+                          onChange={(e) => setForm((f) => ({ ...f, province: e.target.value }))}
+                          required
+                        >
+                          {SA_PROVINCES.map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>Postal code</span>
+                        <input
+                          value={form.postalCode}
+                          onChange={(e) => setForm((f) => ({ ...f, postalCode: e.target.value }))}
+                          required
+                          autoComplete="postal-code"
+                        />
+                      </label>
+                      <label>
+                        <span>T-shirt size</span>
+                        <select
+                          value={form.shirtSize}
+                          onChange={(e) => setForm((f) => ({ ...f, shirtSize: e.target.value }))}
+                          required
+                        >
+                          {WELCOME_PACK_SHIRT_SIZES.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>T-shirt color</span>
+                        <select
+                          value={form.shirtColor}
+                          onChange={(e) => setForm((f) => ({ ...f, shirtColor: e.target.value }))}
+                          required
+                        >
+                          {WELCOME_PACK_SHIRT_COLORS.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    <p className="welcome-pack-mt5-note">MT5 · {form.mt5Account || '—'}</p>
+
+                    {error ? <p className="welcome-pack-error">{error}</p> : null}
+
+                    <div className="welcome-pack-form-actions">
+                      <button type="button" className="btn btn-outline" onClick={() => setStep(2)}>
+                        Back
+                      </button>
+                      <button type="submit" className="btn btn-primary" disabled={submitting}>
+                        {submitting ? 'Submitting…' : 'Claim Welcome Pack'}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>,
             document.body,
@@ -316,6 +446,10 @@ export function WelcomePackCard() {
                     <dd>
                       {order.shirtSize} · {order.shirtColor}
                     </dd>
+                  </div>
+                  <div>
+                    <dt>MT5</dt>
+                    <dd>{order.mt5Account || '—'}</dd>
                   </div>
                   <div>
                     <dt>Courier</dt>
