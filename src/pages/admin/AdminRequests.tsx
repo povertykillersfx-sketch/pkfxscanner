@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Check, RefreshCw, Search, Send, X } from 'lucide-react'
-import { approveMember, listPendingRequests, revokeMemberAccess } from '../../auth'
+import { approveMember, listPendingRequests, revokeMemberAccess, syncMembersFromCloud } from '../../auth'
 import { filterClients } from '../../adminSearch'
 import { getTelegramSettings, saveTelegramSettings } from '../../adminStore'
 import {
@@ -74,10 +74,21 @@ export function AdminRequests() {
     window.addEventListener('pkfx-users-change', refresh)
     window.addEventListener('storage', refresh)
     const id = window.setInterval(refresh, 2000)
+
+    let cancelled = false
+    async function pullCloud() {
+      await syncMembersFromCloud()
+      if (!cancelled) setRequests(listPendingRequests())
+    }
+    void pullCloud()
+    const cloudId = window.setInterval(() => void pullCloud(), 8000)
+
     return () => {
+      cancelled = true
       window.removeEventListener('pkfx-users-change', refresh)
       window.removeEventListener('storage', refresh)
       window.clearInterval(id)
+      window.clearInterval(cloudId)
     }
   }, [])
 
@@ -204,7 +215,7 @@ export function AdminRequests() {
                 🚀
               </div>
               <p>You don&apos;t have any pending requests 🚀</p>
-              <p className="admin-muted">Clients who continue to payment appear here as pending for approval.</p>
+              <p className="admin-muted">New signups and members who continue to payment appear here for approval.</p>
             </div>
           ) : visible.length === 0 ? (
             <div className="admin-empty">
@@ -222,6 +233,8 @@ export function AdminRequests() {
                     {r.country && <p className="admin-muted">Country: {r.country}</p>}
                     <p className="admin-muted">
                       Status: {r.status || 'pending'}
+                      {r.status === 'lead' ? ' · Signed up' : ''}
+                      {r.status === 'pending' ? ' · Payment started' : ''}
                       {r.joinedAt ? ` · Joined ${new Date(r.joinedAt).toLocaleString()}` : ''}
                     </p>
                   </div>

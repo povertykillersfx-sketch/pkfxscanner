@@ -1,4 +1,5 @@
 import { avatarUrl } from './data/mockData'
+import { cloudLogin, pullMembersFromCloud, pushAllLocalMembersToCloud, pushMemberToCloud } from './membersSync'
 
 export type UserRole = 'client' | 'admin'
 
@@ -130,6 +131,11 @@ function writeUsers(users: UserProfile[]) {
   window.dispatchEvent(new CustomEvent('pkfx-users-change', { detail: users }))
 }
 
+function pushClientProfile(email: string, opts?: { admin?: boolean }) {
+  const user = readUsers().find((u) => u.email.toLowerCase() === email.toLowerCase())
+  if (user && user.role !== 'admin') void pushMemberToCloud(user, opts)
+}
+
 /** Keep the super admin account. Wipe old demo data once. Do not delete real clients. */
 function ensureAdminUser() {
   if (typeof localStorage === 'undefined') return
@@ -257,6 +263,7 @@ export function register(input: {
   })
   writeUsers(users)
   setSignupFunnelEmail(email)
+  pushClientProfile(email)
 
   // Do NOT start a session — Admin must approve first
   return { ok: true }
@@ -335,6 +342,10 @@ export function login(emailInput: string, passwordInput: string): LoginResult {
 
   if (!user) return { ok: false, error: 'Invalid email or password.' }
 
+  return finalizeLogin(user)
+}
+
+function finalizeLogin(user: UserProfile): LoginResult {
   // Clients must be approved by Admin before entering the portal
   if (user.role !== 'admin') {
     const status = user.status || 'pending'
@@ -363,6 +374,39 @@ export function login(emailInput: string, passwordInput: string): LoginResult {
   return { ok: true, role: user.role === 'admin' ? 'admin' : 'client' }
 }
 
+/** Login with cloud fallback when the account was created on another device. */
+export async function loginAsync(emailInput: string, passwordInput: string): Promise<LoginResult> {
+  const local = login(emailInput, passwordInput)
+  if (local.ok || local.reason === 'awaiting_approval' || local.reason === 'revoked') {
+    return local
+  }
+
+  const email = normalizeEmail(emailInput)
+  const password = passwordInput.trim()
+  if (!email || !password || email === ADMIN_EMAIL) return local
+
+  const remote = await cloudLogin(email, password)
+  if (!remote.ok) {
+    // Prefer clearer local error when account exists locally with wrong password
+    return local
+  }
+
+  ensureAdminUser()
+  const users = readUsers()
+  const idx = users.findIndex((u) => u.email.toLowerCase() === email)
+  const merged: UserProfile = {
+    ...(idx >= 0 ? users[idx]! : ({} as UserProfile)),
+    ...remote.member,
+    email,
+    password: remote.member.password || password,
+    role: 'client',
+  }
+  if (idx >= 0) users[idx] = merged
+  else users.push(merged)
+  writeUsers(users)
+  return finalizeLogin(merged)
+}
+
 /** Reset (or create) a client password for local demo auth. */
 export function resetPassword(
   emailInput: string,
@@ -388,6 +432,7 @@ export function resetPassword(
   }
   user.password = password
   writeUsers(users)
+  pushClientProfile(email)
   return { ok: true }
 }
 
@@ -459,6 +504,7 @@ export function setMemberTelegramLink(
     user.telegramLinkedAt = link.linkedAt || new Date().toISOString()
   }
   writeUsers(users)
+  pushClientProfile(email)
 }
 
 export function hasPortalAccess(user: Pick<UserProfile, 'role' | 'status'> | null | undefined): boolean {
@@ -475,6 +521,7 @@ export function revokeMemberAccess(email: string) {
   user.status = 'revoked'
   user.plan = 'free'
   writeUsers(users)
+  pushClientProfile(email, { admin: true })
 }
 
 /** Permanently delete a client account so they can sign up again. */
@@ -508,6 +555,7 @@ export function approveMember(email: string) {
   user.plan = 'Inner Circle'
   if (!user.joinedAt) user.joinedAt = new Date().toISOString()
   writeUsers(users)
+  pushClientProfile(email, { admin: true })
 }
 
 const FUNNEL_KEY = 'pkfx_signup_funnel_v1'
@@ -549,14 +597,64 @@ export function markPaymentStarted(emailInput?: string): boolean {
   user.status = 'pending'
   writeUsers(users)
   setSignupFunnelEmail(email)
+  pushClientProfile(email)
   return true
 }
 
-/** Clients who reached payment and await Admin approval. */
+/** Clients awaiting Admin approval (signed up and/or reached payment). */
 export function listPendingRequests(): UserProfile[] {
   return listMembers()
-    .filter((m) => (m.status || 'pending') === 'pending')
+    .filter((m) => {
+      const status = m.status || 'pending'
+      return status === 'pending' || status === 'lead'
+    })
     .sort((a, b) => new Date(b.joinedAt || 0).getTime() - new Date(a.joinedAt || 0).getTime())
+}
+
+/** Pull cloud members into local store so Admin sees signups from other devices. */
+export async function syncMembersFromCloud(): Promise<number> {
+  ensureAdminUser()
+  // First push any local clients so other devices / this cloud store stay complete
+  await pushAllLocalMembersToCloud(listMembers())
+
+  const remote = await pullMembersFromCloud()
+  if (remote.length === 0) return 0
+
+  const users = readUsers()
+  let changed = 0
+  for (const member of remote) {
+    if (!member?.email || member.role === 'admin') continue
+    const email = normalizeEmail(member.email)
+    const idx = users.findIndex((u) => u.email.toLowerCase() === email)
+    if (idx < 0) {
+      users.push({
+        ...member,
+        email,
+        role: 'client',
+        password: typeof member.password === 'string' ? member.password : '',
+        status: member.status || 'lead',
+      })
+      changed += 1
+      continue
+    }
+    const cur = users[idx]!
+    const next: UserProfile = {
+      ...cur,
+      ...member,
+      email,
+      role: 'client',
+      password:
+        typeof member.password === 'string' && member.password
+          ? member.password
+          : cur.password,
+    }
+    if (JSON.stringify(cur) !== JSON.stringify(next)) {
+      users[idx] = next
+      changed += 1
+    }
+  }
+  if (changed > 0) writeUsers(users)
+  return changed
 }
 
 export function getJoinHistory(days = 14): { date: string; count: number }[] {

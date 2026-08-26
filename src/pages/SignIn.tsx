@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { PortalShell } from '../components/PortalShell'
-import { getCurrentUser, login, setSignupFunnelEmail } from '../auth'
+import { getCurrentUser, loginAsync, setSignupFunnelEmail } from '../auth'
 import { playLoginSuccessSound } from '../sounds'
 import './SignIn.css'
 
@@ -36,9 +36,9 @@ export function SignIn() {
     }
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const result = login(email, password)
+    const result = await loginAsync(email, password)
     if (!result.ok) {
       if (result.reason === 'awaiting_approval') {
         setSignupFunnelEmail(result.email || email)
@@ -67,7 +67,7 @@ export function SignIn() {
       headline="Trade with precision."
       showFoot={false}
     >
-      <form className="portal-panel" onSubmit={handleSubmit}>
+      <form className="portal-panel" onSubmit={(e) => void handleSubmit(e)}>
         <h2 className="portal-panel-title font-display">Welcome back</h2>
         <p className="portal-panel-lead">Sign in to access your PKFX portal.</p>
 

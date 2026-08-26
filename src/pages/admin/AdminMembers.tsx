@@ -6,6 +6,7 @@ import {
   listMembers,
   removeMember,
   revokeMemberAccess,
+  syncMembersFromCloud,
   type UserProfile,
 } from '../../auth'
 import { filterClients } from '../../adminSearch'
@@ -29,10 +30,21 @@ export function AdminMembers() {
     window.addEventListener('pkfx-users-change', refresh)
     window.addEventListener('storage', refresh)
     const id = window.setInterval(refresh, 2000)
+
+    let cancelled = false
+    async function pullCloud() {
+      await syncMembersFromCloud()
+      if (!cancelled) setMembers(listMembers())
+    }
+    void pullCloud()
+    const cloudId = window.setInterval(() => void pullCloud(), 8000)
+
     return () => {
+      cancelled = true
       window.removeEventListener('pkfx-users-change', refresh)
       window.removeEventListener('storage', refresh)
       window.clearInterval(id)
+      window.clearInterval(cloudId)
     }
   }, [])
 

@@ -37,3 +37,6 @@ verify_jwt = false
 
 [functions.telegram-settings]
 verify_jwt = false
+
+[functions.members]
+verify_jwt = false
