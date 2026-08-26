@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AlertsPanel } from '../components/AlertCard'
 import { HowItWorksPanel } from '../components/HowItWorksPanel'
 import { StatsRow } from '../components/StatsRow'
+import { WelcomePackCard } from '../components/WelcomePackCard'
 import { publishedTradeIdeasAsAlerts } from '../tradeIdeas'
 import type { Alert } from '../data/mockData'
 import './Dashboard.css'
@@ -29,6 +30,8 @@ export function Dashboard() {
 
   return (
     <div className="dashboard-page">
+      <WelcomePackCard />
+
       <div className="dashboard-top">
         <AlertsPanel
           alerts={alerts}

@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Users,
   Lightbulb,
+  Gift,
   CreditCard,
   LogOut,
 } from 'lucide-react'
@@ -15,6 +16,7 @@ import './AdminSidebar.css'
 const primaryNav = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/trade-ideas', label: 'Trade Ideas', icon: Lightbulb, end: false },
+  { to: '/admin/welcome-pack', label: 'Welcome Pack', icon: Gift, end: false },
   { to: '/admin/requests', label: 'Requests', icon: ListOrdered, end: false },
   { to: '/admin/tutorials', label: 'Tutorials', icon: BookOpen, end: false },
   { to: '/admin/events', label: 'Events', icon: CalendarDays, end: false },

@@ -627,6 +627,100 @@
   background: #e2e8f0;
 }
 
+.admin-pill.status-pending {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.admin-pill.status-processing {
+  color: #1e40af;
+  background: #dbeafe;
+}
+
+.admin-pill.status-shipped {
+  color: #6b21a8;
+  background: #f3e8ff;
+}
+
+.admin-pill.status-delivered {
+  color: #065f46;
+  background: #d1fae5;
+}
+
+.admin-welcome-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.admin-btn.ghost.is-on {
+  border-color: var(--admin-blue, #0052ff);
+  color: var(--admin-blue, #0052ff);
+  background: var(--admin-blue-soft, rgba(0, 82, 255, 0.1));
+}
+
+.admin-welcome-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.admin-welcome-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.95rem;
+  border: 1px solid var(--admin-border, #e2e8f0);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--admin-blue, #0052ff) 4%, #fff);
+}
+
+.admin-welcome-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+}
+
+.admin-welcome-meta {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--admin-muted, #64748b);
+  line-height: 1.45;
+}
+
+.admin-welcome-edit {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+
+.admin-welcome-edit label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--admin-muted, #64748b);
+}
+
+.admin-welcome-edit input,
+.admin-welcome-edit select {
+  border: 1px solid var(--admin-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  background: var(--admin-card, #fff);
+  color: var(--admin-text, #0f172a);
+}
+
+.admin-welcome-actions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  margin-top: 0.2rem;
+}
+
 @media (max-width: 720px) {
   .admin-form-grid {
     grid-template-columns: 1fr;
@@ -643,6 +737,10 @@
 
   .admin-idea-levels {
     font-size: 0.82rem;
+  }
+
+  .admin-welcome-row {
+    grid-template-columns: 1fr;
   }
 }
 

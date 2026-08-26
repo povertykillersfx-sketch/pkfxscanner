@@ -12,6 +12,8 @@ type Snapshot = {
   ebooks: unknown
   howItWorks: unknown
   tradeIdeas: unknown
+  welcomePackOrders: unknown
+  memberNotifications: unknown
 }
 
 function ensureStore() {
@@ -27,6 +29,8 @@ function ensureStore() {
           ebooks: [],
           howItWorks: null,
           tradeIdeas: [],
+          welcomePackOrders: [],
+          memberNotifications: [],
         },
         null,
         2,
@@ -46,6 +50,10 @@ function readLocal(): Snapshot {
     ebooks: Array.isArray(raw.ebooks) ? raw.ebooks : [],
     howItWorks: raw.howItWorks ?? null,
     tradeIdeas: Array.isArray(raw.tradeIdeas) ? raw.tradeIdeas : [],
+    welcomePackOrders: Array.isArray(raw.welcomePackOrders) ? raw.welcomePackOrders : [],
+    memberNotifications: Array.isArray(raw.memberNotifications)
+      ? raw.memberNotifications
+      : [],
   }
 }
 
@@ -83,6 +91,10 @@ function rowToSnapshot(row: Record<string, unknown> | null): Snapshot {
     ebooks: Array.isArray(row?.ebooks) ? row.ebooks : [],
     howItWorks: row?.how_it_works ?? null,
     tradeIdeas: Array.isArray(row?.trade_ideas) ? row.trade_ideas : [],
+    welcomePackOrders: Array.isArray(row?.welcome_pack_orders) ? row.welcome_pack_orders : [],
+    memberNotifications: Array.isArray(row?.member_notifications)
+      ? row.member_notifications
+      : [],
   }
 }
 
@@ -109,6 +121,8 @@ async function pullSupabase(mode: string): Promise<Snapshot | null> {
         ebooks: [],
         howItWorks: null,
         tradeIdeas: [],
+        welcomePackOrders: [],
+        memberNotifications: [],
       }
     }
     return rowToSnapshot(rows[0]!)
@@ -136,6 +150,12 @@ async function pushSupabase(mode: string, snapshot: Snapshot): Promise<boolean> 
         ebooks: snapshot.ebooks ?? [],
         how_it_works: snapshot.howItWorks ?? null,
         trade_ideas: Array.isArray(snapshot.tradeIdeas) ? snapshot.tradeIdeas : [],
+        welcome_pack_orders: Array.isArray(snapshot.welcomePackOrders)
+          ? snapshot.welcomePackOrders
+          : [],
+        member_notifications: Array.isArray(snapshot.memberNotifications)
+          ? snapshot.memberNotifications
+          : [],
         updated_at: snapshot.updatedAt,
       }),
     })
@@ -189,6 +209,12 @@ function syncMiddleware(mode: string): Connect.NextHandleFunction {
           ebooks: parsed.ebooks ?? [],
           howItWorks: parsed.howItWorks ?? null,
           tradeIdeas: Array.isArray(parsed.tradeIdeas) ? parsed.tradeIdeas : [],
+          welcomePackOrders: Array.isArray(parsed.welcomePackOrders)
+            ? parsed.welcomePackOrders
+            : [],
+          memberNotifications: Array.isArray(parsed.memberNotifications)
+            ? parsed.memberNotifications
+            : [],
           updatedAt: new Date().toISOString(),
         }
         writeLocal(next)

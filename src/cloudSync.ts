@@ -15,6 +15,8 @@ export interface SharedSnapshot {
     subtitle: string
   } | null
   tradeIdeas: unknown[]
+  welcomePackOrders: unknown[]
+  memberNotifications: unknown[]
 }
 
 const POLL_MS = 8_000
@@ -66,6 +68,8 @@ function rowToSnapshot(row: {
   ebooks?: unknown
   how_it_works?: unknown
   trade_ideas?: unknown
+  welcome_pack_orders?: unknown
+  member_notifications?: unknown
   updated_at?: string
 } | null): SharedSnapshot {
   return {
@@ -75,6 +79,10 @@ function rowToSnapshot(row: {
     ebooks: Array.isArray(row?.ebooks) ? row!.ebooks : [],
     howItWorks: (row?.how_it_works as SharedSnapshot['howItWorks']) ?? null,
     tradeIdeas: Array.isArray(row?.trade_ideas) ? row!.trade_ideas : [],
+    welcomePackOrders: Array.isArray(row?.welcome_pack_orders) ? row!.welcome_pack_orders : [],
+    memberNotifications: Array.isArray(row?.member_notifications)
+      ? row!.member_notifications
+      : [],
   }
 }
 
@@ -86,6 +94,12 @@ function snapshotToRow(snapshot: Omit<SharedSnapshot, 'updatedAt'> & { updatedAt
     ebooks: snapshot.ebooks ?? [],
     how_it_works: snapshot.howItWorks ?? null,
     trade_ideas: Array.isArray(snapshot.tradeIdeas) ? snapshot.tradeIdeas : [],
+    welcome_pack_orders: Array.isArray(snapshot.welcomePackOrders)
+      ? snapshot.welcomePackOrders
+      : [],
+    member_notifications: Array.isArray(snapshot.memberNotifications)
+      ? snapshot.memberNotifications
+      : [],
     updated_at: snapshot.updatedAt || new Date().toISOString(),
   }
 }
@@ -179,6 +193,8 @@ async function pullRest(): Promise<SharedSnapshot | null> {
         ebooks: [],
         howItWorks: null,
         tradeIdeas: [],
+        welcomePackOrders: [],
+        memberNotifications: [],
       }
     }
     return rowToSnapshot(row as Parameters<typeof rowToSnapshot>[0])
@@ -274,7 +290,9 @@ function isRemoteEmpty(snapshot: SharedSnapshot) {
   const hasEbooks = (snapshot.ebooks?.length || 0) > 0
   const hasHow = Boolean(snapshot.howItWorks?.url?.trim())
   const hasIdeas = (snapshot.tradeIdeas?.length || 0) > 0
-  return !hasCommunity && !hasCourses && !hasEbooks && !hasHow && !hasIdeas
+  const hasPacks = (snapshot.welcomePackOrders?.length || 0) > 0
+  const hasNotifs = (snapshot.memberNotifications?.length || 0) > 0
+  return !hasCommunity && !hasCourses && !hasEbooks && !hasHow && !hasIdeas && !hasPacks && !hasNotifs
 }
 
 /** Start background pull so phones/tablets pick up admin edits. */

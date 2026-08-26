@@ -1,6 +1,6 @@
 /**
  * PKFX shared sync Edge Function
- * GET  → read community / courses / ebooks / how_it_works / trade_ideas
+ * GET  → read community / courses / ebooks / how_it_works / trade_ideas / welcome pack
  * PUT  → upsert the same payload (admin publish)
  *
  * Deploy: npx supabase functions deploy sync
@@ -16,6 +16,8 @@ type SharedRow = {
   ebooks: unknown
   how_it_works: unknown
   trade_ideas: unknown
+  welcome_pack_orders: unknown
+  member_notifications: unknown
   updated_at: string
 }
 
@@ -38,6 +40,10 @@ function toSnapshot(row: SharedRow | null) {
     ebooks: Array.isArray(row?.ebooks) ? row!.ebooks : [],
     howItWorks: row?.how_it_works ?? null,
     tradeIdeas: Array.isArray(row?.trade_ideas) ? row!.trade_ideas : [],
+    welcomePackOrders: Array.isArray(row?.welcome_pack_orders) ? row!.welcome_pack_orders : [],
+    memberNotifications: Array.isArray(row?.member_notifications)
+      ? row!.member_notifications
+      : [],
   }
 }
 
@@ -66,6 +72,8 @@ Deno.serve(async (req) => {
         ebooks?: unknown
         howItWorks?: unknown
         tradeIdeas?: unknown
+        welcomePackOrders?: unknown
+        memberNotifications?: unknown
         updatedAt?: string
       }
 
@@ -77,6 +85,12 @@ Deno.serve(async (req) => {
         ebooks: Array.isArray(body.ebooks) ? body.ebooks : [],
         how_it_works: body.howItWorks ?? null,
         trade_ideas: Array.isArray(body.tradeIdeas) ? body.tradeIdeas : [],
+        welcome_pack_orders: Array.isArray(body.welcomePackOrders)
+          ? body.welcomePackOrders
+          : [],
+        member_notifications: Array.isArray(body.memberNotifications)
+          ? body.memberNotifications
+          : [],
         updated_at: updatedAt,
       }
 

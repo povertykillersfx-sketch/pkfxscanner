@@ -11,6 +11,11 @@ import {
   type SharedSnapshot,
 } from './cloudSync'
 import { listTradeIdeas, replaceTradeIdeasFromSync } from './tradeIdeas'
+import {
+  listMemberNotificationsForSync,
+  listWelcomePackOrdersForSync,
+  replaceWelcomePackFromSync,
+} from './welcomePack'
 
 export type { CommunitySettings, CommunityChannel, CommunityResource, LiveSession }
 
@@ -306,6 +311,14 @@ export function applySharedSnapshot(snapshot: SharedSnapshot, opts?: { silent?: 
     replaceTradeIdeasFromSync(snapshot.tradeIdeas, { silent: opts?.silent })
   }
 
+  if (Array.isArray(snapshot.welcomePackOrders) || Array.isArray(snapshot.memberNotifications)) {
+    replaceWelcomePackFromSync(
+      Array.isArray(snapshot.welcomePackOrders) ? snapshot.welcomePackOrders : [],
+      Array.isArray(snapshot.memberNotifications) ? snapshot.memberNotifications : [],
+      { silent: opts?.silent },
+    )
+  }
+
   if (snapshot.updatedAt) noteSharedUpdatedAt(snapshot.updatedAt)
 }
 
@@ -316,6 +329,8 @@ function buildSharedSnapshot(): Omit<SharedSnapshot, 'updatedAt'> & { updatedAt?
     ebooks: getAdminEbooks(),
     howItWorks: getHowItWorksVideo(),
     tradeIdeas: listTradeIdeas(),
+    welcomePackOrders: listWelcomePackOrdersForSync(),
+    memberNotifications: listMemberNotificationsForSync(),
   }
 }
 

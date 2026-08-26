@@ -14,6 +14,7 @@ import { AdminTutorials } from './pages/admin/AdminTutorials'
 import { AdminMembers } from './pages/admin/AdminMembers'
 import { AdminEvents } from './pages/admin/AdminEvents'
 import { AdminTradeIdeas } from './pages/admin/AdminTradeIdeas'
+import { AdminWelcomePack } from './pages/admin/AdminWelcomePack'
 import {
   Billing,
   Favorites,
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="trade-ideas" element={<AdminTradeIdeas />} />
+            <Route path="welcome-pack" element={<AdminWelcomePack />} />
             <Route path="requests" element={<AdminRequests />} />
             <Route path="tutorials" element={<AdminTutorials />} />
             <Route path="events" element={<AdminEvents />} />
