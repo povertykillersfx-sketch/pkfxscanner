@@ -1,7 +1,8 @@
 /** Shared CORS + JSON helpers for PKFX Edge Functions. */
 export const corsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type, x-pkfx-notify-secret',
   'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS',
 }
 

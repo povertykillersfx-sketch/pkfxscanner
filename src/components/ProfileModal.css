@@ -65,3 +65,36 @@
 [data-theme='dark'] .profile-field p {
   box-shadow: 0 4px 12px -6px rgba(191, 0, 255, 0.6);
 }
+
+.profile-telegram p.profile-telegram-status {
+  border-bottom: 2px solid var(--neon);
+  margin-bottom: 0.75rem;
+}
+
+.profile-telegram-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.profile-telegram-actions .btn {
+  min-height: 40px;
+  font-size: 0.88rem;
+}
+
+.profile-telegram-msg {
+  margin: 0.55rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  border-bottom: none !important;
+  box-shadow: none !important;
+  font-weight: 550 !important;
+}
+
+.profile-telegram-error {
+  margin: 0.55rem 0 0;
+  font-size: 0.82rem;
+  color: var(--bearish);
+  border-bottom: none !important;
+  box-shadow: none !important;
+  font-weight: 650 !important;
+}

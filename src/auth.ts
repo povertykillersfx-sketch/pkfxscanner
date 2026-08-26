@@ -16,6 +16,10 @@ export interface UserProfile {
   status?: MemberStatus
   /** ISO timestamp when the client registered */
   joinedAt?: string
+  /** Optional Telegram chat ID linked via Connect Telegram */
+  telegramChatId?: string
+  telegramUsername?: string
+  telegramLinkedAt?: string
 }
 
 export type MemberStatus = 'lead' | 'pending' | 'active' | 'revoked'
@@ -434,6 +438,26 @@ export function setMemberStatus(email: string, status: MemberStatus) {
   const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
   if (!user || user.role === 'admin') return
   user.status = status
+  writeUsers(users)
+}
+
+/** Save or clear Telegram link fields on a member profile (local store). */
+export function setMemberTelegramLink(
+  email: string,
+  link: { chatId: string; username?: string; linkedAt?: string } | null,
+) {
+  const users = readUsers()
+  const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
+  if (!user) return
+  if (!link) {
+    delete user.telegramChatId
+    delete user.telegramUsername
+    delete user.telegramLinkedAt
+  } else {
+    user.telegramChatId = link.chatId
+    user.telegramUsername = link.username
+    user.telegramLinkedAt = link.linkedAt || new Date().toISOString()
+  }
   writeUsers(users)
 }
 

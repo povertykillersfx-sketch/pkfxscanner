@@ -1,5 +1,6 @@
 import { INSTRUMENTS, type Alert, type MarketSession } from './data/mockData'
 import { publishSharedContent } from './adminStore'
+import { notifyTradeIdeaPublished } from './telegram'
 
 export type TradeDirection = 'Buy' | 'Sell'
 
@@ -117,6 +118,9 @@ export function createTradeIdea(
     archived: false,
   })
   writeAll([idea, ...readAll()])
+  if (idea.publishedAt) {
+    void notifyTradeIdeaPublished(idea)
+  }
   return idea
 }
 
@@ -139,7 +143,9 @@ export function updateTradeIdea(
 }
 
 export function publishTradeIdea(id: string): TradeIdea | null {
-  return updateTradeIdea(id, { publishedAt: new Date().toISOString(), archived: false })
+  const idea = updateTradeIdea(id, { publishedAt: new Date().toISOString(), archived: false })
+  if (idea) void notifyTradeIdeaPublished(idea)
+  return idea
 }
 
 export function unpublishTradeIdea(id: string): TradeIdea | null {
