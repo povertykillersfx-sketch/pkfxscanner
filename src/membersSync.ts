@@ -65,15 +65,18 @@ export async function pullMembersFromCloud(): Promise<UserProfile[]> {
   }
 }
 
-export async function pushAllLocalMembersToCloud(
-  members: UserProfile[],
-): Promise<void> {
+export async function pushAllLocalMembersToCloud(members: UserProfile[]): Promise<void> {
   await Promise.all(
     members
       .filter((m) => m.role !== 'admin')
       .map((m) => pushMemberToCloud(m, { admin: true })),
   )
 }
+
+export async function cloudLogin(
+  email: string,
+  password: string,
+): Promise<{ ok: true; member: UserProfile } | { ok: false; error: string }> {
   const base = supabaseBase()
   if (!base) return { ok: false, error: 'Cloud login unavailable' }
   try {
