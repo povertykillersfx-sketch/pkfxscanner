@@ -23,19 +23,19 @@ export const PLAN = {
   usdAmount: USD_AMOUNT,
   benefitsIntro: 'You’ll get access to:',
   benefits: [
-    '📈 Trade Ideas',
-    '📚 Education',
-    '👥 Private Community',
-    '🏆 Leaderboards & Competitions',
-    '🧠 Trading Tools',
-    '🔥 And much more',
+    'Trade Ideas',
+    'Education',
+    'Private Community',
+    'Leaderboards & Competitions',
+    'Trading Tools',
+    'And much more',
   ],
   welcomePackIntro:
     'And because you’re part of the PKFX community, we’re welcoming our members with an exclusive PKFX Welcome Pack.',
   welcomePackTitle: 'Your pack includes:',
   welcomePackItems: [
-    '👕 Exclusive PKFX T-Shirt',
-    '☕ PKFX Branded Mug',
-    '🔑 PKFX Keychain',
+    'Exclusive PKFX T-Shirt',
+    'PKFX Branded Mug',
+    'PKFX Keychain',
   ],
 } as const
