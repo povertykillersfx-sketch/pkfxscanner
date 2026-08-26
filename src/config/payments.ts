@@ -1,5 +1,5 @@
 /**
- * Payment checkout URL for the PKFX annual plan.
+ * Payment checkout URL for the PKFX plan.
  * Paste your live payment-page link here (or set VITE_PAYMENT_URL).
  */
 export const PAYMENT_URL =
@@ -14,17 +14,28 @@ const ZAR_AMOUNT = 2499
 const USD_AMOUNT = Math.round(ZAR_AMOUNT / USD_ZAR_RATE)
 
 export const PLAN = {
-  name: 'PKFX Annual Access',
+  name: 'PKFX Access',
   priceLabel: 'R2 499',
   usdPriceLabel: `$${USD_AMOUNT}`,
-  period: 'year',
+  periodLabel: 'once off',
   currency: 'ZAR',
   amount: ZAR_AMOUNT,
   usdAmount: USD_AMOUNT,
+  benefitsIntro: 'You’ll get access to:',
   benefits: [
-    'AI Chart scanner',
-    'Access to Inner circle Community',
-    'Live Trading streams',
-    'Educational content',
+    '📈 Trade Ideas',
+    '📚 Education',
+    '👥 Private Community',
+    '🏆 Leaderboards & Competitions',
+    '🧠 Trading Tools',
+    '🔥 And much more',
+  ],
+  welcomePackIntro:
+    'And because you’re part of the PKFX community, we’re welcoming our members with an exclusive PKFX Welcome Pack.',
+  welcomePackTitle: 'Your pack includes:',
+  welcomePackItems: [
+    '👕 Exclusive PKFX T-Shirt',
+    '☕ PKFX Branded Mug',
+    '🔑 PKFX Keychain',
   ],
 } as const
