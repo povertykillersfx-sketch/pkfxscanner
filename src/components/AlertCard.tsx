@@ -78,43 +78,47 @@ export function AlertCard({ alert }: AlertCardProps) {
     <>
       <article className={`alert-card ${expanded ? 'expanded' : ''} ${isCurrent ? 'is-current' : ''}`}>
         <header className="alert-row">
-          <button
-            type="button"
-            className="alert-asset-btn"
-            onClick={() => setExpanded((v) => !v)}
-            aria-expanded={expanded}
-          >
-            {isCurrent && (
-              <span className="current-dot" title="Current running trade" aria-label="Current running trade" />
-            )}
-            {alert.asset}
-          </button>
-          <span className={`badge ${isBearish ? 'badge-bearish' : 'badge-bullish'}`}>
-            {alert.sentiment}
-          </span>
-          <span className="alert-session">{alert.session}</span>
-          {alert.live && <span className="live-pill" title="Built from live market OHLC">LIVE</span>}
-          {!alert.live && (
-            <span className="demo-pill" title="Not live market OHLC — demo/fallback feed">
-              DEMO
+          <div className="alert-row-main">
+            <button
+              type="button"
+              className="alert-asset-btn"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+            >
+              {isCurrent && (
+                <span className="current-dot" title="Current running trade" aria-label="Current running trade" />
+              )}
+              {alert.asset}
+            </button>
+            <span className={`badge ${isBearish ? 'badge-bearish' : 'badge-bullish'}`}>
+              {alert.sentiment}
             </span>
-          )}
-          <span className={`trend-orb ${isBearish ? 'down' : 'up'}`}>
-            {isBearish ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
-          </span>
-          <span className="alert-date">
-            <span className="date-dot" aria-hidden />
-            {formatSessionTime(alert.noticedAt)}
-          </span>
-          <button
-            type="button"
-            className="expand-btn"
-            aria-expanded={expanded}
-            aria-label={expanded ? 'Collapse alert' : 'Expand alert'}
-            onClick={() => setExpanded((v) => !v)}
-          >
-            {expanded ? <X size={16} /> : <ChevronDown size={16} />}
-          </button>
+            <span className="alert-session">{alert.session}</span>
+            {alert.live && <span className="live-pill" title="Built from live market OHLC">LIVE</span>}
+            {!alert.live && (
+              <span className="demo-pill" title="Not live market OHLC — demo/fallback feed">
+                DEMO
+              </span>
+            )}
+          </div>
+          <div className="alert-row-meta">
+            <span className={`trend-orb ${isBearish ? 'down' : 'up'}`}>
+              {isBearish ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+            </span>
+            <span className="alert-date">
+              <span className="date-dot" aria-hidden />
+              {formatSessionTime(alert.noticedAt)}
+            </span>
+            <button
+              type="button"
+              className="expand-btn"
+              aria-expanded={expanded}
+              aria-label={expanded ? 'Collapse alert' : 'Expand alert'}
+              onClick={() => setExpanded((v) => !v)}
+            >
+              {expanded ? <X size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </div>
         </header>
 
         {expanded && (
