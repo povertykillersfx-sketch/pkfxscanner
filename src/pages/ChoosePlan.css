@@ -155,6 +155,7 @@
   margin-bottom: 1.2rem;
   padding-bottom: 1.1rem;
   border-bottom: 1px solid var(--border-soft);
+  text-align: center;
 }
 
 .choose-plan-kicker {
@@ -169,6 +170,7 @@
 .choose-plan-price {
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: 0.35rem;
   flex-wrap: wrap;
 }
