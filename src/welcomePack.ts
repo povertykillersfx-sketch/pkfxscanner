@@ -48,12 +48,7 @@ export const WELCOME_PACK_STATUSES: WelcomePackStatus[] = [
 
 export const WELCOME_PACK_SHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'] as const
 
-export const WELCOME_PACK_SHIRT_COLORS = [
-  'Midnight Black',
-  'Arctic White',
-  'Royal Purple',
-  'Charcoal',
-] as const
+export const WELCOME_PACK_SHIRT_COLORS = ['Black', 'White'] as const
 
 export const SA_PROVINCES = [
   'Eastern Cape',

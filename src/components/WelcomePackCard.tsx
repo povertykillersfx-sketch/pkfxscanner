@@ -65,7 +65,7 @@ export function WelcomePackCard() {
     province: 'Gauteng',
     postalCode: '',
     shirtSize: 'L',
-    shirtColor: 'Midnight Black' as string,
+    shirtColor: 'Black' as string,
   })
 
   useEffect(() => {
