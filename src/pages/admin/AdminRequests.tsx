@@ -170,14 +170,18 @@ export function AdminRequests() {
   }
 
   function approve(email: string) {
-    approveMember(email)
-    setRequests(listPendingRequests())
+    void (async () => {
+      await approveMember(email)
+      setRequests(listPendingRequests())
+    })()
   }
 
   function reject(email: string) {
     if (!window.confirm(`Reject / revoke access for ${email}?`)) return
-    revokeMemberAccess(email)
-    setRequests(listPendingRequests())
+    void (async () => {
+      await revokeMemberAccess(email)
+      setRequests(listPendingRequests())
+    })()
   }
 
   return (

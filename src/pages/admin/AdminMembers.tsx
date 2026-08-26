@@ -64,13 +64,17 @@ export function AdminMembers() {
     if (!window.confirm(`Revoke access for ${member.fullName || member.email}? They will be locked out until you approve them again.`)) {
       return
     }
-    revokeMemberAccess(member.email)
-    setMembers(listMembers())
+    void (async () => {
+      await revokeMemberAccess(member.email)
+      setMembers(listMembers())
+    })()
   }
 
   function approve(member: UserProfile) {
-    approveMember(member.email)
-    setMembers(listMembers())
+    void (async () => {
+      await approveMember(member.email)
+      setMembers(listMembers())
+    })()
   }
 
   function remove(member: UserProfile) {

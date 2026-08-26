@@ -120,17 +120,12 @@ Deno.serve(async (req) => {
             ? prev.password
             : ''
 
-      // Don't let anonymous callers reactivate revoked users or forge active without prior active
+      // Don't let anonymous callers approve themselves or demote an approved member
       let status = incoming.status || 'lead'
       if (!authorizeAdmin(req)) {
-        if (prev.status === 'revoked') status = 'revoked'
-        else if (prev.status === 'active' && status !== 'active') {
-          // allow telegram field updates etc. while keeping active unless explicitly pending/lead from same device flows
-          if (status !== 'pending' && status !== 'lead') status = 'active'
-        } else if (status === 'active' && prev.status !== 'active') {
-          // only admin secret can approve to active
-          status = prev.status === 'pending' ? 'pending' : 'lead'
-        }
+        if (prev.status === 'active') status = 'active'
+        else if (prev.status === 'revoked') status = 'revoked'
+        else if (status === 'active') status = prev.status || 'lead'
       }
 
       const merged: MemberProfile = {

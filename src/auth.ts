@@ -374,22 +374,19 @@ function finalizeLogin(user: UserProfile): LoginResult {
   return { ok: true, role: user.role === 'admin' ? 'admin' : 'client' }
 }
 
-/** Login with cloud fallback when the account was created on another device. */
+/** Login with cloud fallback when the account was created/approved on another device. */
 export async function loginAsync(emailInput: string, passwordInput: string): Promise<LoginResult> {
   const local = login(emailInput, passwordInput)
-  if (local.ok || local.reason === 'awaiting_approval' || local.reason === 'revoked') {
-    return local
-  }
+  if (local.ok) return local
 
   const email = normalizeEmail(emailInput)
   const password = passwordInput.trim()
   if (!email || !password || email === ADMIN_EMAIL) return local
 
+  // Always re-check cloud when local login is blocked (pending/revoked/missing/wrong).
+  // Admin may have approved on another device after this browser cached "pending".
   const remote = await cloudLogin(email, password)
-  if (!remote.ok) {
-    // Prefer clearer local error when account exists locally with wrong password
-    return local
-  }
+  if (!remote.ok) return local
 
   ensureAdminUser()
   const users = readUsers()
@@ -400,6 +397,8 @@ export async function loginAsync(emailInput: string, passwordInput: string): Pro
     email,
     password: remote.member.password || password,
     role: 'client',
+    status: remote.member.status || (idx >= 0 ? users[idx]!.status : 'lead'),
+    plan: remote.member.plan || (idx >= 0 ? users[idx]!.plan : 'free'),
   }
   if (idx >= 0) users[idx] = merged
   else users.push(merged)
@@ -513,7 +512,7 @@ export function hasPortalAccess(user: Pick<UserProfile, 'role' | 'status'> | nul
   return (user.status || 'pending') === 'active'
 }
 
-export function revokeMemberAccess(email: string) {
+export async function revokeMemberAccess(email: string) {
   // Cut paid/portal access — does not delete the account
   const users = readUsers()
   const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
@@ -521,7 +520,7 @@ export function revokeMemberAccess(email: string) {
   user.status = 'revoked'
   user.plan = 'free'
   writeUsers(users)
-  pushClientProfile(email, { admin: true })
+  await pushMemberToCloud(user, { admin: true })
 }
 
 /** Permanently delete a client account so they can sign up again. */
@@ -547,7 +546,7 @@ export function removeMember(email: string): boolean {
   return true
 }
 
-export function approveMember(email: string) {
+export async function approveMember(email: string) {
   const users = readUsers()
   const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
   if (!user || user.role === 'admin') return
@@ -555,7 +554,7 @@ export function approveMember(email: string) {
   user.plan = 'Inner Circle'
   if (!user.joinedAt) user.joinedAt = new Date().toISOString()
   writeUsers(users)
-  pushClientProfile(email, { admin: true })
+  await pushMemberToCloud(user, { admin: true })
 }
 
 const FUNNEL_KEY = 'pkfx_signup_funnel_v1'
@@ -614,11 +613,7 @@ export function listPendingRequests(): UserProfile[] {
 /** Pull cloud members into local store so Admin sees signups from other devices. */
 export async function syncMembersFromCloud(): Promise<number> {
   ensureAdminUser()
-  // First push any local clients so other devices / this cloud store stay complete
-  await pushAllLocalMembersToCloud(listMembers())
-
   const remote = await pullMembersFromCloud()
-  if (remote.length === 0) return 0
 
   const users = readUsers()
   let changed = 0
@@ -643,6 +638,9 @@ export async function syncMembersFromCloud(): Promise<number> {
       ...member,
       email,
       role: 'client',
+      // Cloud status/plan win so approvals propagate to every device
+      status: member.status || cur.status,
+      plan: member.plan || cur.plan,
       password:
         typeof member.password === 'string' && member.password
           ? member.password
@@ -654,6 +652,9 @@ export async function syncMembersFromCloud(): Promise<number> {
     }
   }
   if (changed > 0) writeUsers(users)
+
+  // Push after merge so we don't overwrite newer cloud approvals with stale local pending
+  await pushAllLocalMembersToCloud(listMembers())
   return changed
 }
 
