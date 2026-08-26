@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowRight, Check, ExternalLink, X } from 'lucide-react'
+import { ArrowRight, Check, ExternalLink, Gift, X } from 'lucide-react'
 import { getCommunitySettings } from '../adminStore'
 import { getCurrentUser } from '../auth'
 import {
@@ -153,9 +153,17 @@ export function WelcomePackCard() {
           <span className="welcome-pack-banner-meta">{statusLabel(order!.status)}</span>
         </button>
       ) : (
-        <button type="button" className="welcome-pack-banner" onClick={openClaim}>
-          <span>PKFX Welcome Pack — Claim Yours</span>
-          <ArrowRight size={16} strokeWidth={2.25} aria-hidden />
+        <button type="button" className="welcome-pack-banner is-claimable" onClick={openClaim}>
+          <span className="welcome-pack-banner-main">
+            <Gift size={18} strokeWidth={2.25} aria-hidden />
+            <span className="welcome-pack-banner-copy">
+              <span className="welcome-pack-banner-title">PKFX Welcome Pack — Claim Yours</span>
+              <span className="welcome-pack-banner-includes">
+                Exclusive PKFX t-shirt · PKFX Branded Mug · PKFX Keychain
+              </span>
+            </span>
+          </span>
+          <ArrowRight size={16} strokeWidth={2.25} aria-hidden className="welcome-pack-banner-arrow" />
         </button>
       )}
 
@@ -197,9 +205,15 @@ export function WelcomePackCard() {
                 </button>
 
                 <h2 id="welcome-pack-title" className="font-display">
+                  <Gift size={22} strokeWidth={2.25} aria-hidden />
                   Claim your Welcome Pack
                 </h2>
                 <p className="welcome-pack-modal-sub">Three quick steps. You’re almost there.</p>
+                <ul className="welcome-pack-includes" aria-label="What’s in the pack">
+                  <li>Exclusive PKFX t-shirt</li>
+                  <li>PKFX Branded Mug</li>
+                  <li>PKFX Keychain</li>
+                </ul>
 
                 <ol className="welcome-pack-progress" aria-label="Claim progress">
                   {[

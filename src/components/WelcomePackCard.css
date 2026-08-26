@@ -38,8 +38,11 @@
 .welcome-pack-banner > span:first-child,
 .welcome-pack-banner > span {
   display: inline-flex;
-  align-items: center;
   gap: 0.35rem;
+}
+
+.welcome-pack-banner.is-claimed > span {
+  align-items: center;
 }
 
 .welcome-pack-banner svg {
@@ -47,10 +50,55 @@
   flex-shrink: 0;
 }
 
+.welcome-pack-banner-main {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.welcome-pack-banner-main > svg {
+  margin-top: 0.12rem;
+}
+
+.welcome-pack-banner-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.welcome-pack-banner-title {
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.welcome-pack-banner-includes {
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-muted);
+  letter-spacing: 0;
+}
+
+.welcome-pack-banner-arrow {
+  flex-shrink: 0;
+}
+
+.welcome-pack-banner.is-claimable {
+  animation: welcome-pack-pulse 2.4s ease-in-out infinite;
+}
+
+.welcome-pack-banner.is-claimable .welcome-pack-banner-arrow {
+  animation: welcome-pack-nudge 1.8s ease-in-out infinite;
+}
+
 .welcome-pack-banner.is-claimed {
   border-color: color-mix(in srgb, var(--neon) 28%, transparent);
   background: color-mix(in srgb, var(--neon) 8%, var(--bg-card-inner));
   font-weight: 700;
+  animation: none;
 }
 
 .welcome-pack-banner-meta {
@@ -59,6 +107,35 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--neon-soft);
+}
+
+@keyframes welcome-pack-pulse {
+  0%,
+  100% {
+    border-color: color-mix(in srgb, var(--neon) 38%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--neon) 0%, transparent);
+  }
+  50% {
+    border-color: color-mix(in srgb, var(--neon-bright) 62%, transparent);
+    box-shadow: 0 0 18px 0 color-mix(in srgb, var(--neon) 28%, transparent);
+  }
+}
+
+@keyframes welcome-pack-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-pack-banner.is-claimable,
+  .welcome-pack-banner.is-claimable .welcome-pack-banner-arrow {
+    animation: none;
+  }
 }
 
 .welcome-pack-toast {
@@ -116,15 +193,40 @@
 }
 
 .welcome-pack-modal h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   margin: 0 2rem 0.35rem 0;
   font-size: 1.25rem;
   font-weight: 800;
 }
 
+.welcome-pack-modal h2 svg {
+  color: var(--neon-bright);
+  flex-shrink: 0;
+}
+
 .welcome-pack-modal-sub {
-  margin: 0 0 1.1rem;
+  margin: 0 0 0.85rem;
   color: var(--text-muted);
   font-size: 0.88rem;
+}
+
+.welcome-pack-includes {
+  margin: 0 0 1.15rem;
+  padding: 0.7rem 0.85rem 0.7rem 1.15rem;
+  list-style: disc;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--neon) 22%, transparent);
+  background: color-mix(in srgb, var(--neon) 7%, transparent);
+}
+
+.welcome-pack-includes li {
+  margin: 0.2rem 0;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.4;
 }
 
 .welcome-pack-progress {
@@ -367,6 +469,15 @@
   .welcome-pack-banner {
     font-size: 0.86rem;
     padding: 0.7rem 0.85rem;
+    align-items: flex-start;
+  }
+
+  .welcome-pack-banner-includes {
+    font-size: 0.68rem;
+  }
+
+  .welcome-pack-banner-arrow {
+    margin-top: 0.15rem;
   }
 
   .welcome-pack-form-grid {
