@@ -68,7 +68,6 @@ export function ChoosePlan() {
           <div className="choose-plan-brand motion-scale-in">
             <Logo size="lg" />
           </div>
-          <p className="choose-plan-eyebrow motion-rise motion-d1">Premium Access</p>
           <h1 className="font-display motion-rise motion-d2">
             Let&apos;s get you started{firstName ? `, ${firstName}` : ''}
           </h1>
