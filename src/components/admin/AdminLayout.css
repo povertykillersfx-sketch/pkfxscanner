@@ -19,9 +19,10 @@
   --admin-bg: #05010d;
   --admin-text: #f5e9ff;
   --admin-muted: #a78bb8;
-  --admin-border: rgba(191, 0, 255, 0.25);
+  --admin-border: rgba(191, 0, 255, 0.28);
   --admin-blue: var(--accent, #bf00ff);
   --admin-blue-soft: color-mix(in srgb, var(--accent, #bf00ff) 22%, transparent);
+  color-scheme: dark;
 }
 
 .admin-main {

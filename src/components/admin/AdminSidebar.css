@@ -99,4 +99,8 @@
   .admin-sidebar.open {
     transform: translateX(0);
   }
+
+  [data-theme='dark'] .admin-sidebar {
+    box-shadow: 8px 0 40px rgba(0, 0, 0, 0.55);
+  }
 }
