@@ -48,6 +48,13 @@ export const DEFAULT_COMMUNITY: CommunitySettings = {
   sessions: [],
   resources: [
     {
+      id: 'broker-vantage',
+      title: 'Broker sign-up — Vantage Markets',
+      description: 'Open a live account via the official PKFX partner link.',
+      url: 'https://vigco.co/la-com-inv/PKFX01',
+      category: 'broker',
+    },
+    {
       id: 'broker-exness',
       title: 'Broker sign-up — Exness',
       description: 'Open a live or demo account to trade PKFX setups.',

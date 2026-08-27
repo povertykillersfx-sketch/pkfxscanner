@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowRight, Check, ExternalLink, Gift, X } from 'lucide-react'
-import { getCommunitySettings } from '../adminStore'
 import { getCurrentUser } from '../auth'
 import {
   SA_PROVINCES,
@@ -52,13 +51,14 @@ function useWelcomePack() {
   }
 }
 
+/** Official PKFX Welcome Pack partner broker (affiliate). */
+const WELCOME_PACK_BROKER = {
+  title: 'Vantage Markets',
+  url: 'https://vigco.co/la-com-inv/PKFX01',
+} as const
+
 function getBrokerLink(): { title: string; url: string } {
-  const brokers = getCommunitySettings().resources.filter(
-    (r) => r.category === 'broker' && r.url.trim(),
-  )
-  const first = brokers[0]
-  if (first) return { title: first.title.replace(/^Broker sign-up —\s*/i, '') || 'our broker', url: first.url }
-  return { title: 'Exness', url: 'https://www.exness.com/' }
+  return { title: WELCOME_PACK_BROKER.title, url: WELCOME_PACK_BROKER.url }
 }
 
 export function WelcomePackCard() {
