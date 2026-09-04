@@ -1,0 +1,245 @@
+.chart-empty {
+  margin: 0;
+  padding: 1.35rem 0.25rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.chart-line {
+  position: relative;
+  display: flex;
+  gap: 0.5rem;
+  --chart-tone: var(--bullish);
+}
+
+.chart-line.tone-loss {
+  --chart-tone: var(--bearish);
+}
+
+.chart-line-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  padding: 0.1rem 0;
+  flex-shrink: 0;
+}
+
+.chart-line svg {
+  width: 100%;
+  height: 150px;
+  overflow: visible;
+}
+
+.chart-zero {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-area {
+  fill: color-mix(in srgb, var(--chart-tone) 22%, transparent);
+}
+
+.chart-stroke {
+  fill: none;
+  stroke: var(--chart-tone);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-dot {
+  fill: var(--chart-tone);
+}
+
+.chart-donut {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 168px;
+  margin: 0 auto;
+}
+
+.chart-donut svg {
+  width: 100%;
+  display: block;
+}
+
+.donut-track {
+  fill: none;
+  stroke: var(--border-soft);
+  stroke-width: 12;
+}
+
+[data-theme='dark'] .donut-track {
+  stroke: rgba(255, 255, 255, 0.07);
+}
+
+.donut-track.is-empty.tone-profit {
+  stroke: color-mix(in srgb, var(--bullish) 55%, transparent);
+}
+
+.donut-track.is-empty.tone-loss {
+  stroke: color-mix(in srgb, var(--bearish) 55%, transparent);
+}
+
+.donut-value {
+  fill: none;
+  stroke-width: 12;
+  transition: stroke-dasharray 0.35s ease;
+}
+
+.donut-value.tone-profit {
+  stroke: var(--bullish);
+}
+
+.donut-value.tone-loss {
+  stroke: var(--bearish);
+}
+
+.donut-value.tone-neutral {
+  stroke: var(--accent-strong);
+}
+
+.chart-donut-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.1rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.chart-donut-center strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.chart-donut-center span {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.chart-symbols {
+  list-style: none;
+  margin: auto 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.chart-symbols li {
+  display: grid;
+  grid-template-columns: minmax(3.5rem, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.chart-symbol-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.chart-symbol-track {
+  display: block;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--border-soft);
+  overflow: hidden;
+}
+
+[data-theme='dark'] .chart-symbol-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.chart-symbol-bar {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.chart-symbol-bar.is-profit {
+  background: color-mix(in srgb, var(--bullish) 55%, transparent);
+}
+
+.chart-symbol-bar.is-loss {
+  background: color-mix(in srgb, var(--bearish) 55%, transparent);
+}
+
+.chart-symbol-value {
+  font-size: 0.78rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-symbol-value.is-profit {
+  color: var(--bullish);
+}
+
+.chart-symbol-value.is-loss {
+  color: var(--bearish);
+}
+
+.chart-daily {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  height: 132px;
+}
+
+.chart-daily.is-split {
+  background: linear-gradient(to bottom, transparent calc(50% - 1px), var(--border) 50%, transparent calc(50% + 1px));
+}
+
+.chart-daily-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-daily-half {
+  flex: 1 1 100%;
+  display: flex;
+  min-height: 0;
+}
+
+.chart-daily.is-split .chart-daily-half {
+  flex-basis: 50%;
+}
+
+.chart-daily-half.up {
+  align-items: flex-end;
+}
+
+.chart-daily-half.down {
+  align-items: flex-start;
+}
+
+.chart-daily-bar {
+  width: 100%;
+  border-radius: 3px;
+}
+
+.chart-daily-bar.is-profit {
+  background: color-mix(in srgb, var(--bullish) 55%, transparent);
+}
+
+.chart-daily-bar.is-loss {
+  background: color-mix(in srgb, var(--bearish) 55%, transparent);
+}

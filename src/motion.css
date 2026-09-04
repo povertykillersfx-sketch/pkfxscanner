@@ -1,0 +1,278 @@
+/* Shared micro-interactions — smooth, intentional, reduced-motion safe */
+
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-fast: 160ms;
+  --motion-med: 280ms;
+  --motion-slow: 520ms;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes rise-in-soft {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes rule-draw {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 64px;
+    opacity: 1;
+  }
+}
+
+@keyframes shake-soft {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-5px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes sheen {
+  0% {
+    transform: translateX(-120%) skewX(-16deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-16deg);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.motion-rise {
+  opacity: 0;
+  animation: rise-in var(--motion-slow) var(--ease-out) both;
+}
+
+.motion-rise-soft {
+  opacity: 0;
+  animation: rise-in-soft var(--motion-slow) var(--ease-out) both;
+}
+
+.motion-scale-in {
+  opacity: 0;
+  animation: scale-in var(--motion-slow) var(--ease-spring) both;
+}
+
+.motion-d1 {
+  animation-delay: 60ms;
+}
+.motion-d2 {
+  animation-delay: 120ms;
+}
+.motion-d3 {
+  animation-delay: 180ms;
+}
+.motion-d4 {
+  animation-delay: 240ms;
+}
+.motion-d5 {
+  animation-delay: 320ms;
+}
+.motion-d6 {
+  animation-delay: 400ms;
+}
+.motion-d7 {
+  animation-delay: 480ms;
+}
+
+/* Buttons — press + sheen */
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform var(--motion-fast) var(--ease-spring),
+    box-shadow var(--motion-med) var(--ease-soft),
+    background var(--motion-med) var(--ease-soft),
+    border-color var(--motion-med) var(--ease-soft),
+    filter var(--motion-med) var(--ease-soft);
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.22) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%) skewX(-16deg);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.btn:hover::after {
+  opacity: 1;
+  animation: sheen 0.7s var(--ease-soft);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translateY(0) scale(0.985);
+  transition-duration: 90ms;
+}
+
+.btn:disabled {
+  transform: none;
+  filter: grayscale(0.2) brightness(0.85);
+  cursor: not-allowed;
+}
+
+.btn:disabled::after {
+  display: none;
+}
+
+/* Fields — focus lift */
+.field {
+  transition:
+    box-shadow var(--motion-med) var(--ease-soft),
+    border-color var(--motion-med) var(--ease-soft),
+    background var(--motion-med) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.field:hover {
+  border-color: color-mix(in srgb, var(--neon-bright) 70%, transparent);
+}
+
+.field:focus {
+  transform: translateY(-1px);
+}
+
+.field.field-error {
+  animation: shake-soft 0.42s var(--ease-out);
+}
+
+/* Links */
+a {
+  transition: color var(--motion-fast) var(--ease-soft), opacity var(--motion-fast) var(--ease-soft);
+}
+
+/* Panels / cards hover polish */
+.panel {
+  transition:
+    border-color var(--motion-med) var(--ease-soft),
+    box-shadow var(--motion-med) var(--ease-soft),
+    transform var(--motion-med) var(--ease-out);
+}
+
+.alert-card {
+  transition:
+    border-color var(--motion-med) var(--ease-soft),
+    box-shadow var(--motion-med) var(--ease-soft),
+    transform var(--motion-med) var(--ease-out);
+}
+
+.alert-card:hover {
+  transform: translateY(-2px);
+}
+
+.nav-item {
+  transition:
+    color var(--motion-fast) var(--ease-soft),
+    background var(--motion-fast) var(--ease-soft),
+    border-color var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-med) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-spring);
+}
+
+.theme-toggle {
+  transition:
+    transform var(--motion-fast) var(--ease-spring),
+    box-shadow var(--motion-med) var(--ease-soft),
+    background var(--motion-med) var(--ease-soft),
+    color var(--motion-med) var(--ease-soft);
+}
+
+.theme-toggle:hover {
+  transform: translateY(-3px) scale(1.06);
+}
+
+.theme-toggle:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.main-scroll > * {
+  animation: rise-in-soft 0.45s var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .btn::after,
+  .btn:hover::after {
+    display: none;
+  }
+
+  .field:focus,
+  .btn:hover,
+  .alert-card:hover,
+  .theme-toggle:hover {
+    transform: none;
+  }
+}

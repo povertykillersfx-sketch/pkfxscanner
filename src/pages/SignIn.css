@@ -1,0 +1,413 @@
+.signin-page {
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  overflow: hidden;
+}
+
+/* Sign-in only: lock to viewport — no vertical or horizontal page movement */
+.signin-page-fixed {
+  width: 100%;
+  max-width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  height: 100svh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: 100svh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  max-height: 100svh;
+  padding:
+    max(0.75rem, env(safe-area-inset-top, 0px))
+    max(1rem, env(safe-area-inset-right, 0px))
+    max(0.75rem, env(safe-area-inset-bottom, 0px))
+    max(1rem, env(safe-area-inset-left, 0px));
+  overflow: hidden;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.signin-page-fixed .signin-card {
+  width: min(380px, 100%);
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.signin-page-fixed .logo-lg .logo-img {
+  height: clamp(48px, 7vh, 64px);
+}
+
+.signin-page-fixed .signin-title {
+  font-size: clamp(1.2rem, 2.4vh + 0.6rem, 1.45rem);
+}
+
+.signin-page-fixed .field,
+.signin-page-fixed .signin-btn {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+/* Phones */
+@media (max-width: 480px) {
+  .signin-page-fixed {
+    padding-left: max(0.85rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.85rem, env(safe-area-inset-right, 0px));
+  }
+
+  .signin-page-fixed .signin-card {
+    padding: 1.65rem 1.25rem 1.35rem;
+  }
+
+  .signin-page-fixed .signin-signup,
+  .signin-page-fixed .signin-forgot {
+    font-size: 0.88rem;
+  }
+}
+
+/* Tablets */
+@media (min-width: 481px) and (max-width: 1024px) {
+  .signin-page-fixed .signin-card {
+    width: min(420px, 100%);
+    padding: 2.1rem 1.85rem 1.75rem;
+  }
+}
+
+/* Laptops / desktops */
+@media (min-width: 1025px) {
+  .signin-page-fixed .signin-card {
+    width: min(400px, 100%);
+  }
+}
+
+/* Short viewports (small phones / landscape) */
+@media (max-height: 700px) {
+  .signin-page-fixed .signin-logo {
+    margin-bottom: 0.75rem;
+  }
+
+  .signin-page-fixed .signin-title {
+    margin-bottom: 0.75rem;
+  }
+
+  .signin-page-fixed .signin-fields {
+    gap: 0.55rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .signin-page-fixed .signin-btn {
+    margin-bottom: 0.75rem;
+  }
+
+  .signin-page-fixed .signin-card {
+    padding: 1.25rem 1.15rem 1.1rem;
+  }
+}
+
+@media (max-height: 480px) {
+  .signin-page-fixed .signin-card {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .signin-page-fixed .signin-logo {
+    margin-bottom: 0.5rem;
+  }
+
+  .signin-page-fixed .logo-lg .logo-img {
+    height: 40px;
+  }
+}
+
+.signin-scan {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(180deg, transparent, rgba(191, 0, 255, 0.08), transparent);
+  animation: scan-line 7s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+  opacity: var(--atmosphere);
+}
+
+.signin-card {
+  width: min(380px, 100%);
+  padding: 2.25rem 1.75rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+[data-theme='light'] .signin-card {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.1);
+}
+
+.signin-logo {
+  margin-bottom: 1.5rem;
+}
+
+.signin-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  color: var(--text);
+  text-shadow: var(--glow-text);
+}
+
+.signin-sub {
+  width: 100%;
+  margin: 0 0 1.25rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.signin-fields {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1.15rem;
+}
+
+.signin-error {
+  width: 100%;
+  margin: -0.35rem 0 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--badge-bearish-border);
+  background: var(--badge-bearish-bg);
+  color: var(--badge-bearish-fg);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.signin-hint {
+  width: 100%;
+  margin: -0.35rem 0 1rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.signin-btn {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1.05rem;
+  margin-bottom: 1.25rem;
+}
+
+.signin-signup {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-bottom: 0.65rem;
+}
+
+.signin-legal {
+  width: 100%;
+  margin: -0.35rem 0 1rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.signin-legal a {
+  color: var(--neon-bright);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.signin-legal a:hover {
+  color: var(--neon-soft);
+}
+
+.signin-signup a {
+  color: var(--neon-bright);
+  font-weight: 700;
+  text-shadow: var(--glow-text);
+}
+
+.signin-signup a:hover {
+  text-decoration: underline;
+}
+
+.signin-forgot {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.signin-forgot:hover {
+  color: var(--neon-soft);
+}
+
+.signup-card {
+  width: 100%;
+}
+
+.portal-name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 420px) {
+  .portal-name-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field.field-error {
+  border-color: var(--badge-bearish-border);
+  box-shadow: 0 0 0 1px var(--badge-bearish-border);
+}
+
+.phone-field {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-field, color-mix(in srgb, var(--panel) 80%, transparent));
+  overflow: visible;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.phone-field.has-error {
+  border-color: var(--badge-bearish-border);
+}
+
+.phone-field:focus-within {
+  border-color: var(--neon-bright);
+  box-shadow: var(--glow-sm);
+}
+
+.phone-dial-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.7rem;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-weight: 650;
+  font-size: 0.9rem;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.phone-dial-btn:hover {
+  color: var(--neon-bright);
+  background: color-mix(in srgb, var(--neon) 8%, transparent);
+}
+
+.phone-flag {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.phone-dial {
+  font-variant-numeric: tabular-nums;
+}
+
+.phone-input {
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  flex: 1;
+  min-width: 0;
+}
+
+.phone-dial-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel, #120424);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  animation: pop-in 0.22s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+[data-theme='light'] .phone-dial-menu {
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+
+.phone-dial-search {
+  border: 0 !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.phone-dial-list {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.phone-dial-option {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.8rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.phone-dial-option:hover,
+.phone-dial-option.active {
+  background: color-mix(in srgb, var(--neon) 12%, transparent);
+}
+
+.phone-dial-option:hover {
+  transform: translateX(2px);
+}
+
+.phone-option-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-option-dial {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.phone-dial-empty {
+  padding: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin: 0;
+}

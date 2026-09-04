@@ -1,0 +1,44 @@
+.placeholder-page {
+  max-width: 520px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.placeholder-page h2 {
+  font-size: 1.25rem;
+  text-shadow: var(--glow-text);
+}
+
+.placeholder-page p {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.placeholder-page .btn {
+  align-self: flex-start;
+}
+
+.placeholder-auth {
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.placeholder-auth-card {
+  max-width: 400px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: center;
+}
+
+.placeholder-auth-card p {
+  color: var(--text-muted);
+}
+
+.placeholder-auth-card .btn {
+  align-self: center;
+}

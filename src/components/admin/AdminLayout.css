@@ -1,0 +1,71 @@
+.admin-shell {
+  --admin-blue: var(--accent, #9333ea);
+  --admin-blue-soft: color-mix(in srgb, var(--accent, #9333ea) 16%, transparent);
+  --admin-card: #ffffff;
+  --admin-bg: #f3f5f9;
+  --admin-text: #0f172a;
+  --admin-muted: #64748b;
+  --admin-border: #e2e8f0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  font-family: var(--font-body);
+}
+
+[data-theme='dark'] .admin-shell {
+  --admin-card: #120424;
+  --admin-bg: #05010d;
+  --admin-text: #f5e9ff;
+  --admin-muted: #a78bb8;
+  --admin-border: rgba(191, 0, 255, 0.28);
+  --admin-blue: var(--accent, #bf00ff);
+  --admin-blue-soft: color-mix(in srgb, var(--accent, #bf00ff) 22%, transparent);
+  color-scheme: dark;
+}
+
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.admin-scroll {
+  flex: 1;
+  padding: 0 1.25rem 1.5rem;
+  padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1rem));
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-shell .app-header {
+  background: transparent;
+  border: none;
+  color: var(--admin-text);
+}
+
+.admin-shell .header-welcome,
+.admin-shell .header-welcome .name {
+  color: var(--admin-text);
+}
+
+.admin-shell .menu-toggle {
+  color: var(--admin-text);
+  border-color: var(--admin-border);
+  background: var(--admin-card);
+}
+
+@media (max-width: 900px) {
+  .admin-scroll {
+    padding: 0 0.85rem 1.25rem;
+    padding-left: max(0.85rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.85rem, env(safe-area-inset-right, 0px));
+    padding-bottom: max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 4.5rem));
+  }
+}

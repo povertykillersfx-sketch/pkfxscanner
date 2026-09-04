@@ -1,0 +1,42 @@
+# PKFX Supabase local/CLI config
+# Link your project: npx supabase link --project-ref <ref>
+# Deploy functions: npx supabase functions deploy sync
+#                   npx supabase functions deploy health
+
+project_id = "cojgoldwueewzdwnzinr"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+
+[functions.health]
+verify_jwt = false
+
+[functions.sync]
+verify_jwt = false
+
+[functions.telegram-notify]
+verify_jwt = false
+
+[functions.telegram-connect]
+verify_jwt = false
+
+[functions.telegram-webhook]
+verify_jwt = false
+
+[functions.telegram-settings]
+verify_jwt = false
+
+[functions.members]
+verify_jwt = false

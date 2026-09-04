@@ -1,0 +1,46 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.logo-img {
+  display: block;
+  height: auto;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.logo-sm .logo-img {
+  height: 36px;
+}
+
+.logo-md .logo-img {
+  height: 44px;
+}
+
+.logo-lg .logo-img {
+  height: 64px;
+}
+
+/* Sidebar / compact contexts */
+.logo-compact.logo-sm .logo-img {
+  height: 34px;
+}
+
+.logo-compact.logo-md .logo-img {
+  height: 42px;
+}
+
+/* Cover logos inside ebook cards — use the mark as-is */
+.cover-logo .logo-img {
+  height: 28px;
+  filter: none;
+}
+
+[data-theme='dark'] .cover-logo .logo-img {
+  filter: none;
+}
