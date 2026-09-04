@@ -1,70 +1,33 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { NotebookPen, Plus, Trash2 } from 'lucide-react'
-import { INSTRUMENTS } from '../data/mockData'
+import { Link } from 'react-router-dom'
+import { BookOpen, ChevronRight, NotebookPen, Plus, Trash2, X } from 'lucide-react'
 import {
-  ACCOUNT_CURRENCIES,
-  addJournalEntry,
-  currencyPrefix,
-  deleteJournalEntry,
-  formatPnl,
-  formatPnlTotal,
-  groupJournalByDay,
-  journalStats,
-  listJournalEntries,
-  type AccountCurrency,
-  type JournalEntry,
-  type TradeResult,
-  type TradeSide,
+  createJournal,
+  deleteJournal,
+  journalEntryCounts,
+  listJournals,
+  type Journal,
 } from '../tradingJournal'
 import './TradingJournal.css'
 
-const RESULTS: TradeResult[] = ['Win', 'Loss', 'Breakeven']
-const SIDES: TradeSide[] = ['Buy', 'Sell']
-
-function todayInputValue(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function emptyForm() {
-  return {
-    date: todayInputValue(),
-    symbol: 'GOLD',
-    side: 'Buy' as TradeSide,
-    entry: '',
-    exit: '',
-    stopLoss: '',
-    takeProfit: '',
-    result: 'Win' as TradeResult,
-    currency: 'USD' as AccountCurrency,
-    pnl: '',
-    notes: '',
-  }
-}
-
-/** Keep Loss P/L amounts negative; strip forced minus for Win/Breakeven. */
-function applyResultToPnl(result: TradeResult, pnl: string): string {
-  const raw = pnl.trim()
-  if (!raw) return result === 'Loss' ? '-' : ''
-  const unsigned = raw.replace(/^[+-]+/, '').trim()
-  if (!unsigned) return result === 'Loss' ? '-' : ''
-  if (result === 'Loss') return `-${unsigned}`
-  return unsigned
+function formatCreated(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export function TradingJournal() {
-  const [entries, setEntries] = useState<JournalEntry[]>(() => listJournalEntries())
-  const [form, setForm] = useState(emptyForm)
+  const [journals, setJournals] = useState<Journal[]>(() => listJournals())
+  const [counts, setCounts] = useState<Record<string, number>>(() => journalEntryCounts())
+  const [creating, setCreating] = useState(false)
+  const [name, setName] = useState('')
   const [error, setError] = useState('')
-  const [formOpen, setFormOpen] = useState(false)
 
   useEffect(() => {
     function refresh() {
-      setEntries(listJournalEntries())
+      setJournals(listJournals())
+      setCounts(journalEntryCounts())
     }
     window.addEventListener('pkfx-journal-change', refresh)
     window.addEventListener('storage', refresh)
@@ -74,363 +37,120 @@ export function TradingJournal() {
     }
   }, [])
 
-  const stats = useMemo(() => journalStats(entries), [entries])
-  const dayGroups = useMemo(() => groupJournalByDay(entries), [entries])
+  const total = useMemo(
+    () => Object.values(counts).reduce((sum, n) => sum + n, 0),
+    [counts],
+  )
 
-  function setResult(result: TradeResult) {
-    setForm((f) => ({
-      ...f,
-      result,
-      pnl: applyResultToPnl(result, f.pnl),
-    }))
-  }
-
-  function setPnl(value: string) {
-    setForm((f) => ({
-      ...f,
-      pnl: applyResultToPnl(f.result, value),
-    }))
-  }
-
-  function onSubmit(e: FormEvent) {
+  function onCreate(e: FormEvent) {
     e.preventDefault()
-    if (!form.symbol.trim()) {
-      setError('Choose a symbol.')
+    if (!name.trim()) {
+      setError('Give your journal a name.')
       return
     }
-    if (!form.entry.trim()) {
-      setError('Enter your entry price.')
-      return
-    }
-    const pnl = applyResultToPnl(form.result, form.pnl)
-    if (!pnl || pnl === '-' || pnl === '+') {
-      setError('Enter your P/L amount.')
-      return
-    }
-    addJournalEntry({
-      date: form.date || todayInputValue(),
-      symbol: form.symbol.trim().toUpperCase(),
-      side: form.side,
-      entry: form.entry.trim(),
-      exit: form.exit.trim(),
-      stopLoss: form.stopLoss.trim(),
-      takeProfit: form.takeProfit.trim(),
-      result: form.result,
-      currency: form.currency,
-      pnl,
-      notes: form.notes.trim(),
-    })
-    setForm(emptyForm())
+    createJournal(name)
+    setName('')
     setError('')
-    setFormOpen(false)
-    setEntries(listJournalEntries())
+    setCreating(false)
+    setJournals(listJournals())
+    setCounts(journalEntryCounts())
   }
 
-  function onDelete(id: string) {
-    if (!window.confirm('Delete this journal entry?')) return
-    deleteJournalEntry(id)
-    setEntries(listJournalEntries())
+  function onDelete(journal: Journal) {
+    const logged = counts[journal.id] || 0
+    const warning = logged
+      ? `Delete “${journal.name}” and its ${logged} logged trade${logged === 1 ? '' : 's'}?`
+      : `Delete “${journal.name}”?`
+    if (!window.confirm(warning)) return
+    deleteJournal(journal.id)
+    setJournals(listJournals())
+    setCounts(journalEntryCounts())
   }
 
   return (
-    <div className="journal-page">
-      <header className="journal-header animate-fade-up">
+    <div className="journals-page">
+      <header className="journals-header animate-fade-up">
         <div>
-          <h1 className="font-display">Trading Journal</h1>
-          <p>Log your trades, review results, and build consistency.</p>
+          <h1 className="font-display">Trading Journals</h1>
+          <p>Create journals to track and analyze your trades.</p>
         </div>
         <button
           type="button"
-          className="btn btn-primary journal-add-btn"
+          className="btn btn-primary journals-new-btn"
           onClick={() => {
-            setFormOpen((v) => !v)
+            setCreating((v) => !v)
             setError('')
           }}
         >
-          <Plus size={16} /> {formOpen ? 'Close form' : 'New trade'}
+          {creating ? <X size={16} /> : <Plus size={16} />}
+          {creating ? 'Cancel' : 'New Journal'}
         </button>
       </header>
 
-      <div className="journal-stats animate-fade-up stagger-1">
-        <article className="journal-stat panel">
-          <span className="journal-stat-label">Trades</span>
-          <strong>{stats.total}</strong>
-        </article>
-        <article className="journal-stat panel">
-          <span className="journal-stat-label">Win rate</span>
-          <strong>{stats.winRate}%</strong>
-        </article>
-        <article className="journal-stat panel">
-          <span className="journal-stat-label">Wins</span>
-          <strong className="is-win">{stats.wins}</strong>
-        </article>
-        <article className="journal-stat panel">
-          <span className="journal-stat-label">Losses</span>
-          <strong className="is-loss">{stats.losses}</strong>
-        </article>
-        <article className="journal-stat panel">
-          <span className="journal-stat-label">Breakeven</span>
-          <strong>{stats.be}</strong>
-        </article>
-      </div>
-
-      {formOpen && (
-        <form className="journal-form panel panel-glow animate-fade-up" onSubmit={onSubmit}>
-          <div className="journal-form-head">
-            <NotebookPen size={18} />
-            <h2>Log a trade</h2>
-          </div>
-
-          <div className="journal-form-grid">
-            <label>
-              <span>Date</span>
-              <input
-                className="field"
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              <span>Symbol</span>
-              <select
-                className="field"
-                value={form.symbol}
-                onChange={(e) => setForm((f) => ({ ...f, symbol: e.target.value }))}
-              >
-                {INSTRUMENTS.map((sym) => (
-                  <option key={sym} value={sym}>
-                    {sym}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Side</span>
-              <select
-                className="field"
-                value={form.side}
-                onChange={(e) => setForm((f) => ({ ...f, side: e.target.value as TradeSide }))}
-              >
-                {SIDES.map((side) => (
-                  <option key={side} value={side}>
-                    {side}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Result</span>
-              <select
-                className="field"
-                value={form.result}
-                onChange={(e) => setResult(e.target.value as TradeResult)}
-              >
-                {RESULTS.map((result) => (
-                  <option key={result} value={result}>
-                    {result}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Entry</span>
-              <input
-                className="field"
-                type="text"
-                inputMode="decimal"
-                placeholder="Entry price"
-                value={form.entry}
-                onChange={(e) => setForm((f) => ({ ...f, entry: e.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              <span>Exit</span>
-              <input
-                className="field"
-                type="text"
-                inputMode="decimal"
-                placeholder="Exit price"
-                value={form.exit}
-                onChange={(e) => setForm((f) => ({ ...f, exit: e.target.value }))}
-              />
-            </label>
-            <label>
-              <span>Stop loss</span>
-              <input
-                className="field"
-                type="text"
-                inputMode="decimal"
-                placeholder="SL"
-                value={form.stopLoss}
-                onChange={(e) => setForm((f) => ({ ...f, stopLoss: e.target.value }))}
-              />
-            </label>
-            <label>
-              <span>Take profit</span>
-              <input
-                className="field"
-                type="text"
-                inputMode="decimal"
-                placeholder="TP"
-                value={form.takeProfit}
-                onChange={(e) => setForm((f) => ({ ...f, takeProfit: e.target.value }))}
-              />
-            </label>
-            <label>
-              <span>Account currency</span>
-              <select
-                className="field"
-                value={form.currency}
-                onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value as AccountCurrency }))}
-              >
-                {ACCOUNT_CURRENCIES.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency} ({currencyPrefix(currency)})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>P/L amount</span>
-              <div className={`journal-pnl-input ${form.result === 'Loss' ? 'is-loss' : ''}`}>
-                <span className="journal-pnl-prefix" aria-hidden>
-                  {form.result === 'Loss' ? `-${currencyPrefix(form.currency)}` : currencyPrefix(form.currency)}
-                </span>
-                <input
-                  className="field"
-                  type="text"
-                  inputMode="decimal"
-                  placeholder={form.result === 'Loss' ? 'e.g. 45' : 'e.g. 120'}
-                  value={form.result === 'Loss' ? form.pnl.replace(/^-/, '') : form.pnl}
-                  onChange={(e) => setPnl(e.target.value)}
-                  required
-                />
-              </div>
-            </label>
-            <label className="journal-notes-field">
-              <span>Notes / lessons</span>
-              <textarea
-                className="field"
-                rows={3}
-                placeholder="What worked, what didn’t, emotions, setup…"
-                value={form.notes}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              />
-            </label>
-          </div>
-
-          {error ? <p className="journal-error">{error}</p> : null}
-
-          <div className="journal-form-actions">
-            <button type="submit" className="btn btn-primary">
-              Save trade
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                setForm(emptyForm())
-                setFormOpen(false)
-                setError('')
-              }}
-            >
-              Cancel
-            </button>
-          </div>
+      {creating && (
+        <form className="journals-create panel panel-glow animate-fade-up" onSubmit={onCreate}>
+          <label>
+            <span>Journal name</span>
+            <input
+              className="field"
+              type="text"
+              placeholder="e.g. September Funding Pips P1"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+            />
+          </label>
+          {error ? <p className="journals-error">{error}</p> : null}
+          <button type="submit" className="btn btn-primary">
+            Create journal
+          </button>
         </form>
       )}
 
-      <section className="journal-list panel panel-glow animate-fade-up stagger-2">
-        <div className="journal-list-head">
-          <h2>Your trades</h2>
-          <span className="text-muted">{entries.length} logged</span>
-        </div>
+      {journals.length === 0 ? (
+        <section className="journals-empty panel animate-fade-up stagger-1">
+          <NotebookPen size={28} />
+          <p>No journals yet.</p>
+          <p className="text-muted">
+            Create one per account, challenge or month to keep your stats clean.
+          </p>
+        </section>
+      ) : (
+        <ul className="journals-list animate-fade-up stagger-1">
+          {journals.map((journal) => (
+            <li key={journal.id} className="journal-card panel">
+              <Link to={`/trading-journal/${journal.id}`} className="journal-card-link">
+                <span className="journal-card-icon" aria-hidden>
+                  <BookOpen size={18} />
+                </span>
+                <span className="journal-card-copy">
+                  <strong>{journal.name}</strong>
+                  <span className="journal-card-meta">
+                    Created {formatCreated(journal.createdAt)}
+                    {counts[journal.id] ? ` · ${counts[journal.id]} trades` : ''}
+                  </span>
+                </span>
+                <ChevronRight size={18} className="journal-card-arrow" aria-hidden />
+              </Link>
+              <button
+                type="button"
+                className="journal-card-delete"
+                aria-label={`Delete ${journal.name}`}
+                onClick={() => onDelete(journal)}
+              >
+                <Trash2 size={15} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
-        {entries.length === 0 ? (
-          <div className="journal-empty">
-            <NotebookPen size={28} />
-            <p>No trades journaled yet.</p>
-            <p className="text-muted">Click New trade to log your first setup.</p>
-          </div>
-        ) : (
-          <div className="journal-days">
-            {dayGroups.map((day) => {
-              const dayPnlClass =
-                day.totals.length === 0
-                  ? ''
-                  : day.totals.every((t) => t.total > 0)
-                    ? 'is-win'
-                    : day.totals.every((t) => t.total < 0)
-                      ? 'is-loss'
-                      : day.totals.every((t) => t.total === 0)
-                        ? ''
-                        : 'is-mixed'
-
-              return (
-                <section key={day.date} className="journal-day" aria-label={day.label}>
-                  <header className="journal-day-head">
-                    <div className="journal-day-title">
-                      <h3>{day.label}</h3>
-                      <span className="text-muted">
-                        {day.entries.length} trade{day.entries.length === 1 ? '' : 's'}
-                      </span>
-                    </div>
-                    <div className={`journal-day-pnl ${dayPnlClass}`}>
-                      <span className="journal-day-pnl-label">Day P/L</span>
-                      <strong>
-                        {day.totals.length === 0
-                          ? '—'
-                          : day.totals.map((t) => formatPnlTotal(t.total, t.currency)).join(' · ')}
-                      </strong>
-                    </div>
-                  </header>
-
-                  <div className="journal-entries">
-                    {day.entries.map((entry) => (
-                      <article key={entry.id} className="journal-entry">
-                        <div className="journal-entry-top">
-                          <div className="journal-entry-title">
-                            <strong>{entry.symbol}</strong>
-                            <span className={`journal-side side-${entry.side.toLowerCase()}`}>
-                              {entry.side}
-                            </span>
-                            <span className={`journal-result result-${entry.result.toLowerCase()}`}>
-                              {entry.result}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            className="btn btn-ghost journal-delete"
-                            aria-label="Delete entry"
-                            onClick={() => onDelete(entry.id)}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                        <div className="journal-entry-meta">
-                          <span>Entry {entry.entry}</span>
-                          {entry.exit ? <span>Exit {entry.exit}</span> : null}
-                          {entry.stopLoss ? <span>SL {entry.stopLoss}</span> : null}
-                          {entry.takeProfit ? <span>TP {entry.takeProfit}</span> : null}
-                          {entry.pnl ? (
-                            <span className="journal-pnl">
-                              P/L {formatPnl(entry.pnl, entry.currency)}
-                            </span>
-                          ) : null}
-                        </div>
-                        {entry.notes ? <p className="journal-entry-notes">{entry.notes}</p> : null}
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              )
-            })}
-          </div>
-        )}
-      </section>
+      {total > 0 && (
+        <p className="journals-footnote">
+          {total} trade{total === 1 ? '' : 's'} logged across {journals.length} journal
+          {journals.length === 1 ? '' : 's'}.
+        </p>
+      )}
     </div>
   )
 }
