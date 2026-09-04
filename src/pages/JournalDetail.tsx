@@ -171,7 +171,6 @@ export function JournalDetail() {
   }
 
   const pnlTone = stats.totalPnl > 0 ? 'is-profit' : stats.totalPnl < 0 ? 'is-loss' : ''
-  const longPercent = stats.totalTrades > 0 ? (stats.longs / stats.totalTrades) * 100 : 0
 
   return (
     <div className="journal-detail-page">
@@ -260,10 +259,14 @@ export function JournalDetail() {
             </p>
           </header>
           <DonutChart
-            percent={stats.winRate}
+            segments={[
+              { value: stats.wins, tone: 'profit' },
+              { value: stats.losses, tone: 'loss' },
+              { value: stats.breakeven, tone: 'neutral' },
+            ]}
             label={`${stats.winRate}%`}
             caption="win rate"
-            tone={stats.winRate >= 50 ? 'profit' : 'loss'}
+            emptyTone="neutral"
           />
         </section>
       </div>
@@ -277,10 +280,12 @@ export function JournalDetail() {
             <p>Direction distribution of trades</p>
           </header>
           <DonutChart
-            percent={longPercent}
+            segments={[
+              { value: stats.longs, tone: 'profit' },
+              { value: stats.shorts, tone: 'loss' },
+            ]}
             label={String(stats.totalTrades)}
             caption="trades"
-            tone={stats.longs >= stats.shorts ? 'profit' : 'loss'}
           />
           <ul className="journal-chart-legend">
             <li className="tone-profit">Long {stats.longs}</li>

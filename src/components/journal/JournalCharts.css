@@ -65,15 +65,6 @@
   width: 100%;
   max-width: 168px;
   margin: 0 auto;
-  --chart-tone: var(--accent-strong);
-}
-
-.chart-donut.tone-profit {
-  --chart-tone: var(--bullish);
-}
-
-.chart-donut.tone-loss {
-  --chart-tone: var(--bearish);
 }
 
 .chart-donut svg {
@@ -91,12 +82,30 @@
   stroke: rgba(255, 255, 255, 0.07);
 }
 
+.donut-track.is-empty.tone-profit {
+  stroke: color-mix(in srgb, var(--bullish) 55%, transparent);
+}
+
+.donut-track.is-empty.tone-loss {
+  stroke: color-mix(in srgb, var(--bearish) 55%, transparent);
+}
+
 .donut-value {
   fill: none;
-  stroke: var(--chart-tone);
   stroke-width: 12;
-  stroke-linecap: round;
   transition: stroke-dasharray 0.35s ease;
+}
+
+.donut-value.tone-profit {
+  stroke: var(--bullish);
+}
+
+.donut-value.tone-loss {
+  stroke: var(--bearish);
+}
+
+.donut-value.tone-neutral {
+  stroke: var(--accent-strong);
 }
 
 .chart-donut-center {
@@ -193,6 +202,10 @@
   height: 132px;
 }
 
+.chart-daily.is-split {
+  background: linear-gradient(to bottom, transparent calc(50% - 1px), var(--border) 50%, transparent calc(50% + 1px));
+}
+
 .chart-daily-col {
   flex: 1 1 0;
   min-width: 0;
@@ -201,9 +214,13 @@
 }
 
 .chart-daily-half {
-  flex: 1 1 50%;
+  flex: 1 1 100%;
   display: flex;
   min-height: 0;
+}
+
+.chart-daily.is-split .chart-daily-half {
+  flex-basis: 50%;
 }
 
 .chart-daily-half.up {

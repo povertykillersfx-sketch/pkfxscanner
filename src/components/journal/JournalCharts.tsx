@@ -50,32 +50,51 @@ export function CumulativeChart({ points }: CumulativeChartProps) {
   )
 }
 
-interface DonutProps {
-  /** 0–100 */
-  percent: number
-  label: string
-  caption?: string
-  tone?: 'profit' | 'loss' | 'neutral'
+export interface DonutSegment {
+  value: number
+  tone: 'profit' | 'loss' | 'neutral'
 }
 
-export function DonutChart({ percent, label, caption, tone = 'neutral' }: DonutProps) {
+interface DonutProps {
+  segments: DonutSegment[]
+  label: string
+  caption?: string
+  /** Ring colour when every segment is zero. */
+  emptyTone?: 'profit' | 'loss' | 'neutral'
+}
+
+/** Ring split proportionally between segments, e.g. wins vs losses. */
+export function DonutChart({ segments, label, caption, emptyTone = 'neutral' }: DonutProps) {
   const radius = 46
   const circumference = 2 * Math.PI * radius
-  const clamped = Math.max(0, Math.min(100, percent))
-  const dash = (clamped / 100) * circumference
+  const total = segments.reduce((sum, s) => sum + Math.max(0, s.value), 0)
 
-  return (
-    <div className={`chart-donut tone-${tone}`}>
-      <svg viewBox="0 0 120 120" role="img" aria-label={`${label} ${clamped}%`}>
-        <circle className="donut-track" cx="60" cy="60" r={radius} />
+  let offset = 0
+  const arcs = segments
+    .filter((s) => s.value > 0)
+    .map((segment, i) => {
+      const dash = (segment.value / total) * circumference
+      const arc = (
         <circle
-          className="donut-value"
+          key={`${segment.tone}-${i}`}
+          className={`donut-value tone-${segment.tone}`}
           cx="60"
           cy="60"
           r={radius}
           strokeDasharray={`${dash} ${circumference - dash}`}
+          strokeDashoffset={-offset}
           transform="rotate(-90 60 60)"
         />
+      )
+      offset += dash
+      return arc
+    })
+
+  return (
+    <div className="chart-donut">
+      <svg viewBox="0 0 120 120" role="img" aria-label={label}>
+        <circle className={`donut-track ${total > 0 ? '' : `is-empty tone-${emptyTone}`}`} cx="60" cy="60" r={radius} />
+        {arcs}
       </svg>
       <div className="chart-donut-center">
         <strong>{label}</strong>
@@ -123,27 +142,47 @@ interface DailyBarsProps {
   points: JournalPoint[]
 }
 
-/** Vertical bars of daily P/L, drawn above and below a zero baseline. */
+/**
+ * Vertical bars of daily P/L. Winning and losing days share a zero baseline
+ * only when both are present, so a single-sided month uses the full height.
+ */
 export function DailyBars({ points }: DailyBarsProps) {
   if (points.length === 0) {
     return <p className="chart-empty">No trading days logged yet.</p>
   }
 
-  const peak = Math.max(...points.map((p) => Math.abs(p.value)), 1)
+  const visible = points.slice(-14)
+  const peak = Math.max(...visible.map((p) => Math.abs(p.value)), 1)
+  const hasProfit = visible.some((p) => p.value > 0)
+  const hasLoss = visible.some((p) => p.value < 0)
+  const split = hasProfit && hasLoss
 
   return (
-    <div className="chart-daily" role="img" aria-label="Daily profit and loss">
-      {points.slice(-14).map((point) => {
+    <div className={`chart-daily ${split ? 'is-split' : 'is-single'}`} role="img" aria-label="Daily profit and loss">
+      {visible.map((point) => {
         const height = Math.max(6, (Math.abs(point.value) / peak) * 100)
         const isLoss = point.value < 0
+        const bar = (
+          <span
+            className={`chart-daily-bar ${isLoss ? 'is-loss' : 'is-profit'}`}
+            style={{ height: `${height}%` }}
+          />
+        )
+
         return (
-          <div key={point.date} className="chart-daily-col" title={`${point.date} · ${formatMoneyCompact(point.value)}`}>
-            <div className="chart-daily-half up">
-              {!isLoss && <span className="chart-daily-bar is-profit" style={{ height: `${height}%` }} />}
-            </div>
-            <div className="chart-daily-half down">
-              {isLoss && <span className="chart-daily-bar is-loss" style={{ height: `${height}%` }} />}
-            </div>
+          <div
+            key={point.date}
+            className="chart-daily-col"
+            title={`${point.date} · ${formatMoneyCompact(point.value)}`}
+          >
+            {split ? (
+              <>
+                <div className="chart-daily-half up">{!isLoss && bar}</div>
+                <div className="chart-daily-half down">{isLoss && bar}</div>
+              </>
+            ) : (
+              <div className={`chart-daily-half ${hasLoss ? 'down' : 'up'}`}>{bar}</div>
+            )}
           </div>
         )
       })}
