@@ -134,7 +134,7 @@
 
 .chart-symbols {
   list-style: none;
-  margin: 0;
+  margin: auto 0;
   padding: 0;
   display: flex;
   flex-direction: column;
